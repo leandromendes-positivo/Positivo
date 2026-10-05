@@ -6,6 +6,7 @@ Painel web para acompanhar, todo dia, as **peças usadas** que cada técnico ain
 - **Dados:** Firebase (Firestore), na conta Google escolhida por você. Nada de planilha ou dado de técnico fica neste repositório.
 - **Aviso diário:** e-mail de segunda a sexta às 7h55 com quem cobrar (GitHub Actions).
 - **Atualização do site:** qualquer alteração em `src/` enviada para o branch `main` publica o site de novo sozinha.
+- **Aparência:** o botão de tema no topo do painel e na tela de login alterna entre claro (logo preta) e escuro (logo branca e turquesa). A escolha fica salva neste navegador; no primeiro acesso, acompanha o tema do sistema.
 
 Detalhes do funcionamento (regras, formato das planilhas, banco, arquitetura): [CONTEXTO-PARA-CHATGPT.md](CONTEXTO-PARA-CHATGPT.md).
 
@@ -85,6 +86,8 @@ Códigos numéricos no lugar do nome do técnico (ex.: `110301019`) são tratado
 
 ```
 src/pagina.html, src/estilos.css   moldura e visual
+src/tema.js, src/botao-tema.html   escolha de tema e preferência local
+src/assets/                      logos e favicon da Positivo
 src/js/00…80                       lógica e telas (JavaScript puro, sem framework)
 src/js/25-firebase.js              banco Firebase + login Google
 build.py                           monta dist/site/index.html (o site)

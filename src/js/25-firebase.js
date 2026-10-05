@@ -159,14 +159,16 @@ function pedirLogin(auth, firebase, mensagem = "") {
   return new Promise((resolver) => {
     const tela = document.getElementById("acesso");
     tela.hidden = false;
-    tela.innerHTML = `<div class="acesso-cartao">
-      <span class="marca-logo grande" aria-hidden="true">${icone("caixa")}</span>
+    tela.innerHTML = `<div class="acesso-tema">${document.getElementById("botao-tema").innerHTML}</div>
+    <div class="acesso-cartao">
+      <span class="logo-positivo" role="img" aria-label="Positivo Tecnologia"></span>
       <h1>Controle de Peças</h1>
       <p>Entre com a conta Google autorizada para ver e atualizar o painel.</p>
       ${mensagem ? `<p class="acesso-erro"></p>` : ""}
       <button class="btn prim grande" id="entrar-google">${icone("pessoa")}Entrar com Google</button>
       <small>Projeto: <span class="mono"></span></small>
     </div>`;
+    Tema.atualizarBotoes();
     if (mensagem) tela.querySelector(".acesso-erro").textContent = mensagem;
     tela.querySelector("small .mono").textContent = Acesso.projeto;
     const parar = auth.onAuthStateChanged((u) => {

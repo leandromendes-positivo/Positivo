@@ -1,4 +1,9 @@
-<title>Controle de Peças</title>
+<title>Controle de Peças · Positivo Tecnologia</title>
+<meta name="theme-color" content="#f3f5f5">
+<link rel="icon" type="image/svg+xml" href="/*__FAVICON__*/">
+<script>
+/*__TEMA__*/
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
@@ -7,9 +12,11 @@
 </style>
 <div class="app">
   <aside class="rail">
-    <div class="marca">
-      <span class="marca-logo" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="m3 8 9 5 9-5"/><path d="M12 13v8"/></svg></span>
-      <div><strong>Controle de Peças</strong><span>Técnicos de campo</span></div>
+    <div class="marca-painel">
+      <div class="marca-identidade">
+        <span class="logo-positivo" role="img" aria-label="Positivo Tecnologia"></span>
+        <div class="marca-produto"><strong>Controle de Peças</strong><span>Técnicos de campo</span></div>
+      </div>
       <button class="btn-icone btn-menu" data-acao="menu" aria-label="Abrir menu"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h16"/></svg></button>
     </div>
     <nav id="nav" aria-label="Seções"></nav>
@@ -22,6 +29,7 @@
     <header class="topo">
       <div><h1 id="titulo">Painel</h1><p id="subtitulo"></p></div>
       <div class="acoes-topo">
+        <!--__BOTAO_TEMA__-->
         <label class="btn prim">
           <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/></svg>
           Importar planilhas
@@ -36,6 +44,7 @@
     <section id="conteudo"></section>
   </main>
 </div>
+<template id="botao-tema"><!--__BOTAO_TEMA__--></template>
 <div id="acesso" class="acesso" hidden></div>
 <div id="dica" class="dica" hidden></div>
 <div id="toasts"></div>

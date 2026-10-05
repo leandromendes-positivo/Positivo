@@ -124,6 +124,7 @@ function itensSelecionados() {
 }
 
 const ACOES = {
+  tema: () => Tema.alternar(),
   ir: (el) => irPara(el.dataset.pagina),
   recarregar: () => carregarTudo(),
   sair: () => sairDoFirebase(),

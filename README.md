@@ -77,6 +77,8 @@ Abra o site → **Entrar com Google** → arraste as planilhas do dia (Novas e U
 - **Indicadores e gráficos:** cumprimento do prazo, idade das peças, evolução das importações em 7 ou 30 dias e técnicos que precisam de reposição. O histórico começa com suas importações, sem números simulados.
 - **Celular e acessibilidade:** layout adaptável, filtros por teclado, versões em tabela dos gráficos e animações reduzidas conforme a preferência do dispositivo.
 
+O mapa permite aproximar o estado selecionado, voltar à visão do Brasil e consultar os valores com o mouse ou teclado. A evolução tem leitura por dia com as setas ← →, Home e End. As entradas de cartões, barras, linhas e medidores são animadas ao aparecerem na tela; trocar filtros do mapa, da fila ou da agenda atualiza somente aquele componente. A imagem de abertura mantém a proporção original no computador e no celular.
+
 ## Regras (ajustáveis em Configurações)
 
 | Regra | Padrão |
@@ -99,6 +101,7 @@ src/tema.js, src/botao-tema.html   escolha de tema e preferência local
 src/assets/                      logos, favicon, ilustração e mapa (atribuição em MAPA-LICENCA.txt)
 src/js/00…80                       lógica e telas (JavaScript puro, sem framework)
 src/js/25-firebase.js              banco Firebase + login Google
+src/js/55-movimento.js             animações progressivas e preferência de movimento reduzido
 src/js/65-operacao.js              fila de cobranças, mapa e agenda
 build.py                           monta dist/site/index.html (o site)
 aviso/enviar-aviso.mjs             e-mail diário (roda no GitHub Actions)

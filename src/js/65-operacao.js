@@ -74,19 +74,21 @@ function mapaOperacao(D) {
   const metrica = (r) => novas ? r.abaixo + r.acima : r.cobrar;
   if (!dados.some((r) => r.regiao === UIpainel.regiao)) UIpainel.regiao = [...dados].sort((a, b) => metrica(b) - metrica(a))[0]?.regiao || "";
   const r = dados.find((r) => r.regiao === UIpainel.regiao);
-  const caminho = MAPA_BRASIL.map((uf) => {
+  const maximo = Math.max(1, ...dados.map(metrica));
+  const caminho = [...MAPA_BRASIL].sort((a, b) => (a.uf === UIpainel.regiao) - (b.uf === UIpainel.regiao)).map((uf) => {
     const d = dados.find((x) => x.regiao === uf.uf);
     const pend = d && metrica(d);
+    const dica = `<strong>${esc(UFS[uf.uf])}</strong><span>${d ? `${fmtNum(pend)} ${novas ? "técnicos fora da meta" : "peças para cobrar"}` : "Sem planilha importada"}</span>`;
     const label = `${UFS[uf.uf]}, ${d ? `${fmtNum(pend)} ${novas ? "técnicos fora da meta" : "peças para cobrar"}` : "sem planilha importada"}`;
-    return `<g class="mapa-estado ${d ? pend ? "com-pendencia" : "em-dia" : "sem-dados"} ${UIpainel.regiao === uf.uf ? "selecionado" : ""}" ${d ? `role="button" tabindex="0" data-acao="painel-regiao" data-regiao="${uf.uf}" aria-pressed="${UIpainel.regiao === uf.uf}"` : 'role="img"'} aria-label="${esc(label)}"><title>${esc(label)}</title><path d="${uf.d}"/>${d ? `<text x="${uf.centro[0]}" y="${uf.centro[1]}">${uf.uf}</text>` : ""}</g>`;
+    return `<g data-dica="${esc(dica)}" style="--intensidade:${d ? 30 + pend / maximo * 65 : 0}%" class="mapa-estado ${d ? pend ? "com-pendencia" : "em-dia" : "sem-dados"} ${UIpainel.regiao === uf.uf ? "selecionado" : ""}" ${d ? `role="button" tabindex="0" data-acao="painel-regiao" data-regiao="${uf.uf}" aria-pressed="${UIpainel.regiao === uf.uf}"` : 'role="img"'} aria-label="${esc(label)}"><title>${esc(label)}</title><path d="${uf.d}"/>${d ? `<text x="${uf.centro[0]}" y="${uf.centro[1]}">${uf.uf}</text>` : ""}${UIpainel.regiao === uf.uf ? `<circle class="mapa-sinal" cx="${uf.centro[0]}" cy="${uf.centro[1]}" r="13"/>` : ""}</g>`;
   }).join("");
   const seletor = `<div class="filtros-segmentados">${[["usadas", "Usadas"], ["novas", "Novas"]].map(([id, nome]) => `<button type="button" data-acao="painel-mapa-modo" data-modo="${id}" aria-pressed="${UIpainel.mapaModo === id}" class="${UIpainel.mapaModo === id ? "ativo" : ""}">${nome}</button>`).join("")}</div>`;
   const frescor = r && D.frescor.find((f) => f.regiao === r.regiao && f.tipo === UIpainel.mapaModo);
-  const detalhe = r ? `<span class="mapa-uf">${r.regiao}</span><h3>${esc(UFS[r.regiao] || r.regiao)}</h3><div class="mapa-numero">${fmtNum(metrica(r))}<span>${novas ? "técnicos fora da meta" : "peças para cobrar"}</span></div>
+  const detalhe = r ? `<span class="mapa-uf">${r.regiao}</span><h3>${esc(UFS[r.regiao] || r.regiao)}</h3><div class="mapa-numero">${fmtNum(metrica(r))}<span>${novas ? `${palavra(metrica(r), "técnico", "técnicos")} fora da meta` : `${palavra(metrica(r), "peça", "peças")} para cobrar`}</span></div>
     <dl><div><dt>${novas ? "Peças com técnicos" : "Usadas pendentes"}</dt><dd>${fmtNum(novas ? r.novas : r.total)}</dd></div><div><dt>${novas ? "Abaixo da meta" : "Vencem em breve"}</dt><dd>${fmtNum(novas ? r.abaixo : r.vencendo)}</dd></div><div><dt>${novas ? "Na meta" : "Atrasadas com previsão"}</dt><dd>${fmtNum(novas ? r.ideal : r.aguardando)}</dd></div></dl>
     <button class="btn pequeno" data-acao="painel-regiao-abrir">${novas ? "Ver estoque" : "Ver peças"}${icone("seta")}</button><small class="mapa-atualizacao">Relatório ${frescor?.em ? fmtQuando(frescor.em) : "não importado"}</small>` : `<div class="vazio">${icone("arquivo")}<h3>Sem relatório de ${novas ? "novas" : "usadas"}</h3><p>Importe uma planilha para acompanhar os estados.</p></div>`;
-  return cartao("Sua operação pelo Brasil", `<div class="mapa-layout"><div class="mapa-figura"><svg class="mapa-brasil" viewBox="0 0 525 525" role="group" aria-label="Estados brasileiros. Selecione um estado com dados para ver seus indicadores.">${caminho}</svg><div class="mapa-legenda"><span><i class="pendente"></i>${novas ? "Fora da meta" : "A cobrar"}</span><span><i class="em-dia"></i>${novas ? "Na faixa" : "Sem cobrança"}</span><span><i></i>Sem dados</span></div></div><div class="mapa-detalhe">${detalhe}</div></div>
-    <div class="mapa-regioes" aria-label="Selecionar estado">${dados.map((x) => `<button class="chip ${x.regiao === UIpainel.regiao ? "ativo" : ""}" data-acao="painel-regiao" data-regiao="${x.regiao}" aria-pressed="${x.regiao === UIpainel.regiao}">${x.regiao} <span>${fmtNum(metrica(x))}</span></button>`).join("")}</div><p class="mapa-nota">Dados por estado das planilhas, sem localização individual de técnicos.</p>`, { sub: "Selecione um estado para explorar suas pendências.", acoes: seletor, classe: "cartao-mapa" });
+  return cartao("Mapa da operação", `<div class="mapa-layout"><div class="mapa-figura"><div class="mapa-cab"><span>BRASIL · VISÃO POR ESTADO</span><strong>${dados.length} UF${dados.length === 1 ? "" : "s"}</strong></div><svg class="mapa-brasil" viewBox="0 0 525 525" role="group" aria-label="Estados brasileiros. Selecione um estado com dados para ver seus indicadores."><g class="mapa-grade" aria-hidden="true">${[75,150,225,300,375,450].map((v) => `<path d="M${v},0V525M0,${v}H525"/>`).join("")}</g><g class="mapa-cena" style="transform:${transformacaoMapa()}">${caminho}</g></svg><div class="mapa-controles" aria-label="Zoom do mapa"><button type="button" data-acao="painel-zoom" data-passo="-1" aria-label="Diminuir zoom" ${UIpainel.zoom <= 1 ? "disabled" : ""}>−</button><button type="button" data-acao="painel-zoom" data-passo="1" aria-label="Aproximar estado selecionado" ${UIpainel.zoom >= 2.5 ? "disabled" : ""}>+</button><button type="button" data-acao="painel-zoom" data-passo="0" aria-label="Restaurar visão de todo o Brasil">Brasil</button></div></div><div class="mapa-detalhe">${detalhe}</div></div>
+    <div class="mapa-legenda"><span><i class="pendente"></i>${novas ? "Fora da meta" : "A cobrar"}</span><span><i class="em-dia"></i>${novas ? "Na faixa" : "Sem cobrança"}</span><span><i></i>Sem dados</span></div><div class="mapa-regioes" aria-label="Selecionar estado">${dados.map((x) => `<button class="chip ${x.regiao === UIpainel.regiao ? "ativo" : ""}" data-acao="painel-regiao" data-regiao="${x.regiao}" aria-pressed="${x.regiao === UIpainel.regiao}">${x.regiao} <span>${fmtNum(metrica(x))}</span></button>`).join("")}</div><p class="mapa-nota">A intensidade indica o volume relativo. Dados das planilhas, sem localização individual.</p>`, { sub: "Explore o território. Selecione um estado para ver os detalhes.", acoes: seletor, classe: "cartao-mapa" });
 }
 
 function saudePrazos(D) {
@@ -116,9 +118,40 @@ function historicoDoPainel() {
   return E.historico.filter((h) => h.data >= corte && h.data <= hojeISO());
 }
 
+function transformacaoMapa() {
+  const uf = MAPA_BRASIL.find((x) => x.uf === UIpainel.regiao);
+  const [x, y] = uf?.centro || [262.5, 262.5];
+  const z = UIpainel.zoom;
+  return z === 1 ? "translate(0px, 0px) scale(1)" : `translate(${262.5 - x * z}px, ${262.5 - y * z}px) scale(${z})`;
+}
+
+function ajustarZoomMapa(passo) {
+  UIpainel.zoom = passo === 0 ? 1 : Math.max(1, Math.min(2.5, UIpainel.zoom + passo * .5));
+  const cena = document.querySelector(".mapa-cena");
+  if (cena) cena.style.transform = transformacaoMapa();
+  document.querySelectorAll('[data-acao="painel-zoom"]').forEach((b) => {
+    b.disabled = b.dataset.passo === "-1" ? UIpainel.zoom <= 1 : b.dataset.passo === "1" && UIpainel.zoom >= 2.5;
+  });
+  Dica.esconder();
+}
+
 function atualizarFiltroPainel(chave, valor, seletor) {
+  const transformacaoAnterior = document.querySelector(".mapa-cena")?.style.transform;
   UIpainel[chave] = valor;
-  renderizar(true);
+  const alvos = { regiao: [".cartao-mapa", mapaOperacao], mapaModo: [".cartao-mapa", mapaOperacao], fila: [".cartao-fila", filaHoje], dia: [".cartao-agenda", agendaDevolucoes] };
+  if (alvos[chave] && document.querySelector(alvos[chave][0])) {
+    const [alvo, montar] = alvos[chave];
+    document.querySelector(alvo).outerHTML = montar(derivar());
+    if (alvo === ".cartao-mapa") {
+      ligarMapaPainel();
+      Movimento.animar(document.querySelector(".mapa-cena"), [{ transform: transformacaoAnterior }, { transform: transformacaoMapa() }], 600);
+      Movimento.detalhe(document.querySelector(".mapa-detalhe"));
+    } else Movimento.detalhe(document.querySelector(alvo + (chave === "dia" ? " .agenda-detalhe" : " .fila-operacao")));
+  } else {
+    renderizar(true);
+    Movimento.detalhe(document.querySelector(".cartao-evolucao .grafico"));
+  }
+  Dica.esconder();
   document.querySelector(seletor)?.focus({ preventScroll: true });
 }
 
@@ -128,7 +161,11 @@ function abrirCobrancasPainel(aba = "cobrar") {
 }
 
 function ligarMapaPainel() {
-  document.querySelectorAll('.mapa-estado[role="button"]').forEach((el) => {
+  const mapa = document.querySelector(".mapa-brasil");
+  if (!mapa || mapa.dataset.ligado) return;
+  mapa.dataset.ligado = "1";
+  ligarDicas(mapa);
+  mapa.querySelectorAll('.mapa-estado[role="button"]').forEach((el) => {
     el.addEventListener("keydown", (e) => {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); el.dispatchEvent(new MouseEvent("click", { bubbles: true })); }
     });

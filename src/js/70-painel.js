@@ -73,7 +73,7 @@ function boasVindas() {
   </section>`;
 }
 
-const UIpainel = { tabelas: new Set(), fila: "cobrar", dia: "", mapaModo: "usadas", regiao: "", periodo: 30 };
+const UIpainel = { tabelas: new Set(), fila: "cobrar", dia: "", mapaModo: "usadas", regiao: "", periodo: 30, zoom: 1 };
 
 function renderPainel() {
   const D = derivar();

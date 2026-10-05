@@ -32,6 +32,9 @@ function irPara(pagina, { tid = null } = {}) {
   renderizar(true);
   window.scrollTo({ top: 0 });
   document.querySelector(".app")?.classList.remove("menu-aberto");
+  document.querySelector(".btn-menu")?.setAttribute("aria-expanded", "false");
+  document.querySelector(".btn-menu")?.setAttribute("aria-label", "Abrir menu");
+  Dica.esconder();
 }
 
 let renderPendente = false;
@@ -62,6 +65,7 @@ function renderizar(forcar = false) {
   conteudo.innerHTML = p.render();
   if (p.depois) p.depois();
   if (UI.posRender) UI.posRender();
+  Movimento.preparar();
 }
 
 function atualizarMoldura() {
@@ -125,6 +129,7 @@ function itensSelecionados() {
 
 const ACOES = {
   "painel-cobrancas": (el) => abrirCobrancasPainel(el.dataset.aba || "cobrar"),
+  "painel-zoom": (el) => ajustarZoomMapa(Number(el.dataset.passo)),
   "painel-fila": (el) => atualizarFiltroPainel("fila", el.dataset.fila, `[data-acao="painel-fila"][data-fila="${el.dataset.fila}"]`),
   "painel-dia": (el) => atualizarFiltroPainel("dia", el.dataset.dia, `[data-acao="painel-dia"][data-dia="${el.dataset.dia}"]`),
   "painel-regiao": (el) => atualizarFiltroPainel("regiao", el.dataset.regiao, `.mapa-regioes [data-regiao="${el.dataset.regiao}"]`),
@@ -233,7 +238,11 @@ const ACOES = {
   },
   "exportar-tudo": () => exportarTudo(),
   "alternar-tabela": (el) => { const s = UIpainel.tabelas; s.has(el.dataset.grafico) ? s.delete(el.dataset.grafico) : s.add(el.dataset.grafico); renderizar(true); },
-  menu: () => document.querySelector(".app").classList.toggle("menu-aberto"),
+  menu: () => {
+    const aberto = document.querySelector(".app").classList.toggle("menu-aberto");
+    document.querySelector(".btn-menu").setAttribute("aria-expanded", String(aberto));
+    document.querySelector(".btn-menu").setAttribute("aria-label", aberto ? "Fechar menu" : "Abrir menu");
+  },
 };
 
 const MUDANCAS = {

@@ -44,12 +44,26 @@ try {
   assert.equal(await page.locator(".fila-operacao li").count(), 3);
   assert.equal(await page.locator(".anel-prazos strong").innerText(), "50%");
 
+  // O enquadramento preserva a arte e os filtros não remontam a página inteira.
+  assert.equal(await page.locator(".hero-arte").evaluate((img) => getComputedStyle(img).objectFit), "contain");
+  const heroOriginal = await page.locator(".operacao-hero").elementHandle();
+  await page.locator('[data-acao="painel-zoom"][data-passo="1"]').click();
+  assert.equal(await page.evaluate(() => UIpainel.zoom), 1.5);
+  assert.match(await page.locator(".mapa-cena").getAttribute("style"), /scale\(1.5\)/);
+  for (let n = 0; n < 2; n++) await page.locator('[data-acao="painel-zoom"][data-passo="1"]').click();
+  assert.equal(await page.locator('[data-acao="painel-zoom"][data-passo="1"]').isDisabled(), true);
+  await page.locator('[data-acao="painel-zoom"][data-passo="0"]').click();
+  assert.equal(await page.evaluate(() => UIpainel.zoom), 1);
+
   // Estados sem planilha não são mostrados como zero pendências.
   assert.match(await page.locator('.mapa-estado[aria-label^="Acre,"]').getAttribute("aria-label"), /sem planilha/);
   const sc = page.locator('.mapa-estado[data-regiao="SC"]');
   await sc.focus(); await page.keyboard.press("Enter");
   assert.equal(await page.locator(".mapa-detalhe h3").innerText(), "Santa Catarina");
-  assert.equal(await page.locator(".mapa-numero").innerText(), "1\npeças para cobrar");
+  assert.equal(await heroOriginal.evaluate((el) => el.isConnected), true, "selecionar estado preserva o restante da página");
+  await page.locator('.mapa-estado[data-regiao="SC"]').focus();
+  assert.match(await page.locator("#dica").innerText(), /Santa Catarina/);
+  assert.equal(await page.locator(".mapa-numero").innerText(), "1\npeça para cobrar");
   await page.evaluate(() => { UI.us.tid = "filtro-antigo"; UI.us.busca = "filtro-antigo"; });
   await page.locator('[data-acao="painel-regiao-abrir"]').click();
   assert.deepEqual(await page.evaluate(() => [UI.pagina, UI.us.regiao, UI.us.tid, UI.us.busca]), ["usadas", "SC", "", ""]);
@@ -99,6 +113,16 @@ try {
   assert.equal(await page.evaluate(() => derivar().kpi.usadas), 9);
   assert.equal(await page.evaluate(() => E.devolucoes.length), 1);
   assert.equal(await page.locator('.grafico[data-grafico="evolucao"] svg').count(), 1);
+  const leitura = page.locator('.cartao-evolucao [role="slider"]');
+  await leitura.focus();
+  await page.keyboard.press("Home");
+  assert.equal(await leitura.getAttribute("aria-valuenow"), "1");
+  assert.match(await page.locator("#dica").innerText(), /10/);
+  await page.keyboard.press("ArrowRight");
+  assert.equal(await leitura.getAttribute("aria-valuenow"), "2");
+  assert.match(await page.locator("#dica").innerText(), /9/);
+  await page.keyboard.press("Escape");
+  assert.equal(await page.locator("#dica").isHidden(), true);
   assert.equal(await page.locator(".cartao-devolucoes .lista-simples li").count(), 1);
   await page.locator('[data-acao="painel-periodo"][data-periodo="7"]').click();
   assert.equal(await page.evaluate(() => historicoDoPainel().length), 2);
@@ -112,22 +136,29 @@ try {
   await page.locator('[data-acao="painel-mapa-modo"][data-modo="usadas"]').click();
   await page.evaluate(() => { document.getElementById("toasts").innerHTML = ""; });
   await page.locator(".hero-arte").evaluate((img) => img.decode());
-  await page.waitForTimeout(450);
-  await page.screenshot({ path: `${saida}/claro.png`, fullPage: true });
+  await page.waitForTimeout(1200);
+  await page.screenshot({ path: `${saida}/claro.png`, fullPage: true, animations: "disabled" });
   await page.screenshot({ path: `${saida}/claro-topo.png` });
   await page.locator('.acoes-topo [data-acao="tema"]').click();
   assert.equal(await page.locator("html").getAttribute("data-theme"), "dark");
-  await page.screenshot({ path: `${saida}/escuro.png`, fullPage: true });
+  await page.screenshot({ path: `${saida}/escuro.png`, fullPage: true, animations: "disabled" });
   await page.screenshot({ path: `${saida}/escuro-topo.png` });
   for (const width of [390, 320]) {
     await page.setViewportSize({ width, height: 844 });
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `sem overflow em ${width}px`);
-    await page.screenshot({ path: `${saida}/celular-${width}.png`, fullPage: true });
+    await page.screenshot({ path: `${saida}/celular-${width}.png`, fullPage: true, animations: "disabled" });
   }
+  await page.locator('[data-acao="menu"]').click();
+  assert.equal(await page.locator('.btn-menu').getAttribute('aria-expanded'), 'true');
+  await page.locator('[data-nav="estoque"]').click();
+  assert.equal(await page.locator('.btn-menu').getAttribute('aria-expanded'), 'false');
+  await page.locator('[data-acao="menu"]').click();
+  await page.locator('[data-nav="painel"]').click();
   await page.emulateMedia({ reducedMotion: "reduce" });
   assert.equal(await page.locator(".operacao-hero").evaluate((el) => getComputedStyle(el).animationName), "none");
   assert.deepEqual(erros, []);
-  console.log("PASSOU: mapa e filtros, cobrança, agenda, previsões vencidas, quantidade, devolução na nova planilha, evolução, reposição, temas e celular (320/390px).");
+  assert.equal(await page.locator('.mapa-cena').evaluate((el) => getComputedStyle(el).transitionDuration), '0s');
+  console.log("PASSOU: mapa, zoom, dicas, enquadramento, filtros locais, cobrança, agenda, devoluções, gráficos por teclado, temas, menu móvel e movimento reduzido (320/390px).");
   await context.close();
 } finally {
   await browser.close();

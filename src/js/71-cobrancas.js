@@ -4,6 +4,7 @@
 
 const ABAS_COB = [
   { id: "cobrar", rotulo: "Cobrar hoje", dica: "Peças com mais de {prazo} dias sem previsão, ou com a previsão vencida" },
+  { id: "vencidas", rotulo: "Previsões vencidas", dica: "O técnico informou uma data de devolução que já passou e a peça continua no relatório" },
   { id: "vencendo", rotulo: "Vencem em breve", dica: "Peças entre {alerta} e {prazo} dias: dá para lembrar o técnico antes de atrasar" },
   { id: "aguardando", rotulo: "Com previsão", dica: "Peças atrasadas com previsão de devolução informada pelo técnico" },
   { id: "previsoes", rotulo: "Previsões de hoje", dica: "Técnicos que prometeram devolver hoje: confira na próxima importação" },
@@ -13,6 +14,7 @@ const ABAS_COB = [
 function itensDaAba(t, aba, hoje) {
   switch (aba) {
     case "cobrar": return t.itensCobrar;
+    case "vencidas": return t.usadas.filter((i) => i.status === "previsao_vencida");
     case "vencendo": return t.itensVencendo;
     case "aguardando": return t.itensAguardando;
     case "previsoes": return t.usadas.filter((i) => i.previsao === hoje);
@@ -27,7 +29,7 @@ function cartaoCobranca(t, aba, D) {
   const uc = t.ultimaCobranca;
   const maxDias = itens.length ? Math.max(...itens.map((i) => i.dias)) : 0;
   const sev = t.nPrevVencida ? "crit" : t.nCobrar ? (maxDias > D.cfg.prazo * 2 ? "crit" : "grave") : t.nVencendo ? "alerta" : "ok";
-  const rotuloQtd = { cobrar: "para cobrar", vencendo: "vencem em breve", aguardando: "com previsão", previsoes: "previstas p/ hoje", todos: "pendentes" }[aba];
+  const rotuloQtd = { cobrar: "para cobrar", vencidas: "com previsão vencida", vencendo: "vencem em breve", aguardando: "com previsão", previsoes: "previstas p/ hoje", todos: "pendentes" }[aba];
   const infos = [];
   if (t.nPrevVencida) infos.push(pill("crit", `${plural(t.nPrevVencida, "peça", "peças")} com previsão vencida`, "quebra"));
   if (t.proxPrevisao) infos.push(pill("info", `Próxima previsão: ${fmtPrevisao(t.proxPrevisao)}`, "calendario"));

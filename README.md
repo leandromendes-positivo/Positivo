@@ -69,6 +69,14 @@ Abra o site → **Entrar com Google** → arraste as planilhas do dia (Novas e U
 3. **Cobranças → Cobrar hoje**: o botão **Cobrar** monta a mensagem para o WhatsApp; registre a cobrança e a **previsão de devolução** que o técnico informar.
 4. Peça que some do relatório no dia seguinte conta como **devolvida**.
 
+### Visão geral da operação
+
+- **Sua fila de hoje:** técnicos a cobrar, previsões vencidas e devoluções previstas hoje. As promessas vencidas aparecem primeiro, seguidas das peças mais antigas. O botão **Cobrar** abre o registro de contato e previsão.
+- **Agenda de devoluções:** compromissos dos próximos 7 dias, com quantidade de peças e técnicos por data. Registrar uma previsão não confirma a devolução.
+- **Mapa do Brasil:** selecione um estado para conferir pendências ou estoque e abrir a lista correspondente. Estados sem planilha aparecem como **sem dados**; o mapa não usa localização individual dos técnicos.
+- **Indicadores e gráficos:** cumprimento do prazo, idade das peças, evolução das importações em 7 ou 30 dias e técnicos que precisam de reposição. O histórico começa com suas importações, sem números simulados.
+- **Celular e acessibilidade:** layout adaptável, filtros por teclado, versões em tabela dos gráficos e animações reduzidas conforme a preferência do dispositivo.
+
 ## Regras (ajustáveis em Configurações)
 
 | Regra | Padrão |
@@ -86,10 +94,12 @@ Códigos numéricos no lugar do nome do técnico (ex.: `110301019`) são tratado
 
 ```
 src/pagina.html, src/estilos.css   moldura e visual
+src/operacao.css                   visual da central de operações
 src/tema.js, src/botao-tema.html   escolha de tema e preferência local
-src/assets/                      logos e favicon da Positivo
+src/assets/                      logos, favicon, ilustração e mapa (atribuição em MAPA-LICENCA.txt)
 src/js/00…80                       lógica e telas (JavaScript puro, sem framework)
 src/js/25-firebase.js              banco Firebase + login Google
+src/js/65-operacao.js              fila de cobranças, mapa e agenda
 build.py                           monta dist/site/index.html (o site)
 aviso/enviar-aviso.mjs             e-mail diário (roda no GitHub Actions)
 .github/workflows/                 publicar-site.yml e aviso-diario.yml
@@ -107,3 +117,14 @@ npx firebase-tools emulators:start --only auth,firestore --project demo-controle
 python3 -m http.server 8000 --directory dist/site
 node testes/firebase-e2e.mjs exemplos capturas   # o emulador precisa de uma cópia de firestore.rules liberando teste@exemplo.com
 ```
+
+Para validar a visão geral com as planilhas fictícias, sem conectar ao Firebase:
+
+```bash
+python3 build.py
+python3 -m http.server 8000 --directory dist
+# Em outro terminal, com Playwright e Chromium instalados:
+node testes/operacao-e2e.mjs
+```
+
+O teste abre `pagina-completa.html` e exige armazenamento em memória antes de importar dados. Verifica cobranças, previsões vencidas, agenda, devolução na importação seguinte, mapa, gráficos, temas e telas de 320/390 pixels. Use `PW_PATH` e `CHROMIUM` para indicar instalações específicas; `URL_PAINEL_TESTE` permite mudar a URL local.

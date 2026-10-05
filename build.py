@@ -54,21 +54,25 @@ def config_firebase() -> str:
 
 
 def main() -> int:
-    css = (SRC / "estilos.css").read_text(encoding="utf-8")
+    css = "\n".join((SRC / nome).read_text(encoding="utf-8") for nome in ("estilos.css", "operacao.css"))
     # Imagens embutidas preservam as três versões de HTML autocontidas.
     for nome, marcador in (("positivo-claro.png", "/*__LOGO_CLARA__*/"), ("positivo-escuro.png", "/*__LOGO_ESCURA__*/")):
         imagem = base64.b64encode((SRC / "assets" / nome).read_bytes()).decode("ascii")
         css = css.replace(marcador, "data:image/png;base64," + imagem)
     tema = (SRC / "tema.js").read_text(encoding="utf-8")
     js = "\n".join(p.read_text(encoding="utf-8") for p in sorted((SRC / "js").glob("*.js")))
+    mapa = json.loads((SRC / "assets" / "mapa-brasil.json").read_text(encoding="utf-8"))
+    js = js.replace("/*__MAPA_BRASIL__*/", json.dumps(mapa, ensure_ascii=False, separators=(",", ":")))
     if re.search(r"</script", js + tema, re.IGNORECASE):
         print("ERRO: o JavaScript contém '</script'; escreva '<\\/script'.", file=sys.stderr)
         return 1
     pagina = (SRC / "pagina.html").read_text(encoding="utf-8")
     favicon = base64.b64encode((SRC / "assets" / "favicon.svg").read_bytes()).decode("ascii")
+    ilustracao = base64.b64encode((SRC / "assets" / "operacao-pecas.png").read_bytes()).decode("ascii")
     botao_tema = (SRC / "botao-tema.html").read_text(encoding="utf-8").strip()
     pagina = (pagina.replace("/*__CSS__*/", css).replace("/*__JS__*/", js)
               .replace("/*__TEMA__*/", tema).replace("/*__FAVICON__*/", "data:image/svg+xml;base64," + favicon)
+              .replace("/*__OPERACAO_IMAGEM__*/", "data:image/png;base64," + ilustracao)
               .replace("<!--__BOTAO_TEMA__-->", botao_tema))
     config = config_firebase()
     (DIST / "site").mkdir(parents=True, exist_ok=True)

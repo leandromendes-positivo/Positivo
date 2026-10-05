@@ -1,12 +1,12 @@
 <title>Controle de Peças · Positivo Tecnologia</title>
-<meta name="theme-color" content="#f3f5f5">
+<meta name="theme-color" content="#f4f6f8">
 <link rel="icon" type="image/svg+xml" href="/*__FAVICON__*/">
 <script>
 /*__TEMA__*/
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <style>
 /*__CSS__*/
 </style>
@@ -19,7 +19,9 @@
       </div>
       <button class="btn-icone btn-menu" data-acao="menu" aria-label="Abrir menu"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h16"/></svg></button>
     </div>
+    <span class="rail-secao">Área de trabalho</span>
     <nav id="nav" aria-label="Seções"></nav>
+    <div class="rail-rotina"><span class="rail-rotina-sinal"></span><strong>Seu ritual diário</strong><p>Atualize as planilhas e acompanhe o que mudou.</p><button class="link-rail" data-acao="ir" data-pagina="importar">Atualizar planilhas →</button></div>
     <div class="rail-rodape">
       <div id="rail-frescor"></div>
       <div id="rail-conta" class="rail-conta" hidden></div>
@@ -45,6 +47,7 @@
   </main>
 </div>
 <template id="botao-tema"><!--__BOTAO_TEMA__--></template>
+<template id="imagem-operacao"><img class="hero-arte" src="/*__OPERACAO_IMAGEM__*/" alt="" width="1536" height="1024" decoding="async"></template>
 <div id="acesso" class="acesso" hidden></div>
 <div id="dica" class="dica" hidden></div>
 <div id="toasts"></div>

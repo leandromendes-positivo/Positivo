@@ -16,26 +16,13 @@ function delta(atual, antes, subirEhRuim, dia) {
   const ruim = subirEhRuim ? d > 0 : d < 0;
   return `<span class="delta ${ruim ? "ruim" : "bom"}" title="${d > 0 ? "Aumentou" : "Diminuiu"} ${fmtNum(Math.abs(d))}${desde}">${icone(d > 0 ? "sobe" : "desce")}${fmtNum(Math.abs(d))}${desde}</span>`;
 }
-function kpi({ rotulo, valor, sub = "", classe = "", acao = "", dica = "" }) {
+function kpi({ rotulo, valor, sub = "", classe = "", acao = "", dica = "", ic = "" }) {
   const tag = acao ? "button" : "div";
   return `<${tag} class="kpi ${classe}" ${acao} ${dica ? `title="${esc(dica)}"` : ""}>
-    <span class="kpi-rotulo">${esc(rotulo)}</span>
+    ${ic ? `<span class="kpi-icone">${icone(ic)}</span>` : ""}<span class="kpi-rotulo">${esc(rotulo)}</span>
     <span class="kpi-valor">${valor}</span>
     <span class="kpi-sub">${sub}</span>
   </${tag}>`;
-}
-
-function faixaDoDia(D) {
-  const k = D.kpi;
-  if (k.cobrarTecnicos) {
-    return `<div class="faixa crit">
-      ${icone("sino")}
-      <div><strong>Hoje você precisa cobrar ${plural(k.cobrarTecnicos, "técnico", "técnicos")}</strong>
-      <span>${plural(k.cobrarPecas, "peça usada passou", "peças usadas passaram")} do prazo de ${D.cfg.prazo} dias${k.prevVencida ? ` · ${plural(k.prevVencida, "peça", "peças")} com previsão vencida` : ""}.</span></div>
-      <button class="btn prim" data-acao="ir" data-pagina="cobrancas">Abrir lista de cobrança ${icone("seta")}</button>
-    </div>`;
-  }
-  return `<div class="faixa ok">${icone("ok")}<div><strong>Nenhum técnico para cobrar hoje</strong><span>Todas as peças usadas estão dentro do prazo de ${D.cfg.prazo} dias ou com previsão de devolução.</span></div></div>`;
 }
 
 function avisoAtualizacao(D) {
@@ -51,29 +38,6 @@ function avisoAtualizacao(D) {
   });
   return `<div class="faixa alerta compacta">${icone("relogio")}<div><strong>Planilhas de hoje ainda não importadas</strong><span>Última importação — ${esc(partes.join(" · "))}</span></div>
     <button class="btn" data-acao="ir" data-pagina="importar">Importar agora</button></div>`;
-}
-
-function listaPrioridades(D, limite = 7) {
-  const lista = D.cobrarTec.slice(0, limite);
-  if (!lista.length) return vazio("ok", "Ninguém para cobrar", "Quando uma peça usada passar do prazo, o técnico aparece aqui.");
-  return `<ul class="prioridades">${lista.map((t) => {
-    const uc = t.ultimaCobranca;
-    const situacao = t.nPrevVencida
-      ? pill("crit", "Previsão vencida", "quebra")
-      : uc && diffDias(uc.em.slice(0, 10), D.hoje) <= 1
-        ? pill("neutro", `Cobrado ${fmtQuando(uc.em)}`, "mensagem")
-        : pill("alerta", "Sem previsão", "calendario");
-    return `<li>
-      <button class="prioridade" data-acao="tecnico" data-tid="${esc(t.tid)}">
-        ${avatar(t.nome, t.tipo)}
-        <span class="prioridade-id"><strong>${esc(t.nome)}</strong>
-        <span>${regiaoTag(t.regiao)} ${plural(t.nCobrar, "peça", "peças")} · mais antiga com ${t.maxDias} dias</span></span>
-        ${situacao}
-      </button>
-      <button class="btn-icone whats" data-acao="cobrar" data-tid="${esc(t.tid)}" title="Cobrar ${esc(t.nome)}" aria-label="Cobrar ${esc(t.nome)}">${icone("mensagem")}</button>
-    </li>`;
-  }).join("")}</ul>
-  ${D.cobrarTec.length > limite ? `<button class="link-mais" data-acao="ir" data-pagina="cobrancas">Ver os ${D.cobrarTec.length} técnicos ${icone("seta")}</button>` : ""}`;
 }
 
 function devolvidasRecentes(D) {
@@ -109,92 +73,58 @@ function boasVindas() {
   </section>`;
 }
 
-const UIpainel = { tabelas: new Set() };
+const UIpainel = { tabelas: new Set(), fila: "cobrar", dia: "", mapaModo: "usadas", regiao: "", periodo: 30 };
 
 function renderPainel() {
   const D = derivar();
-  if (!E.usadas.length && !E.novas.length) return boasVindas();
+  if (!E.usadas.length && !E.novas.length) return cabecalhoOperacao(D, true) + boasVindas();
   const k = D.kpi, cfg = D.cfg;
-  const ant = historicoAnterior();
-  const at = ant && ant.tot;
-  const pctAtr = k.usadas ? k.atrasadas / k.usadas : 0;
-  const kpis = [
-    kpi({ rotulo: "Peças usadas pendentes", valor: fmtNum(k.usadas), sub: `com ${plural(k.usadasTecnicos, "técnico", "técnicos")} ${at ? delta(k.usadas, at.usadas, true, ant.data) : ""}`, acao: `data-acao="ir" data-pagina="usadas"` }),
-    kpi({ rotulo: `Atrasadas (mais de ${cfg.prazo} dias)`, valor: fmtNum(k.atrasadas), classe: k.atrasadas ? "crit" : "", sub: `${fmtPct(pctAtr)} das pendentes · mais antiga com ${k.maisAntiga} dias ${at ? delta(k.atrasadas, at.atrasadas, true, ant.data) : ""}`, acao: `data-acao="filtrar-usadas" data-status="atrasadas"` }),
-    kpi({ rotulo: "Técnicos para cobrar hoje", valor: fmtNum(k.cobrarTecnicos), classe: k.cobrarTecnicos ? "alerta" : "", sub: `${plural(k.cobrarPecas, "peça", "peças")}${k.aguardando ? ` · ${fmtNum(k.aguardando)} aguardando previsão` : ""}`, acao: `data-acao="ir" data-pagina="cobrancas"` }),
-    kpi({ rotulo: "Devolvidas nos últimos 7 dias", valor: k.temHistoricoDev ? fmtNum(k.devolvidas7) : "—", sub: k.temHistoricoDev ? (k.devolvidas7 ? `${fmtPct(k.devolvidas7NoPrazo / k.devolvidas7)} dentro do prazo` : "nenhuma devolução registrada") : "começa a contar na próxima importação" }),
-    kpi({ rotulo: "Peças novas com técnicos", valor: fmtNum(k.novas), sub: `média de ${fmtNum1(k.mediaNovas)} por técnico · meta ${cfg.meta}`, acao: `data-acao="ir" data-pagina="estoque"` }),
-    kpi({ rotulo: "Técnicos fora da meta de novas", valor: fmtNum(k.abaixo + k.acima), sub: `<span class="tendencia">${icone("desce")}${fmtNum(k.abaixo)} abaixo</span> <span class="tendencia">${icone("sobe")}${fmtNum(k.acima)} acima</span> · ${fmtNum(k.ideal)} na meta`, acao: `data-acao="ir" data-pagina="estoque"` }),
+  const ant = historicoAnterior(), at = ant && ant.tot;
+  const previstas = somar(k.previsoesHoje, (i) => i.qtd);
+  const estoque = estoqueConhecidoPainel(D);
+  const mediaNovas = estoque.tecnicos.length ? estoque.total / estoque.tecnicos.length : 0;
+  const indicadores = [
+    kpi({ rotulo: "Peças usadas pendentes", valor: fmtNum(k.usadas), sub: `${fmtNum(k.atrasadas)} acima de ${cfg.prazo} dias ${at ? delta(k.usadas, at.usadas, true, ant.data) : ""}`, acao: 'data-acao="ir" data-pagina="usadas"', ic: "retorno" }),
+    kpi({ rotulo: "Técnicos para cobrar", valor: fmtNum(k.cobrarTecnicos), classe: k.cobrarTecnicos ? "crit" : "", sub: `${plural(k.cobrarPecas, "peça", "peças")} precisam de atenção`, acao: 'data-acao="painel-cobrancas" data-aba="cobrar"', ic: "sino" }),
+    kpi({ rotulo: "Devoluções previstas hoje", valor: fmtNum(previstas), classe: "destaque", sub: `${plural(new Set(k.previsoesHoje.map((i) => i.tid)).size, "técnico com compromisso", "técnicos com compromisso")}`, acao: 'data-acao="painel-cobrancas" data-aba="previsoes"', ic: "calendario" }),
+    kpi({ rotulo: "Peças novas com técnicos", valor: estoque.temRelatorio ? fmtNum(estoque.total) : "—", sub: estoque.temRelatorio ? `${fmtNum(estoque.abaixo.length)} técnicos abaixo da meta · média ${fmtNum1(mediaNovas)}` : "Importe a planilha de peças novas", acao: 'data-acao="ir" data-pagina="estoque"', ic: "caixa" }),
   ];
   const botaoTabela = (id) => `<button class="btn fantasma pequeno" data-acao="alternar-tabela" data-grafico="${id}">${icone(UIpainel.tabelas.has(id) ? "grafico" : "tabela")}${UIpainel.tabelas.has(id) ? "Gráfico" : "Tabela"}</button>`;
-  const seriesRegiao = [
-    { chave: "no_prazo", nome: "No prazo", cor: "var(--good)" },
-    { chave: "vencendo", nome: "Vence em breve", cor: "var(--warn)" },
-    { chave: "aguardando", nome: "Atrasada com previsão", cor: "var(--series-1)" },
-    { chave: "cobrar", nome: "Cobrar", cor: "var(--crit)" },
-  ];
-  const seriesEstoque = [
-    { chave: "abaixo", nome: "Abaixo da meta", cor: "var(--warn)" },
-    { chave: "ideal", nome: "Na meta", cor: "var(--good)" },
-    { chave: "acima", nome: "Acima da meta", cor: "var(--serious)" },
-  ];
-  const tab = (id, corpo, tabela) => (UIpainel.tabelas.has(id) ? tabela : corpo);
-  return `
-    ${faixaDoDia(D)}
-    ${avisoAtualizacao(D)}
-    <div class="kpis">${kpis.join("")}</div>
-    <div class="grade-2">
-      ${cartao("Quem cobrar hoje", listaPrioridades(D), { sub: "Ordem: previsão vencida primeiro, depois a peça mais antiga", acoes: `<button class="btn pequeno" data-acao="ir" data-pagina="cobrancas">Lista completa</button>` })}
-      ${cartao("Idade das peças usadas", tab("idade", `<div class="grafico" data-grafico="idade"></div>`, tabelaFaixas(D)), { sub: "Quantidade de peças por dias com o técnico. Clique numa coluna para ver as peças.", acoes: botaoTabela("idade") })}
-    </div>
-    <div class="grade-2">
-      ${cartao("Situação por região", tab("regioes", legendaHTML(seriesRegiao) + `<div class="grafico" data-grafico="regioes"></div>`, tabelaRegioes(D)), { sub: "Peças usadas pendentes em cada estado", acoes: botaoTabela("regioes") })}
-      ${cartao("Evolução", tab("evolucao", `<div class="grafico" data-grafico="evolucao"></div>`, tabelaEvolucao()), { sub: "Peças usadas pendentes e atrasadas em cada dia importado", acoes: botaoTabela("evolucao") })}
-    </div>
-    <div class="grade-2">
-      ${cartao("Estoque de peças novas", tab("estoque", legendaHTML(seriesEstoque) + `<div class="grafico" data-grafico="estoque"></div>`, tabelaEstoqueRegiao(D)), { sub: `Técnicos por situação em relação à meta de ${cfg.meta} peças (faixa ${Math.max(0, cfg.meta - cfg.tolerancia)} a ${Number(cfg.meta) + Number(cfg.tolerancia)})`, acoes: botaoTabela("estoque") })}
-      ${cartao("Devolvidas recentemente", devolvidasRecentes(D), { sub: "Peças que saíram do relatório de usadas" })}
-    </div>`;
+  const tab = (id, corpo, tabela) => UIpainel.tabelas.has(id) ? tabela : corpo;
+  const periodo = `<div class="filtros-segmentados">${[7, 30].map((dias) => `<button type="button" class="${UIpainel.periodo === dias ? "ativo" : ""}" data-acao="painel-periodo" data-periodo="${dias}" aria-pressed="${UIpainel.periodo === dias}">${dias} dias</button>`).join("")}</div>`;
+  const hist = historicoDoPainel();
+  const evolucao = hist.length > 1 ? `<div class="grafico" data-grafico="evolucao"></div>` : `<div class="historico-inicial">${icone("grafico")}<strong>${hist.length ? "Sua primeira fotografia está registrada" : "Ainda sem importações neste período"}</strong><p>Com importações em dias diferentes, você verá se as pendências estão diminuindo.</p>${hist.length ? `<span>${fmtData(hist[0].data)} · ${plural(hist[0].tot.usadas, "peça pendente", "peças pendentes")}</span>` : ""}</div>`;
+  return `<div class="painel-operacao">
+    ${cabecalhoOperacao(D)}${avisoAtualizacao(D)}
+    <div class="kpis kpis-4 indicadores-operacao">${indicadores.join("")}</div>
+    <div class="grade-operacao">${mapaOperacao(D)}${filaHoje(D)}</div>
+    ${agendaDevolucoes(D)}
+    <div class="grade-analise">${saudePrazos(D)}${cartao("Evolução das pendências", tab("evolucao", evolucao, tabelaEvolucao()), { sub: "Peças pendentes e atrasadas nas importações do período.", acoes: periodo + botaoTabela("evolucao"), classe: "cartao-evolucao" })}</div>
+    <div class="grade-2">${cartao("Onde o atraso se concentra", tab("idade", `<div class="grafico" data-grafico="idade"></div>`, tabelaFaixas(D)), { sub: "Clique em uma faixa para abrir as peças correspondentes.", acoes: botaoTabela("idade") })}${reposicaoPainel(D)}</div>
+    ${cartao("Devoluções confirmadas", devolvidasRecentes(D), { sub: "Peças que saíram do relatório após uma nova importação.", classe: "cartao-devolucoes" })}
+  </div>`;
 }
 
 function tabelaFaixas(D) {
   return `<div class="tabela-rolagem"><table class="tabela compacta"><thead><tr><th>Dias com a peça</th><th class="num">Peças</th></tr></thead><tbody>
     ${D.faixas.map((f) => `<tr><td>${esc(f.rotulo)} dias</td><td class="num">${fmtNum(f.valor)}</td></tr>`).join("")}</tbody></table></div>`;
 }
-function tabelaRegioes(D) {
-  return `<div class="tabela-rolagem"><table class="tabela compacta"><thead><tr><th>Região</th><th class="num">No prazo</th><th class="num">Vence em breve</th><th class="num">Com previsão</th><th class="num">Cobrar</th><th class="num">Total</th></tr></thead><tbody>
-    ${D.porRegiao.map((r) => `<tr><td>${esc(r.regiao)}</td><td class="num">${fmtNum(r.no_prazo)}</td><td class="num">${fmtNum(r.vencendo)}</td><td class="num">${fmtNum(r.aguardando)}</td><td class="num">${fmtNum(r.cobrar)}</td><td class="num">${fmtNum(r.total)}</td></tr>`).join("")}</tbody></table></div>`;
-}
 function tabelaEvolucao() {
-  const h = E.historico.slice(-30);
+  const h = historicoDoPainel();
   if (!h.length) return `<p class="nota">Sem histórico ainda.</p>`;
   return `<div class="tabela-rolagem"><table class="tabela compacta"><thead><tr><th>Dia</th><th class="num">Pendentes</th><th class="num">Atrasadas</th><th class="num">Técnicos a cobrar</th></tr></thead><tbody>
     ${[...h].reverse().map((x) => `<tr><td>${fmtData(x.data)}</td><td class="num">${fmtNum(x.tot.usadas)}</td><td class="num">${fmtNum(x.tot.atrasadas)}</td><td class="num">${fmtNum(x.tot.cobrarTec)}</td></tr>`).join("")}</tbody></table></div>`;
 }
-function tabelaEstoqueRegiao(D) {
-  return `<div class="tabela-rolagem"><table class="tabela compacta"><thead><tr><th>Região</th><th class="num">Abaixo</th><th class="num">Na meta</th><th class="num">Acima</th><th class="num">Peças novas</th></tr></thead><tbody>
-    ${D.porRegiao.map((r) => `<tr><td>${esc(r.regiao)}</td><td class="num">${fmtNum(r.abaixo)}</td><td class="num">${fmtNum(r.ideal)}</td><td class="num">${fmtNum(r.acima)}</td><td class="num">${fmtNum(r.novas)}</td></tr>`).join("")}</tbody></table></div>`;
-}
-
 function desenharPainel() {
+  ligarMapaPainel();
   const D = derivar();
   const el = (id) => document.querySelector(`.grafico[data-grafico="${id}"]`);
   if (el("idade")) graficoColunas(el("idade"), {
     faixas: D.faixas, titulo: "Idade das peças usadas",
     aoClicar: (f) => { Object.assign(UI.us, { status: "todas", faixa: { min: f.min, max: f.max, rotulo: f.rotulo }, pagina: 1, aba: "pendentes" }); irPara("usadas"); },
   });
-  if (el("regioes")) graficoEmpilhado(el("regioes"), {
-    linhas: D.porRegiao.filter((r) => r.total).map((r) => ({ rotulo: r.regiao, partes: r })),
-    series: [
-      { chave: "no_prazo", nome: "No prazo", cor: "var(--good)" },
-      { chave: "vencendo", nome: "Vence em breve", cor: "var(--warn)" },
-      { chave: "aguardando", nome: "Atrasada com previsão", cor: "var(--series-1)" },
-      { chave: "cobrar", nome: "Cobrar", cor: "var(--crit)" },
-    ],
-    aoClicar: (l) => { Object.assign(UI.us, { regiao: l.rotulo, status: "todas", faixa: null, pagina: 1, aba: "pendentes" }); irPara("usadas"); },
-  });
   if (el("evolucao")) {
-    const h = E.historico.slice(-30);
+    const h = historicoDoPainel();
     graficoLinhas(el("evolucao"), {
       datas: h.map((x) => x.data),
       series: [
@@ -204,14 +134,4 @@ function desenharPainel() {
       vazio: "O gráfico ganha forma a cada dia importado.",
     });
   }
-  if (el("estoque")) graficoEmpilhado(el("estoque"), {
-    linhas: D.porRegiao.filter((r) => r.abaixo + r.ideal + r.acima).map((r) => ({ rotulo: r.regiao, partes: r })),
-    series: [
-      { chave: "abaixo", nome: "Abaixo da meta", cor: "var(--warn)" },
-      { chave: "ideal", nome: "Na meta", cor: "var(--good)" },
-      { chave: "acima", nome: "Acima da meta", cor: "var(--serious)" },
-    ],
-    unidade: ["técnico", "técnicos"],
-    aoClicar: (l, serie) => { Object.assign(UI.es, { regiao: l.rotulo, status: serie }); irPara("estoque"); },
-  });
 }

@@ -15,7 +15,7 @@ const UI = {
 };
 
 const PAGINAS = {
-  painel: { titulo: "Painel", icone: "painel", render: renderPainel, depois: desenharPainel },
+  painel: { titulo: "Visão geral", icone: "painel", render: renderPainel, depois: desenharPainel },
   cobrancas: { titulo: "Cobranças", icone: "sino", render: renderCobrancas },
   usadas: { titulo: "Peças usadas", icone: "retorno", render: renderUsadas },
   estoque: { titulo: "Estoque de novas", icone: "caixa", render: renderEstoque },
@@ -124,6 +124,25 @@ function itensSelecionados() {
 }
 
 const ACOES = {
+  "painel-cobrancas": (el) => abrirCobrancasPainel(el.dataset.aba || "cobrar"),
+  "painel-fila": (el) => atualizarFiltroPainel("fila", el.dataset.fila, `[data-acao="painel-fila"][data-fila="${el.dataset.fila}"]`),
+  "painel-dia": (el) => atualizarFiltroPainel("dia", el.dataset.dia, `[data-acao="painel-dia"][data-dia="${el.dataset.dia}"]`),
+  "painel-regiao": (el) => atualizarFiltroPainel("regiao", el.dataset.regiao, `.mapa-regioes [data-regiao="${el.dataset.regiao}"]`),
+  "painel-mapa-modo": (el) => atualizarFiltroPainel("mapaModo", el.dataset.modo, `[data-acao="painel-mapa-modo"][data-modo="${el.dataset.modo}"]`),
+  "painel-periodo": (el) => atualizarFiltroPainel("periodo", Number(el.dataset.periodo), `[data-acao="painel-periodo"][data-periodo="${el.dataset.periodo}"]`),
+  "painel-regiao-abrir": () => {
+    if (UIpainel.mapaModo === "novas") {
+      Object.assign(UI.es, { regiao: UIpainel.regiao, status: "", busca: "", bases: false });
+      irPara("estoque");
+    } else {
+      Object.assign(UI.us, { regiao: UIpainel.regiao, status: "todas", busca: "", faixa: null, tid: "", pagina: 1, aba: "pendentes" });
+      irPara("usadas");
+    }
+  },
+  "painel-reposicao": () => {
+    Object.assign(UI.es, { regiao: "", status: "abaixo", busca: "", bases: false });
+    irPara("estoque");
+  },
   tema: () => Tema.alternar(),
   ir: (el) => irPara(el.dataset.pagina),
   recarregar: () => carregarTudo(),

@@ -1,0 +1,42 @@
+# Manda por e-mail, de segunda a sexta às 7h55 (Brasília), quem cobrar no dia.
+# Lê o documento resumo/atual do Firestore. Precisa dos segredos do repositório
+# (Settings → Secrets and variables → Actions): FIREBASE_SERVICE_ACCOUNT,
+# GMAIL_USUARIO, GMAIL_SENHA_APP e, opcional, EMAIL_PARA. Sem eles, não envia nada.
+name: Aviso diário de peças
+
+on:
+  schedule:
+    - cron: "55 10 * * 1-5"   # 10h55 UTC = 7h55 em Brasília
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write   # para manter o agendamento ativo
+
+jobs:
+  enviar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Instalar dependências
+        working-directory: aviso
+        run: npm install --no-audit --no-fund
+      - name: Enviar aviso
+        working-directory: aviso
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          GMAIL_USUARIO: ${{ secrets.GMAIL_USUARIO }}
+          GMAIL_SENHA_APP: ${{ secrets.GMAIL_SENHA_APP }}
+          EMAIL_PARA: ${{ secrets.EMAIL_PARA }}
+          PAINEL_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
+        run: node enviar-aviso.mjs
+      # O GitHub desliga agendamentos de repositórios públicos sem atividade por 60 dias;
+      # reativar o próprio fluxo a cada execução evita isso.
+      - name: Manter o agendamento ativo
+        if: github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X PUT "repos/${{ github.repository }}/actions/workflows/aviso-diario.yml/enable" || true

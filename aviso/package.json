@@ -1,0 +1,10 @@
+{
+  "name": "aviso-diario-pecas",
+  "private": true,
+  "type": "module",
+  "description": "Envia por e-mail o resumo diário do Controle de Peças",
+  "dependencies": {
+    "firebase-admin": "^13.0.0",
+    "nodemailer": "^6.9.0"
+  }
+}

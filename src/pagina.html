@@ -1,0 +1,45 @@
+<title>Controle de Peças</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/*__CSS__*/
+</style>
+<div class="app">
+  <aside class="rail">
+    <div class="marca">
+      <span class="marca-logo" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="m3 8 9 5 9-5"/><path d="M12 13v8"/></svg></span>
+      <div><strong>Controle de Peças</strong><span>Técnicos de campo</span></div>
+      <button class="btn-icone btn-menu" data-acao="menu" aria-label="Abrir menu"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h16"/></svg></button>
+    </div>
+    <nav id="nav" aria-label="Seções"></nav>
+    <div class="rail-rodape">
+      <div id="rail-frescor"></div>
+      <div id="rail-conta" class="rail-conta" hidden></div>
+    </div>
+  </aside>
+  <main class="principal">
+    <header class="topo">
+      <div><h1 id="titulo">Painel</h1><p id="subtitulo"></p></div>
+      <div class="acoes-topo">
+        <label class="btn prim">
+          <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/></svg>
+          Importar planilhas
+          <input id="entrada-topo" type="file" multiple accept=".csv,.txt,.xlsx,.xls" data-entrada-arquivos hidden>
+        </label>
+      </div>
+    </header>
+    <div id="aviso-armazem" class="faixa alerta compacta" hidden>
+      <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.7 18-8-14a2 2 0 0 0-3.4 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.7-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+      <div><strong>Os dados não estão sendo salvos</strong><span>Esta visualização não tem acesso ao banco de dados. Abra o painel pelo link do Claude, conectado à sua conta, para salvar as importações e as cobranças.</span></div>
+    </div>
+    <section id="conteudo"></section>
+  </main>
+</div>
+<div id="acesso" class="acesso" hidden></div>
+<div id="dica" class="dica" hidden></div>
+<div id="toasts"></div>
+<div id="soltar" class="soltar" hidden>Solte as planilhas para importar</div>
+<script>
+/*__JS__*/
+</script>

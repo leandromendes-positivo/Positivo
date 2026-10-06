@@ -103,19 +103,23 @@ Uma linha representa um saldo ou uma saída registrada. O mesmo material pode ap
 
 No Firebase, as saídas de usadas e novas, o registro de importação e a troca do saldo oficial são confirmados na mesma transação. Assim, uma falha ao salvar o arquivo histórico não avança a foto do inventário.
 
+O botão **Recolher**, no topo do menu lateral, amplia a área do painel no computador. Use **Mostrar menu lateral**, ao lado do título, para reabrir; a preferência é lembrada no navegador. As setas do topo e do rodapé percorrem as seções permitidas para o usuário, e as tabelas mantêm setas próprias de paginação.
+
 ### Consulta avançada e rankings
 
 **Consulta avançada**, no menu lateral, localiza materiais por nome ou código, inclusive códigos com zeros à esquerda. Combine palavras para refinar a descrição ou separe códigos por vírgula/ponto e vírgula. Os filtros incluem técnico, UF, novas/usadas, posição atual/histórico, família, situação, tipo de envio, chamado/NF/remessa, datas, dias e quantidade por registro. Campos ausentes no relatório não são inventados. A visão por responsável agrupa as quantidades; **Ver peças** abre seu detalhamento. **Exportar resultado** exporta todas as linhas filtradas, não apenas a página exibida.
 
-Na **Visão geral**, os rankings têm filtros de **esta semana** (segunda-feira até hoje), **este mês** (dia 1 até hoje), UF e novas/usadas, com usadas selecionadas inicialmente:
+Na **Visão geral**, os rankings têm filtros de **esta semana** (segunda-feira até hoje), **este mês** (dia 1 até hoje), **intervalo personalizado** (data inicial e final inclusivas), UF e novas/usadas, com usadas selecionadas inicialmente:
 
 - **Maior volume em atraso:** quantidade de peças que ficaram acima do prazo no período, incluindo pendências e devoluções atrasadas. O maior atraso desempata; fotos diárias não são somadas repetidamente.
 - **Devoluções em dia:** percentual das quantidades devolvidas dentro do prazo, com volume no prazo como desempate. Técnicos sem devolução não recebem uma taxa artificial de 100%.
 - **Uso por técnico:** no modo usadas, trocas registradas por Data FT; cada registro conta uma vez mesmo após devolução parcial. No modo novas, saídas classificadas como uso em atendimento. Os dois modos são separados, não somados. Clique no técnico para ver códigos, descrições, tipos, quantidades e registros que compõem o indicador. O ranking completo fica disponível quando há mais de cinco técnicos.
 
+Para escolher datas, clique em **Intervalo personalizado**, preencha **Data inicial** e **Data final** e clique em **Aplicar intervalo**. O período vale para os três rankings e seus detalhes, aceita um único dia e não permite datas futuras ou a data final anterior à inicial. Os atalhos de semana e mês continuam disponíveis.
+
 **Novas: 7 dias por padrão, a partir da primeira observação do material no estoque.** O relatório não informa data de recebimento nem identifica individualmente cada unidade; a idade acompanha o saldo do material e não comprova a idade de cada unidade após uma reposição. Uma troca de tipo de envio não reinicia essa referência. Quedas de saldo entre importações geram saídas a classificar, sem presumir consumo. Somente saídas classificadas como devolução entram na pontualidade; transferências e ajustes não contam como uso. As datas de saída são as datas em que a diferença foi observada na importação, não uma confirmação do horário físico da movimentação.
 
-Se uma saída tiver destinos diferentes, informe a quantidade de cada parte ao classificá-la; o restante mantém o destino anterior. As saídas de novas começam a ser registradas com esta versão e também entram em **Baixar tudo em Excel**. As análises operacionais usam os últimos 120 dias; o menu **Histórico de peças** consulta todo o acervo preservado, sem esse corte. Lacunas entre importações e períodos anteriores ao acompanhamento não são reconstruídos. Os gráficos respeitam movimento reduzido e oferecem detalhes acessíveis por teclado.
+Se uma saída tiver destinos diferentes, informe a quantidade de cada parte ao classificá-la; o restante mantém o destino anterior. As saídas de novas começam a ser registradas com esta versão e também entram em **Baixar tudo em Excel**. A carga operacional inicial usa os últimos 120 dias. Ao aplicar um intervalo anterior nos rankings, o painel busca também os registros antigos necessários; o menu **Histórico de peças** consulta todo o acervo preservado, sem esse corte. Lacunas entre importações e períodos anteriores ao acompanhamento não são reconstruídos. Os gráficos respeitam movimento reduzido e oferecem detalhes acessíveis por teclado.
 
 ### Parâmetros
 
@@ -191,6 +195,7 @@ node testes/analises-e2e.mjs
 node testes/prazos-e2e.mjs
 node testes/inventario-e2e.mjs
 node testes/limite-estoque-e2e.mjs
+node testes/intervalo-navegacao-e2e.mjs
 ```
 
 Os testes abrem `pagina-completa.html` e exigem armazenamento em memória antes de importar dados. Verificam cobranças, previsões, agenda, devoluções, mapa, gráficos, cálculos, filtros combinados, agrupamento, períodos civis, uso sem duplicação, saídas classificadas, devoluções parciais, persistência e desfazer. A regressão de interface cobre contraste dos botões em repouso, com cursor e foco, seleção parcial, quantidades em lote, avisos e navegação por teclado nas janelas dos dois temas. Use `PW_PATH` e `CHROMIUM` para indicar instalações específicas; `URL_PAINEL_TESTE` permite mudar a URL local. O teste de prazos verifica herança, limites, alertas, mensagens, histórico, rankings e falhas de gravação. O teste com emuladores Firebase também verifica prazos personalizados e classificação em dois dispositivos, recarregamento e reversão das saídas de novas.

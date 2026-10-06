@@ -119,9 +119,9 @@ function paginacao(total, pagina, porPagina, alvo) {
   if (paginas <= 1) return `<div class="paginacao"><span>${fmtNum(total)} ${total === 1 ? "linha" : "linhas"}</span></div>`;
   const ini = (pagina - 1) * porPagina + 1, fim = Math.min(total, pagina * porPagina);
   return `<div class="paginacao"><span>${fmtNum(ini)}–${fmtNum(fim)} de ${fmtNum(total)}</span>
-    <div><button class="btn pequeno" data-acao="pagina" data-alvo="${alvo}" data-p="${pagina - 1}" ${pagina <= 1 ? "disabled" : ""}>Anterior</button>
+    <div><button class="btn pequeno" data-acao="pagina" data-alvo="${alvo}" data-p="${pagina - 1}" aria-label="Página anterior da lista" ${pagina <= 1 ? "disabled" : ""}>${icone('esquerda')}Anterior</button>
     <span class="pag-num">${pagina} / ${paginas}</span>
-    <button class="btn pequeno" data-acao="pagina" data-alvo="${alvo}" data-p="${pagina + 1}" ${pagina >= paginas ? "disabled" : ""}>Próxima</button></div></div>`;
+    <button class="btn pequeno" data-acao="pagina" data-alvo="${alvo}" data-p="${pagina + 1}" aria-label="Próxima página da lista" ${pagina >= paginas ? "disabled" : ""}>Próxima${icone('direita')}</button></div></div>`;
 }
 function thOrdenavel(rotulo, campo, ordem, alvo, classe = "") {
   const ativo = ordem.campo === campo;

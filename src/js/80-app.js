@@ -28,6 +28,30 @@ const PAGINAS = {
   conta: { titulo: "Minha conta", icone: "pessoa", render: renderConta },
 };
 
+function paginasVizinhas() {
+  if (UI.pagina === 'tecnicos' && UI.tid) return { anterior: 'tecnicos', proxima: null };
+  const paginas = Object.keys(PAGINAS).filter(id => !PAGINAS[id].admin || podeAdministrar());
+  const atual = paginas.indexOf(UI.pagina);
+  return { anterior: paginas[atual - 1], proxima: paginas[atual + 1] };
+}
+function atualizarNavegacaoSecoes() {
+  const destinos = paginasVizinhas();
+  document.querySelectorAll('[data-navegacao-secoes]').forEach(nav => {
+    const compacto = nav.classList.contains('navegacao-secoes-topo');
+    nav.hidden = E.status !== 'pronto';
+    const chave = `${destinos.anterior || ''}|${destinos.proxima || ''}`;
+    if (nav.dataset.destinos === chave) return;
+    nav.dataset.destinos = chave;
+    nav.innerHTML = ['anterior', 'proxima'].map(direcao => {
+      const id = destinos[direcao], nome = id ? PAGINAS[id].nav || PAGINAS[id].titulo : '';
+      const anterior = direcao === 'anterior', titulo = id ? `${anterior ? 'Voltar para' : 'Avançar para'} ${nome}` : anterior ? 'Primeira seção' : 'Última seção';
+      const seta = icone(anterior ? 'esquerda' : 'direita');
+      const rotulo = `<span><small>${anterior ? 'Anterior' : 'Próxima'}</small><strong>${esc(nome || '—')}</strong></span>`;
+      return `<button type="button" class="${compacto ? 'btn-icone' : 'btn'}" data-acao="navegar-secao" data-direcao="${direcao}" ${!id ? 'disabled' : ''} aria-label="${esc(titulo)}" title="${esc(titulo)}">${compacto ? seta : anterior ? seta + rotulo : rotulo + seta}</button>`;
+    }).join('');
+  });
+}
+
 function irPara(pagina, { tid = null } = {}) {
   if (!PAGINAS[pagina]) pagina = "painel";
   UI.pagina = pagina;
@@ -67,6 +91,7 @@ function renderizar(forcar = false) {
     return;
   }
   if (PAGINAS[UI.pagina]?.admin && !podeAdministrar()) UI.pagina = 'painel';
+  atualizarNavegacaoSecoes();
   const p = PAGINAS[UI.pagina];
   UI.posRender = null;
   conteudo.dataset.pagina = UI.pagina;
@@ -85,6 +110,7 @@ function renderizar(forcar = false) {
 }
 
 function atualizarMoldura() {
+  atualizarNavegacaoSecoes();
   const D = E.status === "pronto" ? derivar() : null;
   document.getElementById("entrada-topo").closest("label").hidden = !podeAdministrar();
   const p = PAGINAS[UI.pagina];
@@ -143,7 +169,16 @@ function itensSelecionados() {
 }
 
 const ACOES = {
-  "ranking-filtro": (el) => { if (['tipo','periodo'].includes(el.dataset.campo)) UIranking[el.dataset.campo] = el.dataset.valor; renderizar(true); },
+  "navegar-secao": el => {
+    const pagina = paginasVizinhas()[el.dataset.direcao];
+    if (!pagina) return;
+    irPara(pagina);
+    const titulo = document.getElementById('titulo');
+    titulo.setAttribute('tabindex', '-1'); titulo.focus({ preventScroll: true });
+  },
+  "menu-lateral": () => MenuLateral.alternar(),
+  "ranking-filtro": (el) => alterarFiltroRanking(el.dataset.campo, el.dataset.valor),
+  "ranking-recarregar": () => { limparHistoricoRanking(); renderizar(true); },
   "ranking-detalhe": (el) => modalRanking(el.dataset.tid, el.dataset.modo),
   "ranking-completo": (el) => modalRankingCompleto(el.dataset.modo),
   "consultar-saidas": () => { UIconsulta.filtros = { ...FILTROS_CONSULTA, tipo: 'novas', origem: 'saida', situacao: 'pendente', regiao: UIranking.regiao }; UIconsulta.pagina = 1; UIconsulta.visao = 'pecas'; irPara('consulta'); },
@@ -353,6 +388,11 @@ function ligarEventos() {
   });
   document.addEventListener("input", (ev) => {
     const el = ev.target;
+    if (el.dataset.rankingData) {
+      UIranking.rascunho = { ...(UIranking.rascunho || UIranking), [el.dataset.rankingData]: el.value };
+      el.closest('form').querySelector('[role="alert"]').textContent = '';
+      return;
+    }
     const f = el.dataset && DIGITACAO[el.dataset.digitar];
     if (f) { f(el.value); aplicarBusca(el); }
   });
@@ -361,6 +401,7 @@ function ligarEventos() {
     if (!form) return;
     ev.preventDefault();
     if (form.dataset.form === 'consulta') { aplicarConsulta(form); return; }
+    if (form.dataset.form === 'ranking-intervalo') { aplicarIntervaloRanking(form); return; }
     salvarFormulario(form).catch((e) => toast(erroAmigavel(e).message, "erro"));
   });
   document.addEventListener("focusout", () => {
@@ -416,6 +457,7 @@ function montarMoldura() {
 }
 
 async function iniciar() {
+  MenuLateral.iniciar();
   montarMoldura();
   ligarEventos();
   aoMudar.add(debounce(() => renderizar(), 40));

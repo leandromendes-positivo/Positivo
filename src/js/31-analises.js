@@ -64,7 +64,15 @@ function filtrarConsulta(linhas, f) {
     return true;
   });
 }
-function periodoDesempenho(periodo, referencia = hojeISO()) {
+function periodoDesempenho(periodo, referencia = hojeISO(), personalizado = {}) {
+  if (periodo === 'intervalo') {
+    const { inicio, fim } = personalizado;
+    const valida = data => /^\d{4}-\d{2}-\d{2}$/.test(data || '') && Number.isFinite(numDia(data)) && somaDias(data, 0) === data;
+    if (!valida(inicio) || !valida(fim)) throw new Error('Informe a data inicial e a data final.');
+    if (inicio > fim) throw new Error('A data final deve ser igual ou posterior à data inicial.');
+    if (fim > hojeISO()) throw new Error('Selecione datas até hoje para consultar os registros.');
+    return { inicio, fim, fimCivil: fim };
+  }
   const dia = referencia || hojeISO();
   const semana = periodo === 'semana';
   const inicio = semana ? somaDias(dia, -((new Date(numDia(dia) * 86400000).getUTCDay() + 6) % 7)) : dia.slice(0, 7) + '-01';
@@ -72,8 +80,9 @@ function periodoDesempenho(periodo, referencia = hojeISO()) {
   const fimCivil = semana ? somaDias(inicio, 6) : somaDias(proximoMes.toISOString().slice(0, 10), -1);
   return { inicio, fim: fimCivil < hojeISO() ? fimCivil : hojeISO(), fimCivil };
 }
-function calcularDesempenho({ tipo = 'usadas', periodo = 'semana', referencia = hojeISO(), regiao = '' } = {}, D = derivar()) {
-  const intervalo = periodoDesempenho(periodo, referencia), { inicio, fim } = intervalo;
+function calcularDesempenho({ tipo = 'usadas', periodo = 'semana', referencia = hojeISO(), regiao = '', inicio: de, fim: ate, historico = null } = {}, D = derivar()) {
+  const intervalo = periodoDesempenho(periodo, referencia, { inicio: de, fim: ate }), { inicio, fim } = intervalo;
+  const devolvidas = historico?.devolucoes || E.devolucoes, movimentos = historico?.movimentos || E.movimentos;
   const mapa = new Map();
   const permitido = (i) => (E.cadastro[i.tid]?.tipo || 'tecnico') === 'tecnico' && (!regiao || i.regiao === regiao);
   const tecnico = (i) => {
@@ -81,7 +90,7 @@ function calcularDesempenho({ tipo = 'usadas', periodo = 'semana', referencia = 
     return mapa.get(i.tid);
   };
   const atual = tipo === 'usadas' ? D.itens : D.tecnicos.flatMap((t) => t.novasLinhas);
-  const devolucoes = tipo === 'usadas' ? E.devolucoes : E.movimentos.filter((m) => m.destino === 'devolucao');
+  const devolucoes = tipo === 'usadas' ? devolvidas : movimentos.filter((m) => m.destino === 'devolucao');
   // No histórico, uma peça conta uma vez; não somamos repetidamente as fotos diárias.
   const avaliarAtraso = (i, encerrada) => {
     if (!permitido(i)) return;
@@ -109,7 +118,7 @@ function calcularDesempenho({ tipo = 'usadas', periodo = 'semana', referencia = 
   });
   const usos = new Map();
   if (tipo === 'usadas') {
-    for (const i of [...E.devolucoes, ...D.itens]) {
+    for (const i of [...devolvidas, ...D.itens]) {
       if (!i.dataFT || !permitido(i)) continue;
       const data = i.dataFT.slice(0,10);
       if (data < inicio || data > fim) continue;
@@ -119,7 +128,7 @@ function calcularDesempenho({ tipo = 'usadas', periodo = 'semana', referencia = 
       if (!anterior || qtd > anterior.qtd) usos.set(chave, { ...i, qtd, data, detalhe: 'Troca registrada por Data FT' });
     }
   } else {
-    for (const m of E.movimentos) if (m.destino === 'uso' && permitido(m) && m.em.slice(0,10) >= inicio && m.em.slice(0,10) <= fim) usos.set(m.k, { ...m, data: m.em.slice(0,10), detalhe: 'Uso confirmado pelo operador' });
+    for (const m of movimentos) if (m.destino === 'uso' && permitido(m) && m.em.slice(0,10) >= inicio && m.em.slice(0,10) <= fim) usos.set(m.k, { ...m, data: m.em.slice(0,10), detalhe: 'Uso confirmado pelo operador' });
   }
   for (const i of usos.values()) {
     const t = tecnico(i); t.uso += i.qtd;
@@ -133,7 +142,7 @@ function calcularDesempenho({ tipo = 'usadas', periodo = 'semana', referencia = 
     atraso: lista.filter((t) => t.atrasadas > 0).sort((a,b) => b.atrasadas - a.atrasadas || b.maiorAtraso - a.maiorAtraso || nome(a,b)),
     pontualidade: lista.filter((t) => t.noPrazo > 0).sort((a,b) => b.taxa - a.taxa || b.noPrazo - a.noPrazo || nome(a,b)),
     uso: lista.filter((t) => t.uso > 0).sort((a,b) => b.uso - a.uso || nome(a,b)),
-    pendentes: E.movimentos.filter((m) => permitido(m) && m.destino === 'pendente' && m.em.slice(0,10) >= inicio && m.em.slice(0,10) <= fim),
+    pendentes: movimentos.filter((m) => permitido(m) && m.destino === 'pendente' && m.em.slice(0,10) >= inicio && m.em.slice(0,10) <= fim),
     semData: tipo === 'usadas' ? D.itens.filter((i) => permitido(i) && !i.dataFT).length : 0,
   };
 }

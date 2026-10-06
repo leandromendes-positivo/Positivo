@@ -1,5 +1,63 @@
 /* Rankings auditáveis. Os gráficos mantêm valores e ações disponíveis por teclado. */
-const UIranking = { tipo: 'usadas', periodo: 'semana', regiao: '' };
+const UIranking = { tipo: 'usadas', periodo: 'semana', regiao: '', inicio: '', fim: '', rascunho: null };
+const historicoRanking = { chave: '', pedido: 0, carregando: false, erro: '', devolucoes: [], movimentos: [] };
+function limparHistoricoRanking() {
+  Object.assign(historicoRanking, { chave: '', pedido: historicoRanking.pedido + 1, carregando: false, erro: '', devolucoes: [], movimentos: [] });
+}
+function intervaloRanking() { return periodoDesempenho(UIranking.periodo, hojeISO(), UIranking); }
+function chaveHistoricoRanking() { return `${intervaloRanking().inicio}|${E.rev}|${hojeISO()}`; }
+function precisaHistoricoRanking() { return intervaloRanking().inicio < somaDias(hojeISO(), -120); }
+async function carregarHistoricoRanking() {
+  const chave = chaveHistoricoRanking(), inicio = intervaloRanking().inicio;
+  if (historicoRanking.carregando && historicoRanking.chave === chave) return;
+  const pedido = historicoRanking.pedido + 1;
+  Object.assign(historicoRanking, { chave, pedido, carregando: true, erro: '' });
+  try {
+    // Saídas posteriores ao fim também podem ter estado pendentes no intervalo.
+    const [devs, movs] = await Promise.all(['devolucoes', 'movimentos'].map(colecao => Armazem.consultar(colecao, { onde: [['data', '>=', inicio]] })));
+    if (pedido !== historicoRanking.pedido || E.status !== 'pronto') return;
+    historicoRanking.devolucoes = devs.flatMap(d => (d.itens || []).map(l => decodificarDevolucao(l, d.id)));
+    historicoRanking.movimentos = movs.flatMap(d => (d.itens || []).map(m => ({ ...m, doc: d.id })));
+  } catch (e) {
+    if (pedido === historicoRanking.pedido) historicoRanking.erro = erroAmigavel(e).message;
+  } finally {
+    if (pedido === historicoRanking.pedido) {
+      historicoRanking.carregando = false;
+      if (UI.pagina === 'painel' && E.status === 'pronto') renderizar(true);
+    }
+  }
+}
+function dadosDesempenhoRanking(D = derivar()) {
+  if (!precisaHistoricoRanking()) return calcularDesempenho(UIranking, D);
+  if (historicoRanking.chave !== chaveHistoricoRanking() || historicoRanking.carregando || historicoRanking.erro) return null;
+  return calcularDesempenho({ ...UIranking, historico: historicoRanking }, D);
+}
+function alterarFiltroRanking(campo, valor) {
+  if (campo === 'periodo' && ['semana', 'mes', 'intervalo'].includes(valor)) {
+    if (valor === 'intervalo' && !UIranking.inicio) Object.assign(UIranking, intervaloRanking());
+    UIranking.periodo = valor;
+    UIranking.rascunho = { inicio: UIranking.inicio, fim: UIranking.fim };
+  } else if (campo === 'tipo' && ['novas', 'usadas'].includes(valor)) UIranking.tipo = valor;
+  renderizar(true);
+}
+function aplicarIntervaloRanking(form) {
+  if (!form.reportValidity()) return;
+  const inicio = form.elements.inicio.value, fim = form.elements.fim.value;
+  try { periodoDesempenho('intervalo', hojeISO(), { inicio, fim }); }
+  catch (e) { form.querySelector('[role="alert"]').textContent = e.message; return; }
+  Object.assign(UIranking, { periodo: 'intervalo', inicio, fim, rascunho: { inicio, fim } });
+  renderizar(true);
+}
+function formularioIntervaloRanking() {
+  if (UIranking.periodo !== 'intervalo') return '';
+  const datas = UIranking.rascunho || UIranking;
+  return `<form class="ranking-intervalo" data-form="ranking-intervalo" aria-label="Intervalo de datas dos rankings">
+    <label class="campo"><span>Data inicial</span><input type="date" name="inicio" data-ranking-data="inicio" value="${esc(datas.inicio)}" max="${hojeISO()}" required></label>
+    <label class="campo"><span>Data final</span><input type="date" name="fim" data-ranking-data="fim" value="${esc(datas.fim)}" max="${hojeISO()}" required></label>
+    <button type="submit" class="btn prim">${icone('filtro')}Aplicar intervalo</button><span class="ranking-intervalo-ajuda">As duas datas entram no resultado.</span>
+    <p class="ranking-intervalo-erro" role="alert"></p>
+  </form>`;
+}
 function rankLinhas(lista, modo, limite = 5) {
   if (!lista.length) return vazio(modo === 'atraso' ? 'ok' : 'grafico', modo === 'atraso' ? 'Nenhum atraso identificado' : modo === 'pontualidade' ? 'Aguardando devoluções no prazo' : 'Sem uso registrado no período', modo === 'atraso' ? 'Não há peças acima do prazo nos dados deste recorte.' : 'O ranking aparece quando houver registros suficientes.');
   const max = modo === 'atraso' ? lista[0].atrasadas : modo === 'uso' ? lista[0].uso : 1;
@@ -16,14 +74,20 @@ function rankLinhas(lista, modo, limite = 5) {
   }).join('')}</ol>${lista.length > limite ? `<button class="btn fantasma rank-ver-todos" data-acao="ranking-completo" data-modo="${modo}">Ver todos · ${plural(lista.length,'técnico','técnicos')}${icone('direita')}</button>` : ''}`;
 }
 function renderRankings(D) {
-  const r = calcularDesempenho(UIranking, D), novas = UIranking.tipo === 'novas';
+  const r = dadosDesempenhoRanking(D), intervalo = intervaloRanking(), novas = UIranking.tipo === 'novas';
+  if (!r && historicoRanking.chave !== chaveHistoricoRanking()) UI.posRender = carregarHistoricoRanking;
+  const registros = precisaHistoricoRanking() && r ? [...historicoRanking.devolucoes, ...historicoRanking.movimentos] : [...E.devolucoes, ...E.movimentos];
+  const regioes = [...new Set([...D.regioes, ...registros.map(i => i.regiao), UIranking.regiao].filter(Boolean))].sort();
   const prazo = novas ? Number(D.cfg.prazoNovas) || 7 : D.cfg.prazo;
   const seg = (campo, opcoes) => `<div class="filtros-segmentados" role="group" aria-label="${campo === 'tipo' ? 'Tipo de peça do ranking' : 'Período do ranking'}">${opcoes.map(([v,n]) => `<button type="button" data-acao="ranking-filtro" data-campo="${campo}" data-valor="${v}" class="${UIranking[campo] === v ? 'ativo' : ''}" aria-pressed="${UIranking[campo] === v}">${n}</button>`).join('')}</div>`;
+  const cabecalho = `<section class="desempenho" aria-labelledby="titulo-desempenho">
+    <header class="desempenho-topo"><div><span class="sobretitulo">DESEMPENHO DA EQUIPE</span><h2 id="titulo-desempenho">Prazos, devoluções e uso de peças</h2><p>${fmtData(intervalo.inicio)} a ${fmtData(intervalo.fim)} · ${novas ? 'Novas · prazo observado' : 'Usadas · prioridade de cobrança'} · prazos por técnico (geral: ${prazo} dias)</p></div>
+    <div class="ranking-filtros">${seg('periodo', [['semana','Esta semana'],['mes','Este mês'],['intervalo','Intervalo personalizado']])}${seg('tipo',[['usadas','Usadas · prioritárias'],['novas','Novas']])}<select data-mudar="ranking-regiao" aria-label="UF dos rankings"><option value="">Todas as UFs</option>${regioes.map((uf) => `<option value="${esc(uf)}" ${UIranking.regiao === uf ? 'selected' : ''}>${esc(uf)}</option>`).join('')}</select></div></header>${formularioIntervaloRanking()}`;
+  if (!r) return cabecalho + (historicoRanking.erro && historicoRanking.chave === chaveHistoricoRanking()
+    ? vazio('alerta', 'Não foi possível consultar o período', esc(historicoRanking.erro), '<button class="btn" data-acao="ranking-recarregar">Tentar novamente</button>')
+    : '<div class="carregando" role="status"><div class="girando"></div><p>Consultando registros do período…</p></div>') + '</section>';
   const totalAtraso = somar(r.atraso, (t) => t.atrasadas), totalDev = somar(r.lista,(t) => t.devolvidas), emDia = somar(r.lista,(t) => t.noPrazo), totalUso = somar(r.uso,(t) => t.uso);
-  return `<section class="desempenho" aria-labelledby="titulo-desempenho">
-    <header class="desempenho-topo"><div><span class="sobretitulo">DESEMPENHO DA EQUIPE</span><h2 id="titulo-desempenho">Prazos, devoluções e uso de peças</h2><p>${fmtData(r.inicio)} a ${fmtData(r.fim)} · ${novas ? 'Novas · prazo observado' : 'Usadas · prioridade de cobrança'} · prazos por técnico (geral: ${prazo} dias)</p></div>
-    <div class="ranking-filtros">${seg('periodo', [['semana','Esta semana'],['mes','Este mês']])}${seg('tipo',[['usadas','Usadas · prioritárias'],['novas','Novas']])}<select data-mudar="ranking-regiao" aria-label="UF dos rankings"><option value="">Todas as UFs</option>${D.regioes.map((uf) => `<option value="${uf}" ${UIranking.regiao === uf ? 'selected' : ''}>${uf}</option>`).join('')}</select></div></header>
-    <div class="ranking-grade">
+  return `${cabecalho}<div class="ranking-grade">
       ${cartao('Maior volume em atraso', `<div class="rank-resumo"><strong>${fmtNum(totalAtraso)}</strong><span>peças acima do prazo<br>com ${plural(r.atraso.length, 'técnico', 'técnicos')}</span>${icone('relogio')}</div>${rankLinhas(r.atraso,'atraso')}`, { sub: 'Pendências e devoluções atrasadas no período.', classe: 'ranking-cartao ranking-atraso' })}
       ${cartao('Devoluções em dia', `<div class="rank-resumo"><strong>${totalDev ? fmtNum1(emDia/totalDev*100) + '<small>%</small>' : '—'}</strong><span>${fmtNum(emDia)} de ${plural(totalDev, 'peça devolvida', 'peças devolvidas')}<br>dentro do prazo</span><svg class="rank-anel" viewBox="0 0 44 44" aria-hidden="true"><circle class="anel-fundo" cx="22" cy="22" r="17"/><circle class="anel-valor" cx="22" cy="22" r="17" pathLength="100" style="--deslocamento:${totalDev ? 100-emDia/totalDev*100 : 100}"/></svg></div>${rankLinhas(r.pontualidade,'pontualidade')}`, { sub: 'Maior pontualidade; volume desempata.', classe: 'ranking-cartao ranking-pontualidade' })}
       ${cartao('Uso por técnico', `<div class="rank-resumo"><strong>${fmtNum(totalUso)}</strong><span>${novas ? 'peças com uso confirmado' : 'peças trocadas por Data FT'}<br>por ${plural(r.uso.length, 'técnico', 'técnicos')}</span>${icone('grafico')}</div>${rankLinhas(r.uso,'uso')}`, { sub: novas ? 'Baixas classificadas como uso em atendimento.' : 'Trocas registradas, com materiais e quantidades.', classe: 'ranking-cartao ranking-uso' })}
@@ -33,7 +97,7 @@ function renderRankings(D) {
   </section>`;
 }
 function modalRanking(tid, modo) {
-  const r = calcularDesempenho(UIranking), t = r.lista.find((t) => t.tid === tid);
+  const r = dadosDesempenhoRanking(), t = r?.lista.find((t) => t.tid === tid);
   if (!t || !['atraso','pontualidade','uso'].includes(modo)) return;
   const itens = t.evidencias[modo];
   const titulos = { atraso: 'Peças em atraso', pontualidade: 'Pontualidade das devoluções', uso: 'Materiais utilizados' };
@@ -49,7 +113,8 @@ function modalRanking(tid, modo) {
 
 function modalRankingCompleto(modo) {
   if (!['atraso','pontualidade','uso'].includes(modo)) return;
-  const r = calcularDesempenho(UIranking);
+  const r = dadosDesempenhoRanking();
+  if (!r) return;
   const nomes = { atraso:'Maior volume em atraso', pontualidade:'Devoluções em dia', uso:'Uso por técnico' };
   const cores = { atraso:'crit', pontualidade:'good', uso:'info' };
   abrirModal({ titulo: nomes[modo], subtitulo: `${plural(r[modo].length,'técnico','técnicos')} · ${fmtData(r.inicio)} a ${fmtData(r.fim)}`,

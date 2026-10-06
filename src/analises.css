@@ -50,6 +50,12 @@
 .desempenho-topo .sobretitulo, .consulta-intro .sobretitulo { color: var(--muted); font: 500 9px var(--f-mono); letter-spacing: .09em; }
 .ranking-filtros { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .ranking-filtros select { min-width: 115px; font-size: 12px; min-height: 37px; padding: 7px 10px; }
+.ranking-intervalo { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; padding: 16px; margin-bottom: 18px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
+.ranking-intervalo .campo { flex: 0 1 190px; min-width: 0; margin: 0; }
+.ranking-intervalo input { width: 100%; min-width: 0; }
+.ranking-intervalo-ajuda { color: var(--muted); font-size: 12px; align-self: center; }
+.ranking-intervalo-erro { flex-basis: 100%; margin: 0; color: var(--crit-ink); font-size: 12px; }
+.ranking-intervalo-erro:empty { display: none; }
 .ranking-grade { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 16px; }
 .ranking-cartao { --rank-cor: var(--crit-ink); min-width: 0; padding: 20px 0 0; overflow: hidden; position: relative; }
 .ranking-pontualidade { --rank-cor: var(--good-ink); }
@@ -151,6 +157,9 @@
   .ranking-filtros .filtros-segmentados { flex: 1 1 auto; }
   .ranking-filtros .filtros-segmentados button { flex: 1; }
   .ranking-filtros select { width: 100%; }
+  .ranking-intervalo .campo { flex: 1 1 150px; }
+  .ranking-intervalo .btn { width: 100%; }
+  .ranking-filtros [data-valor="intervalo"] { white-space: normal; }
   .ranking-cartao .cartao-topo p { min-height: 0; }
 }
 @media (prefers-reduced-motion: reduce) { .rank-item, .rank-item > .ic { transition: none; } .rank-item:hover > .ic { transform: none; } }

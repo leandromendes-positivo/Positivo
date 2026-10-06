@@ -95,7 +95,7 @@ function renderFicha(tid) {
   ];
   let corpo = "";
   if (s.aba === "usadas") corpo = tabelaUsadasFicha(t, D);
-  else if (s.aba === "novas") corpo = `${t.tipo === "tecnico" ? `<div class="linha-medidor">${medidorEstoque(t)}${pillNovas(t)}<span class="nota">${t.meta ? `Limite máximo: ${t.meta} peças${t.metaPropria != null ? " (personalizado)" : ""} · estoque menor está dentro do limite` : "Sem limite configurado"}</span></div>` : ""}${tabelaLinhasNovas(t)}`;
+  else if (s.aba === "novas") corpo = `${t.tipo === "tecnico" ? `<div class="linha-medidor">${medidorEstoque(t)}${pillNovas(t)}<span class="nota">${t.meta ? `Limite máximo: ${t.meta} peças${t.metaPropria != null ? " (personalizado)" : ""} · estoque menor está dentro do limite` : "Sem limite configurado"}</span></div>` : ""}<div class="tabela-rolagem">${tabelaLinhasNovas(t)}</div>`;
   else if (s.aba === "cobrancas") corpo = cobrancas.length ? `<ol class="linha-tempo">${cobrancas.map((c) => `<li>
       <span class="lt-quando">${fmtDataHora(c.em)}</span>
       <div><strong>${esc(CANAIS[c.canal] || c.canal)}</strong><small class="sub-celula">${esc(c.email ? primeiroNomeEmail(c.email) : "Sem autoria registrada")}</small> · ${plural(c.pecas || 0, "peça", "peças")}${c.previsao ? ` · previsão para ${fmtData(c.previsao)}` : ""}${c.obs ? `<p></p>` : ""}</div>

@@ -458,6 +458,7 @@ function montarMoldura() {
 
 async function iniciar() {
   MenuLateral.iniciar();
+  RolagemHorizontal.iniciar();
   montarMoldura();
   ligarEventos();
   aoMudar.add(debounce(() => renderizar(), 40));

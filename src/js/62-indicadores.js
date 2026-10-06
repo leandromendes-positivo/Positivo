@@ -18,9 +18,9 @@ function indicadoresOperacionais(D) {
 function kpiOperacional({ tipo, rotulo, valor, unidade, sub, rodape, acao, icone: ic, legenda, partes = [] }) {
   const total = somar(partes, (p) => p.valor);
   return `<button type="button" class="kpi kpi-operacional kpi-${tipo}" ${acao}>
-    <span class="kpi-reflexo" aria-hidden="true"></span>
+    <span class="kpi-imagem" aria-hidden="true"><span class="kpi-arte"></span></span><span class="kpi-reflexo" aria-hidden="true"></span>
     <span class="kpi-cabecalho"><span class="kpi-icone">${icone(ic)}</span><span class="kpi-rotulo">${esc(rotulo)}</span></span>
-    <span class="kpi-leitura"><span><span class="kpi-valor">${valor}</span><span class="kpi-unidade">${esc(unidade)}</span></span><span class="kpi-imagem" aria-hidden="true"><span class="kpi-arte"></span></span></span>
+    <span class="kpi-leitura"><span><span class="kpi-valor">${valor}</span><span class="kpi-unidade">${esc(unidade)}</span></span></span>
     <span class="kpi-sub">${sub}</span>
     <span class="kpi-composicao"><span class="kpi-legenda">${esc(legenda)}</span>
       <span class="kpi-trilho ${total ? "" : "sem-valor"}" aria-hidden="true">${partes.map((p) => `<i style="--parte:${total ? p.valor / total * 100 : 0}%;--cor:var(--${p.cor})"></i>`).join("")}</span>

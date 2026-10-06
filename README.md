@@ -71,7 +71,7 @@ Abra o site → **Entrar com Google** → arraste as planilhas do dia (Novas e U
 
 ### Visão geral da operação
 
-- **Indicadores no topo:** peças pendentes, técnicos a cobrar, compromissos de hoje e estoque conhecido. Cada cartão separa número, imagem, composição dos dados e ação. As barras representam peças dentro/fora do prazo, contatos da fila atual, compromissos dos próximos 7 dias e técnicos por faixa de estoque. Os cartões abrem as consultas correspondentes e limpam filtros antigos.
+- **Indicadores no topo:** peças pendentes, técnicos a cobrar, compromissos de hoje e estoque conhecido. Fotografias cobrem todo o fundo dos cartões nos dois temas, com enquadramento proporcional e sobreposição para leitura dos números. As barras representam peças dentro/fora do prazo, contatos da fila atual, compromissos dos próximos 7 dias e técnicos por faixa de estoque. Os cartões abrem as consultas correspondentes e limpam filtros antigos.
 - **Prioridades de cobrança:** técnicos a cobrar, previsões vencidas e devoluções previstas hoje. As promessas vencidas aparecem primeiro, seguidas das peças mais antigas. O botão **Cobrar** abre o registro de contato e previsão.
 - **Agenda de devoluções:** compromissos dos próximos 7 dias, com quantidade de peças e técnicos por data. Registrar uma previsão não confirma a devolução.
 - **Mapa do Brasil:** selecione um estado para conferir pendências ou estoque. A escala de verde a coral representa quatro faixas da taxa de atraso: 0–10%, >10–25%, >25–50% e >50%. No modo Novas, representa a proporção de técnicos fora da faixa de estoque. Estados sem planilha usam hachuras; uma planilha vazia importada conta como dado conhecido. O mapa não usa localização individual dos técnicos.

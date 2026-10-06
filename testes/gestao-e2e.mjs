@@ -152,18 +152,25 @@ try {
     await page.setViewportSize({ width: 1440, height: 1050 });
   }
   await page.locator('[data-nav="painel"]').click();
-  // Valores usuais de produção continuam legíveis em larguras intermediárias.
+  // A imagem cobre todo o cartão, mantendo 3:2 no recorte, e os valores cabem.
   for (const width of [320, 390, 768, 1024, 1280, 1440]) {
     await page.setViewportSize({ width, height: 1000 });
     const leituraCabe = await page.locator('.kpi-usadas .kpi-leitura').evaluate((el) => {
-      const valor = el.querySelector('.kpi-valor'), foto = el.querySelector('.kpi-imagem');
+      const valor = el.querySelector('.kpi-valor');
       const antes = valor.textContent; valor.textContent = '2.005';
       const range = document.createRange(); range.selectNodeContents(valor);
-      const r = range.getBoundingClientRect(), imagem = foto.getBoundingClientRect(), leitura = el.getBoundingClientRect();
-      const cabe = r.right <= (imagem.width ? imagem.left - 2 : leitura.right) && r.left >= leitura.left;
+      const r = range.getBoundingClientRect(), leitura = el.getBoundingClientRect();
+      const cabe = r.right <= leitura.right && r.left >= leitura.left;
       valor.textContent = antes; return cabe;
     });
-    assert.equal(leituraCabe, true, `valor e imagem separados em ${width}px`);
+    assert.equal(leituraCabe, true, `valor legível em ${width}px`);
+    const fundo = await card.evaluate((el) => {
+      const r = el.getBoundingClientRect(), f = el.querySelector('.kpi-imagem').getBoundingClientRect();
+      const a = getComputedStyle(el.querySelector('.kpi-arte'));
+      return { largura: Math.abs(r.width - f.width), altura: Math.abs(r.height - f.height), proporcao: parseFloat(a.width) / parseFloat(a.height) };
+    });
+    assert.ok(fundo.largura <= 2.1 && fundo.altura <= 2.1, `fundo preenche o cartão em ${width}px`);
+    assert.ok(Math.abs(fundo.proporcao - 1.5) < .01, 'imagem sem distorção');
   }
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await estado.locator('path').hover();

@@ -133,7 +133,7 @@ try {
   await page.locator('[data-nav="painel"]').click();
   await page.locator('[data-acao="painel-fila"][data-fila="cobrar"]').click();
   await page.locator('[data-acao="painel-mapa-modo"][data-modo="usadas"]').click();
-  await page.evaluate(() => { document.getElementById("toasts").innerHTML = ""; });
+  await page.evaluate(() => { document.getElementById("toasts").innerHTML = ""; window.scrollTo(0, 0); });
   await page.locator(".kpi-arte").first().evaluate(async (el) => { const img = new Image(); img.src = getComputedStyle(el).backgroundImage.slice(5, -2); await img.decode(); });
   await page.waitForTimeout(1200);
   await page.screenshot({ path: `${saida}/claro.png`, fullPage: true, animations: "disabled" });

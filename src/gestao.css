@@ -405,6 +405,10 @@ body:has(.principal > .rolagem-horizontal:not([hidden])) #toasts { bottom: calc(
 .cobrar-formatado summary { font-size: 12px; color: var(--ink-2); cursor: pointer; line-height: 1.6; }
 .cobrar-formatado > .nota { margin: 14px 0; }
 .cobrar-email-previa { margin: 14px 0; max-height: 380px; overflow: auto; overscroll-behavior: contain; }
+.cobrar-email-ajuda { border-left: 2px solid var(--line-2); padding-left: 12px; }
+.cobrar-email-ajuda strong { color: var(--ink); }
+.cobrar-email-copia { padding: 12px; margin: 0; font-size: 12px; line-height: 1.6; border-radius: 6px; background: var(--surface-2); color: var(--ink); }
+.cobrar-email-copia[data-estado="erro"] { background: var(--warn-soft); color: var(--warn-ink); }
 .config-email { padding: 18px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-2); }
 .config-email > div { display: flex; align-items: center; gap: 8px; }
 .config-email .ic { color: var(--accent); }

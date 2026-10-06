@@ -53,8 +53,10 @@ function modalCobrar(tid, aba = "cobrar", itensEscolhidos = null, canalInicial =
           <label class="campo"><span>Onde abrir</span><select id="cob-email-editor">${Object.entries(EDITORES_EMAIL).map(([v,n]) => `<option value="${v}">${n}</option>`).join('')}</select></label>
           <p class="nota" data-email-orientacao></p>
           <p class="cobrar-email-aviso" data-email-aviso role="status" hidden></p>
-          <div class="linha-botoes"><a class="btn prim" id="cob-email-link" target="_blank" rel="noopener noreferrer">${icone('email')}Abrir no Outlook${icone('externo', 'ic-pequeno')}</a><button class="btn" type="button" data-copiar-email>${icone('copiar')}Copiar corpo</button></div>
-          <details class="cobrar-formatado"><summary>Rascunho formatado para Outlook no computador</summary><p class="nota">Baixe o arquivo e abra no Outlook compatível com rascunhos .eml. Inclui a mensagem completa, com cabeçalho e formatação, mesmo quando ela é longa demais para abrir por link.</p><div class="cobrar-email-previa" data-email-previa></div><button type="button" class="btn" data-baixar-email>${icone('baixar')}Baixar rascunho (.eml)</button></details>
+          <div class="linha-botoes"><a class="btn prim" id="cob-email-link" target="_blank" rel="noopener noreferrer">${icone('email')}Abrir no Outlook${icone('externo', 'ic-pequeno')}</a><button class="btn" type="button" data-copiar-email>${icone('copiar')}Copiar com formatação</button></div>
+          <p class="nota cobrar-email-ajuda"><strong>Para enviar com o visual abaixo:</strong> clique em Copiar com formatação. No corpo da mensagem do Outlook, selecione o texto preenchido e cole com Ctrl+V (⌘V no Mac). Se solicitado, escolha Manter formatação original. O botão Abrir no Outlook preenche o texto, mas não define fonte ou negrito.</p>
+          <p class="cobrar-email-copia" data-email-copia role="status" hidden></p>
+          <details class="cobrar-formatado" open><summary>Prévia do e-mail formatado</summary><div class="cobrar-email-previa" data-email-previa></div><div class="linha-botoes"><button type="button" class="btn" data-baixar-email>${icone('baixar')}Baixar rascunho (.eml)</button><button type="button" class="btn" data-copiar-email-texto>${icone('copiar')}Copiar só texto</button></div><p class="nota">O arquivo mantém a mensagem completa e a formatação. Abra no Outlook para computador compatível com rascunhos .eml.</p></details>
         </form>
       </section>
       <form class="cobrar-registro form" id="cob-form">
@@ -106,7 +108,7 @@ function modalCobrar(tid, aba = "cobrar", itensEscolhidos = null, canalInicial =
     el.querySelector('#cob-form [name="canal"]').value = valor;
   }
   el.querySelectorAll('[data-cob-canal]').forEach(b => b.addEventListener('click', () => canal(b.dataset.cobCanal)));
-  ta.addEventListener('input', atualizarLinks); fEmail.addEventListener('input', atualizarLinks);
+  ta.addEventListener('input', atualizarLinks); fEmail.addEventListener('input', () => { el.querySelector('[data-email-copia]').hidden = true; atualizarLinks(); });
   editor.addEventListener('change', () => { atualizarLinks(); try { localStorage.setItem('cp-outlook-editor', editor.value); } catch (_) { /* opcional */ } });
   fEmail.addEventListener('submit', e => { e.preventDefault(); linkEmail.click(); });
   linkEmail.addEventListener('click', e => {
@@ -116,7 +118,18 @@ function modalCobrar(tid, aba = "cobrar", itensEscolhidos = null, canalInicial =
   });
   link.addEventListener('click', () => { el.querySelector('#cob-form [name="canal"]').value = 'whatsapp'; });
   el.querySelector('[data-copiar]').addEventListener('click', () => copiarTexto(ta.value));
-  el.querySelector('[data-copiar-email]').addEventListener('click', () => copiarTexto(corpo.value));
+  el.querySelector('[data-copiar-email]').addEventListener('click', async () => {
+    const aviso = el.querySelector('[data-email-copia]'), btn = el.querySelector('[data-copiar-email]');
+    if (btn.disabled) return;
+    btn.disabled = true;
+    try {
+      await copiarEmailFormatado(rascunho());
+      aviso.textContent = 'Modelo copiado com formatação. Cole no corpo da mensagem no Outlook, substituindo o texto preenchido. Nenhum e-mail foi enviado.';
+      aviso.dataset.estado = 'ok';
+    } catch (e) { aviso.textContent = e.message; aviso.dataset.estado = 'erro'; }
+    finally { aviso.hidden = false; btn.disabled = false; }
+  });
+  el.querySelector('[data-copiar-email-texto]').addEventListener('click', () => copiarTexto(corpo.value));
   el.querySelector('.cobrar-formatado').addEventListener('toggle', atualizarLinks);
   el.querySelector('[data-baixar-email]').addEventListener('click', () => {
     if (!fEmail.reportValidity()) return;

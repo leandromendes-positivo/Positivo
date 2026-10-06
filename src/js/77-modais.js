@@ -117,7 +117,7 @@ function modalPrevisao(itens, titulo) {
   if (limparBtn) limparBtn.addEventListener("click", () => salvar(""));
 }
 
-/** Cadastro do técnico: nome de exibição, tipo, meta própria, contato. */
+/** Cadastro do técnico: nome de exibição, tipo, limite próprio, contato. */
 function modalTecnico(tid, focarPrazos = false) {
   exigirAdministrador();
   const D = derivar();
@@ -131,7 +131,7 @@ function modalTecnico(tid, focarPrazos = false) {
       <label class="campo"><span>Nome para exibir</span><input type="text" name="apelido" maxlength="80" placeholder="${esc(nomeBonito(nomeRelatorio))}"><small>Deixe em branco para usar o nome do relatório. Útil para códigos numéricos.</small></label>
       <div class="campos-2">
         <label class="campo"><span>Tipo</span><select name="tipo">${Object.entries(TIPOS_TEC).map(([v, r]) => `<option value="${v}"${(c.tipo || "tecnico") === v ? " selected" : ""}>${r}</option>`).join("")}</select></label>
-        <label class="campo"><span>Meta própria de peças novas</span><input type="number" name="meta" min="0" max="10000" placeholder="Padrão: ${esc(E.config.meta)}"><small>Em branco = meta padrão. 0 = sem meta.</small></label>
+        <label class="campo"><span>Limite próprio de peças novas</span><input type="number" name="meta" min="0" max="10000" placeholder="Padrão: ${esc(E.config.meta)}"><small>Em branco = limite padrão. 0 = sem limite. Estoque menor não exige reposição.</small></label>
         <label class="campo"><span>Localidade do técnico</span><select name="localidade">${Object.entries(LOCALIDADES).map(([v,n])=>`<option value="${v}" ${(c.localidade||'')===v?'selected':''}>${n}</option>`).join('')}</select><small>Informe se atende na capital ou no interior.</small></label>
         <label class="campo"><span>WhatsApp</span><input type="tel" name="telefone" maxlength="20" placeholder="(41) 99999-9999"></label>
         <label class="campo"><span>E-mail</span><input type="email" name="email" maxlength="120" placeholder="nome@empresa.com.br"></label>

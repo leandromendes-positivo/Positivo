@@ -19,8 +19,8 @@ const PADROES = {
   prazo: 7,          // dias máximos com peça usada
   prazoNovas: 7,     // dias desde a primeira observação de estoque novo
   alerta: 5,         // a partir de quantos dias avisar "vence em breve"
-  meta: 10,          // peças novas por técnico
-  tolerancia: 3,     // faixa aceitável: meta ± tolerância
+  meta: 10,          // limite máximo de peças novas por técnico (campo legado)
+  tolerancia: 0,     // compatibilidade com configurações antigas; não altera o limite
   tiposIgnorados: [],
   msgCobranca:
     "{saudacao}, {nome}! Tudo bem?\n\n" +
@@ -40,10 +40,10 @@ const STATUS = {
   previsao_vencida: { rotulo: "Previsão vencida", classe: "crit", icone: "quebra" },
 };
 const STATUS_NOVAS = {
-  abaixo: { rotulo: "Abaixo da meta", classe: "alerta", icone: "desce" },
-  ideal: { rotulo: "Na meta", classe: "ok", icone: "ok" },
-  acima: { rotulo: "Acima da meta", classe: "grave", icone: "sobe" },
-  sem_meta: { rotulo: "Sem meta", classe: "neutro", icone: "info" },
+  ideal: { rotulo: "Dentro do limite", classe: "ok", icone: "ok" },
+  acima: { rotulo: "Acima do limite", classe: "grave", icone: "sobe" },
+  sem_meta: { rotulo: "Sem limite", classe: "neutro", icone: "info" },
+  sem_dados: { rotulo: "Sem relatório", classe: "neutro", icone: "arquivo" },
 };
 const TIPOS_TEC = { tecnico: "Técnico", base: "Base / depósito", ignorar: "Ignorado" };
 
@@ -244,10 +244,10 @@ function statusUsada(dias, previsao, cfg, hoje) {
   if (dias >= cfg.alerta) return "vencendo";
   return "no_prazo";
 }
-function statusNovas(qtd, meta, tol) {
+// "meta" e "ideal" mantêm os identificadores existentes; agora representam teto e conformidade.
+function statusNovas(qtd, meta) {
   if (!meta) return "sem_meta";
-  if (qtd < meta - tol) return "abaixo";
-  if (qtd > meta + tol) return "acima";
+  if (qtd > meta) return "acima";
   return "ideal";
 }
 
@@ -260,6 +260,7 @@ function derivar() {
   const cfg = E.config;
   const prazo = prazoGeral('usadas', cfg);
   const tecs = new Map();
+  const regioesEstoque = new Set(Object.entries(E.indice.arquivos || {}).filter(([chave,ent]) => chave.startsWith('novas:') && ent?.em).map(([chave]) => chave.split(':')[1]));
 
   function tec(tid, regiao) {
     let t = tecs.get(tid);
@@ -355,11 +356,10 @@ function derivar() {
     t.novasTodas = somar(t.novasLinhas, (n) => n.qtd);
     t.porTipo = {};
     for (const n of t.novasLinhas) t.porTipo[n.tipoEnvio] = (t.porTipo[n.tipoEnvio] || 0) + n.qtd;
-    const tol = Number(cfg.tolerancia) || 0;
-    t.metaMin = Math.max(0, t.meta - tol);
-    t.metaMax = t.meta + tol;
-    t.statusNovas = t.tipo === "tecnico" ? statusNovas(t.novasQtd, t.meta, tol) : "sem_meta";
-    t.difNovas = t.novasQtd - t.meta;
+    if (!t.regiao && t.regioes.size) t.regiao = [...t.regioes][0];
+    t.estoqueConhecido = regioesEstoque.has(t.regiao);
+    t.statusNovas = !t.estoqueConhecido ? "sem_dados" : t.tipo === "tecnico" ? statusNovas(t.novasQtd, t.meta) : "sem_meta";
+    t.excessoNovas = t.statusNovas === "acima" ? t.novasQtd - t.meta : 0;
 
     const cob = ultimaCob(t.tid);
     t.ultimaCobranca = cob;
@@ -370,7 +370,6 @@ function derivar() {
     t.mediaDiasDev = devs.length ? somar(devs, (d) => d.dias * d.qtd) / Math.max(1, t.devolvidas90) : null;
     t.noPrazoDev = devs.length ? somar(devs.filter((d) => d.dias <= prazoDaDevolucao(d)), (d) => d.qtd) / Math.max(1, t.devolvidas90) : null;
 
-    if (!t.regiao && t.regioes.size) t.regiao = [...t.regioes][0];
     t.temDados = u.length > 0 || t.novasLinhas.length > 0;
     lista.push(t);
   }
@@ -378,7 +377,7 @@ function derivar() {
 
   // ---- totais
   const tecnicos = lista.filter((t) => t.tipo === "tecnico");
-  const ativosTec = tecnicos.filter((t) => t.temDados);
+  const estoqueTec = tecnicos.filter((t) => t.estoqueConhecido);
   const cobrarTec = lista.filter((t) => t.nCobrar > 0)
     .sort((a, b) => (b.nPrevVencida > 0) - (a.nPrevVencida > 0) || b.maxDias - a.maxDias || b.nCobrar - a.nCobrar);
   const corte7 = somaDias(hoje, -6);
@@ -398,14 +397,14 @@ function derivar() {
     devolvidas7: somar(dev7, (d) => d.qtd),
     devolvidas7NoPrazo: somar(dev7.filter((d) => d.dias <= prazoDaDevolucao(d)), (d) => d.qtd),
     temHistoricoDev: E.importacoes.filter((i) => !i.desfeito).length > 1 || E.devolucoes.length > 0,
-    novas: somar(ativosTec, (t) => t.novasQtd),
-    novasTecnicos: ativosTec.length,
-    abaixo: ativosTec.filter((t) => t.statusNovas === "abaixo").length,
-    ideal: ativosTec.filter((t) => t.statusNovas === "ideal").length,
-    acima: ativosTec.filter((t) => t.statusNovas === "acima").length,
+    novas: somar(estoqueTec, (t) => t.novasQtd),
+    novasTecnicos: estoqueTec.length,
+    ideal: estoqueTec.filter((t) => t.statusNovas === "ideal").length,
+    acima: estoqueTec.filter((t) => t.statusNovas === "acima").length,
+    excessoNovas: somar(estoqueTec, (t) => t.excessoNovas),
     bases: lista.filter((t) => t.tipo === "base" && t.temDados).length,
   };
-  kpi.mediaNovas = ativosTec.length ? kpi.novas / ativosTec.length : 0;
+  kpi.mediaNovas = estoqueTec.length ? kpi.novas / estoqueTec.length : 0;
 
   // ---- faixas de idade (gráfico)
   const alerta = Math.min(Number(cfg.alerta) || 5, prazo);
@@ -424,11 +423,11 @@ function derivar() {
   }
 
   // ---- por região
-  const regioes = [...new Set([...itens.map((i) => i.regiao), ...E.novas.map((n) => n.regiao)])].sort();
+  const regioes = [...new Set([...itens.map((i) => i.regiao), ...E.novas.map((n) => n.regiao), ...regioesEstoque])].sort();
   const porRegiao = regioes.map((r) => {
     const its = itens.filter((i) => i.regiao === r);
     const q = (f) => somar(its.filter(f), (i) => i.qtd);
-    const tr = lista.filter((t) => t.tipo === "tecnico" && t.temDados && t.regiao === r);
+    const tr = estoqueTec.filter((t) => t.regiao === r);
     return {
       regiao: r,
       no_prazo: q((i) => i.status === "no_prazo"),
@@ -436,9 +435,9 @@ function derivar() {
       cobrar: q((i) => i.cobrar),
       aguardando: q((i) => i.status === "aguardando"),
       total: q(() => true),
-      abaixo: tr.filter((t) => t.statusNovas === "abaixo").length,
       ideal: tr.filter((t) => t.statusNovas === "ideal").length,
       acima: tr.filter((t) => t.statusNovas === "acima").length,
+      excessoNovas: somar(tr, (t) => t.excessoNovas),
       novas: somar(tr, (t) => t.novasQtd),
     };
   });
@@ -531,7 +530,7 @@ function montarResumo() {
     geradoEm: agoraISO(), hoje, prazo: cfg.prazo, meta: cfg.meta,
     dias,
     estoque: {
-      abaixo: D.tecnicos.filter((t) => t.tipo === "tecnico" && t.temDados && t.statusNovas === "abaixo").map((t) => ({ nome: t.nome, regiao: t.regiao, qtd: t.novasQtd })).slice(0, 40),
+      regra: 'limite_maximo', excesso: k.excessoNovas,
       acima: k.acima, ideal: k.ideal, totalNovas: k.novas,
     },
     vencendoAmanha: somar(D.itens.filter((i) => i.dias === i.prazo), (i) => i.qtd),
@@ -558,7 +557,7 @@ async function gravarHistoricoDoDia() {
     data: D.hoje, em: agoraISO(), t,
     tot: {
       usadas: D.kpi.usadas, atrasadas: D.kpi.atrasadas, cobrarTec: D.kpi.cobrarTecnicos, cobrarPecas: D.kpi.cobrarPecas,
-      novas: D.kpi.novas, abaixo: D.kpi.abaixo, ideal: D.kpi.ideal, acima: D.kpi.acima,
+      novas: D.kpi.novas, ideal: D.kpi.ideal, acima: D.kpi.acima, excessoNovas: D.kpi.excessoNovas,
     },
   };
   await Armazem.gravar(`historico/${D.hoje}`, doc);

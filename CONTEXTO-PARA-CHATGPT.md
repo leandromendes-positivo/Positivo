@@ -9,7 +9,7 @@
 Painel web para um **coordenador de técnicos de campo** controlar:
 
 1. **Peças usadas**: a peça com defeito que o técnico tirou num chamado. Ele tem **7 dias** para devolver. O painel mostra há quantos dias cada técnico está com cada peça, quem cobrar hoje, registra cobranças e a **previsão de devolução** que o técnico informou.
-2. **Peças novas**: o estoque que cada técnico carrega. O ideal é **cerca de 10 peças** por técnico. O painel mostra quem está abaixo (repor) e quem está acima (excesso).
+2. **Peças novas**: o estoque que cada técnico carrega. O padrão é **no máximo 10 peças** por técnico. De 0 a 10 está dentro do limite; acima disso é excesso. Estoque menor é desejável e não gera alerta de reposição.
 
 Todo dia o coordenador exporta 8 planilhas do sistema da empresa (Novas e Usadas de PR, RS, SC e TO) e arrasta para o painel, que atualiza tudo e mostra as pendências.
 
@@ -71,8 +71,8 @@ Tamanho real das planilhas de 05/10/2026: PR Novas 8.871 linhas (122.505 peças,
 |---|---|---|
 | `prazo` | 7 | Dias máximos com peça usada. |
 | `alerta` | 5 | A partir de quantos dias mostrar "vence em breve". |
-| `meta` | 10 | Peças novas ideais por técnico (cada técnico pode ter meta própria; 0 = sem meta). |
-| `tolerancia` | 3 | Faixa "na meta" = meta ± tolerância (7 a 13). |
+| `meta` | 10 | Limite máximo de peças novas por técnico (pode ser personalizado; 0 = sem limite). |
+| `tolerancia` | 0 | Campo legado ignorado no cálculo, inclusive quando um banco antigo ainda guarda 3. |
 | `tiposIgnorados` | `[]` | Tipos de envio que **não** contam no estoque (ex.: `["PP"]`). |
 | `msgCobranca`, `msgLembrete` | textos padrão | Modelos da mensagem. Campos: `{saudacao} {nome} {nome_completo} {qtd} {lista} {prazo} {regiao}`. |
 
@@ -94,14 +94,14 @@ cobrar = atrasada OU previsao_vencida
 ### 4.3 Peças novas
 
 - Soma de `Qtd` por técnico (só tipos que contam). Situação só para `tipo = "tecnico"`:
-  `qtd < meta − tol` → **abaixo** (repor) · `qtd > meta + tol` → **acima** (excesso) · senão **na meta** · meta 0 → sem meta.
+  `qtd > meta` → **acima do limite** (excesso = qtd − meta) · de 0 até meta → **dentro do limite** · meta 0 → **sem limite**. Sem relatório de novas da região → **sem relatório**, não zero. Os identificadores internos `meta`, `ideal` e `sem_meta` são mantidos por compatibilidade.
 - Linhas de novas são agregadas por técnico + material + tipo de envio, guardando desde quando aparecem.
 
 ### 4.4 Técnicos
 
 - Identificador estável `tid`: nome sem acento, maiúsculo, espaços únicos, espaços viram `_` (`idSeguro(chaveTexto(nome))`), ex. `MARIA_EXEMPLO_DA_SILVA`.
-- Tipos: `tecnico`, `base` (base/depósito: fica fora da meta e aparece separado no estoque), `ignorar` (some de todas as contas). Nome só com dígitos entra como `base` na primeira vez.
-- Cadastro editável: nome de exibição (apelido), tipo, meta própria, WhatsApp, e-mail, observações.
+- Tipos: `tecnico`, `base` (base/depósito: fica fora do limite dos técnicos e aparece separado no estoque), `ignorar` (some de todas as contas). Nome só com dígitos entra como `base` na primeira vez.
+- Cadastro editável: nome de exibição (apelido), tipo, limite próprio, WhatsApp, e-mail, observações.
 
 ### 4.5 Identidade de cada peça usada (para guardar previsão e cobranças)
 
@@ -184,9 +184,9 @@ API no estilo Firestore: caminhos alternam coleção/documento; `doc(caminho).ge
 | `dados/<u\|n>-<UF>-<gen>-<parte>` | `{tipo, regiao, gen, parte, total, itens: [linhas compactas]}` |
 | `acompanhamento/<tid>` | `{itens: {<k>: {p: previsão, o: observação, c: nº de cobranças, uc: última cobrança}}, cobrancas: [{em, canal, previsao, obs, pecas, por}], atualizadoEm}` |
 | `devolucoes/<AAAA-MM-DD>` (e `.2`, `.3` se o dia for grande) | `{data, itens: [[k, tid, material, chamado, dataFT, qtd, em, dias, UF, lote]], atualizadoEm}` |
-| `historico/<AAAA-MM-DD>` | `{data, em, t: {<tid>: [usadasPendentes, atrasadas, diasMaisAntiga, novas]}, tot: {usadas, atrasadas, cobrarTec, cobrarPecas, novas, abaixo, ideal, acima}}` |
+| `historico/<AAAA-MM-DD>` | `{data, em, t: {<tid>: [usadasPendentes, atrasadas, diasMaisAntiga, novas]}, tot: {usadas, atrasadas, cobrarTec, cobrarPecas, novas, ideal, acima, excessoNovas}}` |
 | `importacoes/<lote>` | `{em, por, arquivos: [{nome, regiao, tipo, linhas, itens, qtd, entradas, saidas, …, avisos}], avisos, chaves, devolvidas, desfeito}` |
-| `resumo/atual` | Projeção dos próximos 7 dias, lida pelo aviso diário: `{geradoEm, hoje, prazo, meta, dias: {<AAAA-MM-DD>: {cobrar: [{nome, regiao, tipo, pecas, maxDias, previsaoVencida, telefone, ultimaCobranca, proxPrevisao}], totalTecnicos, totalPecas, pendentes, atrasadas, previsoes: [{nome, regiao, pecas}]}}, estoque: {abaixo: [{nome, regiao, qtd}], acima, ideal, totalNovas}, vencendoAmanha, previsoesHoje, atualizacao: [{arquivo, em}]}` |
+| `resumo/atual` | Projeção dos próximos 7 dias, lida pelo aviso diário: `{geradoEm, hoje, prazo, meta, dias: {<AAAA-MM-DD>: {cobrar: [{nome, regiao, tipo, pecas, maxDias, previsaoVencida, telefone, ultimaCobranca, proxPrevisao}], totalTecnicos, totalPecas, pendentes, atrasadas, previsoes: [{nome, regiao, pecas}]}}, estoque: {regra: "limite_maximo", excesso, acima, ideal, totalNovas}, vencendoAmanha, previsoesHoje, atualizacao: [{arquivo, em}]}` |
 
 **Linhas compactas** (para caber nos documentos):
 - Usada: `[k, tid, nf, remessa, material, chamado, dataFT "AAAA-MM-DD HH:MM", qtd, desde "AAAA-MM-DD", materialSolicitado (só se diferente)]`
@@ -227,9 +227,9 @@ node testes/e2e.mjs "<pasta com os CSV>" capturas/ # teste ponta a ponta (Node +
 - Para abrir na mão: `dist/pagina-completa.html` direto no navegador (modo sem salvamento).
 - Ganchos de teste no navegador: `window.__CP_AGORA = "2026-10-06T08:30:00"` fixa o relógio; `window.__CP_SEM_DB__ = true` força o banco em memória; `window.__CP_FIREBASE_EMULADOR__ = true` liga nos emuladores; `window.__CP_LOGIN_TESTE__ = {sub, email, email_verified}` entra com uma conta falsa (só no emulador). No console dá para usar `E`, `UI`, `derivar()`, `irPara("cobrancas")`.
 
-**Números esperados com as planilhas fictícias de `exemplos/`** (relógio em 05/10/2026): 10 peças usadas pendentes, 5 atrasadas, 3 técnicos para cobrar (José Exemplo Pereira 56 dias, Carlos Exemplo Souza 13, Ana Exemplo Costa 10), 46 peças novas com 4 técnicos (1 abaixo, 2 na meta, 1 acima) e 1 base.
+**Números esperados com as planilhas fictícias de `exemplos/`** (relógio em 05/10/2026): 10 peças usadas pendentes, 5 atrasadas, 3 técnicos para cobrar (José Exemplo Pereira 56 dias, Carlos Exemplo Souza 13, Ana Exemplo Costa 10), 46 peças novas com 4 técnicos (2 dentro do limite, 2 acima, 16 peças em excesso) e 1 base.
 
-**Números esperados com as planilhas reais de 05/10/2026:** 2.005 peças usadas pendentes, 758 atrasadas (mais antiga com 229 dias), 15 técnicos para cobrar, 3.878 peças novas com 67 técnicos (média 57,9), 25 abaixo da meta, 3 na meta, 39 acima, 13 bases.
+**Números esperados com as planilhas reais de 05/10/2026:** 2.005 peças usadas pendentes, 758 atrasadas (mais antiga com 229 dias), 15 técnicos para cobrar, 3.878 peças novas com 67 técnicos (média 57,9), 13 bases. Os indicadores por limite precisam ser recalculados com os relatórios reais; as antigas faixas de tolerância não se aplicam.
 
 ---
 
@@ -253,7 +253,7 @@ X técnicos para cobrar · Y peças com mais de 7 dias
 • Nome (UF) — P peças, mais antiga com D dias [· previsão vencida] [· última cobrança DD/MM]
 … (até 10) e mais K técnicos
 [Prometeram devolver hoje: …]
-Estoque de novas: A técnicos abaixo da meta e B acima.
+Estoque de novas: A técnicos dentro do limite e B acima; C peças em excesso.
 [Lembrete: importe as planilhas de hoje no painel para atualizar as devoluções.]
 https://leandromendes-positivo.github.io/Positivo/
 ```

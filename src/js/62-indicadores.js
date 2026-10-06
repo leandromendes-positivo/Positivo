@@ -9,8 +9,7 @@ function indicadoresOperacionais(D) {
     criticas: somar(D.itens.filter((i) => i.dias > (i.prazo || prazo) * 2), (i) => i.qtd),
     semContatoHoje: D.cobrarTec.filter((t) => !t.ultimaCobranca || t.ultimaCobranca.em.slice(0, 10) !== D.hoje).length,
     agendadas: somar(D.itens.filter((i) => i.previsao && i.previsao >= D.hoje), (i) => i.qtd),
-    reposicao: somar(estoque.abaixo, (t) => Math.max(0, t.meta - t.novasQtd)),
-    excesso: somar(estoque.tecnicos.filter((t) => t.statusNovas === "acima"), (t) => Math.max(0, t.novasQtd - t.meta)),
+    excesso: somar(estoque.acima, (t) => Math.max(0, t.novasQtd - t.meta)),
     estoque,
   };
 }
@@ -59,10 +58,10 @@ function cabecalhoSecao(pagina, D) {
   const textos = {
     cobrancas: ["Acompanhamento de devoluções", "Registre cada contato e acompanhe as datas combinadas.", [["Na fila", fmtNum(k.cobrarTecnicos), "técnicos"], ["Sem contato hoje", fmtNum(a.semContatoHoje), "na fila atual"], ["Previsões vencidas", fmtNum(k.prevVencida), "peças"]]],
     usadas: ["Rastreabilidade das peças", "Consulte chamados, idade, previsões e histórico de devoluções.", [["Em aberto", fmtNum(k.usadas), "peças"], ["Acima do prazo", fmtNum(k.atrasadas), "respeita prazos individuais"], ["Idade média", a.idadeMedia == null ? "—" : fmtNum1(a.idadeMedia), "dias por peça"]]],
-    estoque: ["Distribuição de estoque", "Compare o saldo de cada técnico com a meta e planeje a reposição.", [["Reposição até a meta", a.estoque.temRelatorio ? fmtNum(a.reposicao) : "—", "peças necessárias"], ["Excesso até a meta", a.estoque.temRelatorio ? fmtNum(a.excesso) : "—", "peças para redistribuir"]]],
+    estoque: ["Controle do limite de estoque", "Estoque menor é bem-vindo. A atenção está em quem ultrapassou o limite máximo.", [["Dentro do limite", a.estoque.temRelatorio ? fmtNum(a.estoque.dentro.length) : "—", "técnicos"], ["Peças em excesso", a.estoque.temRelatorio ? fmtNum(a.excesso) : "—", "para recolher ou redistribuir"]]],
     tecnicos: ["Equipe em campo", "Cadastro, contatos e desempenho de cada técnico em um só lugar.", [["Em operação", fmtNum(tecs.length), "técnicos com dados"], ["Com pendências", fmtNum(tecs.filter((t) => t.nCobrar).length), "técnicos a cobrar"], ["Sem WhatsApp", fmtNum(tecs.filter((t) => !t.telefone).length), "cadastros a completar"]]],
     importar: ["Atualização da operação", "Envie os relatórios de novas e usadas. O sistema identifica as mudanças.", [["Arquivos do dia", fmtNum(D.frescor.filter((f) => f.em && f.dias === 0).length), `de ${D.frescor.length} acompanhados`], ["Importações", fmtNum(E.importacoes.filter((i) => !i.desfeito).length), "no histórico"]]],
-    config: ["Parâmetros da operação", "Defina prazos, metas e mensagens utilizados no acompanhamento.", [["Prazo de devolução", fmtNum(D.cfg.prazo), "dias"], ["Meta de novas", fmtNum(D.cfg.meta), "peças por técnico"], ["Tolerância", `± ${fmtNum(D.cfg.tolerancia)}`, "peças"]]],
+    config: ["Parâmetros da operação", "Defina prazos, limites e mensagens utilizados no acompanhamento.", [["Prazo de devolução", fmtNum(D.cfg.prazo), "dias"], ["Limite de novas", D.cfg.meta ? fmtNum(D.cfg.meta) : "Sem limite", "máximo por técnico"]]],
   };
   const [titulo, texto, dados] = textos[pagina] || [];
   if (!titulo) return "";

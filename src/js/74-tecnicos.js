@@ -43,7 +43,7 @@ function renderTecnicos() {
         ${thOrdenavel("Atrasadas", "atrasadas", s.ordem, "tc", "num")}
         ${thOrdenavel("Mais antiga", "maxDias", s.ordem, "tc", "num")}
         ${thOrdenavel("Novas", "novas", s.ordem, "tc", "num")}
-        <th class="num">Meta</th>
+        <th class="num">Limite máximo</th>
         <th>Prazos de devolução</th>
         ${thOrdenavel("Devolução média", "media", s.ordem, "tc", "num")}
         <th></th>
@@ -56,8 +56,8 @@ function renderTecnicos() {
         <td class="num">${fmtNum(t.nUsadas)}</td>
         <td class="num ${t.nAtrasadas ? "txt-crit" : ""}">${fmtNum(t.nAtrasadas)}</td>
         <td class="num">${t.usadas.length ? `${t.maxDias} d` : "—"}</td>
-        <td class="num">${fmtNum(t.novasQtd)}</td>
-        <td class="num">${t.tipo === "tecnico" ? t.meta : "—"}</td>
+        <td class="num">${t.estoqueConhecido ? fmtNum(t.novasQtd) : "—"}</td>
+        <td class="num">${t.tipo === "tecnico" ? t.meta || "Sem limite" : "—"}</td>
         <td><button class="botao-prazos" data-acao="editar-prazos" data-tid="${esc(t.tid)}" aria-label="Personalizar prazos de ${esc(t.nome)}"><span>Usadas <strong>${t.prazo} dias</strong>${prazoValido(t.cad.prazoUsadas) !== null ? '<small>próprio</small>' : ''}</span><span>Novas <strong>${t.prazoNovas} dias</strong>${prazoValido(t.cad.prazoNovas) !== null ? '<small>próprio</small>' : ''}</span></button></td>
         <td class="num">${t.mediaDiasDev != null ? `${fmtNum1(t.mediaDiasDev)} d` : "—"}</td>
         <td><button class="btn-icone" data-acao="editar-tecnico" data-tid="${esc(t.tid)}" aria-label="Editar ${esc(t.nome)}" title="Editar cadastro">${icone("lapis")}</button></td>
@@ -82,7 +82,7 @@ function renderFicha(tid) {
     ${kpi({ rotulo: "Usadas pendentes", valor: fmtNum(t.nUsadas), sub: t.nVencendo ? `${fmtNum(t.nVencendo)} vencem em breve` : "&nbsp;" })}
     ${kpi({ rotulo: `Atrasadas (+${t.prazo} dias)`, valor: fmtNum(t.nAtrasadas), classe: t.nAtrasadas ? "crit" : "", sub: t.nAguardando ? `${fmtNum(t.nAguardando)} com previsão` : "&nbsp;" })}
     ${kpi({ rotulo: "Peça mais antiga", valor: t.usadas.length ? `${t.maxDias} <small>dias</small>` : "—", sub: t.usadas.length ? `desde ${fmtData(t.usadas[0].dataFT)}` : "&nbsp;" })}
-    ${kpi({ rotulo: "Peças novas", valor: fmtNum(t.novasQtd), classe: t.statusNovas === "abaixo" ? "alerta" : t.statusNovas === "acima" ? "grave" : "", sub: t.tipo === "tecnico" ? `meta ${t.meta} · ${STATUS_NOVAS[t.statusNovas].rotulo.toLowerCase()}` : "base / depósito" })}
+    ${kpi({ rotulo: "Peças novas", valor: t.estoqueConhecido ? fmtNum(t.novasQtd) : "—", classe: t.statusNovas === "acima" ? "grave" : "", sub: t.tipo === "tecnico" ? `${t.meta ? `limite ${t.meta} · ` : ""}${STATUS_NOVAS[t.statusNovas].rotulo.toLowerCase()}` : "base / depósito" })}
     ${kpi({ rotulo: "Tempo médio de devolução", valor: t.mediaDiasDev != null ? `${fmtNum1(t.mediaDiasDev)} <small>dias</small>` : "—", sub: "últimos 90 dias" })}
     ${kpi({ rotulo: "Devolvidas no prazo", valor: t.noPrazoDev != null ? fmtPct(t.noPrazoDev) : "—", sub: t.devolvidas90 ? `${plural(t.devolvidas90, "peça", "peças")} em 90 dias` : "sem devoluções ainda" })}
   </div>`;
@@ -95,7 +95,7 @@ function renderFicha(tid) {
   ];
   let corpo = "";
   if (s.aba === "usadas") corpo = tabelaUsadasFicha(t, D);
-  else if (s.aba === "novas") corpo = `${t.tipo === "tecnico" ? `<div class="linha-medidor">${medidorEstoque(t)}${pillNovas(t)}<span class="nota">Meta ${t.meta}${t.metaPropria != null ? " (própria deste técnico)" : ""} · faixa aceitável ${t.metaMin} a ${t.metaMax}</span></div>` : ""}${tabelaLinhasNovas(t)}`;
+  else if (s.aba === "novas") corpo = `${t.tipo === "tecnico" ? `<div class="linha-medidor">${medidorEstoque(t)}${pillNovas(t)}<span class="nota">${t.meta ? `Limite máximo: ${t.meta} peças${t.metaPropria != null ? " (personalizado)" : ""} · estoque menor está dentro do limite` : "Sem limite configurado"}</span></div>` : ""}${tabelaLinhasNovas(t)}`;
   else if (s.aba === "cobrancas") corpo = cobrancas.length ? `<ol class="linha-tempo">${cobrancas.map((c) => `<li>
       <span class="lt-quando">${fmtDataHora(c.em)}</span>
       <div><strong>${esc(CANAIS[c.canal] || c.canal)}</strong><small class="sub-celula">${esc(c.email ? primeiroNomeEmail(c.email) : "Sem autoria registrada")}</small> · ${plural(c.pecas || 0, "peça", "peças")}${c.previsao ? ` · previsão para ${fmtData(c.previsao)}` : ""}${c.obs ? `<p></p>` : ""}</div>
@@ -164,7 +164,7 @@ async function exportarTecnicos() {
     colunas: [{ titulo: "Nome", largura: 30 }, { titulo: "Nome no relatório", largura: 30 }, { titulo: "Tipo", largura: 14 }, { titulo: "UF", largura: 5 },
       { titulo: "WhatsApp", largura: 16 }, { titulo: "E-mail", largura: 26 }, { titulo: "Usadas pendentes", largura: 10, tipo: "numero" },
       { titulo: "Atrasadas", largura: 10, tipo: "numero" }, { titulo: "Dias da mais antiga", largura: 10, tipo: "numero" }, { titulo: "Peças novas", largura: 10, tipo: "numero" },
-      { titulo: "Meta", largura: 7, tipo: "numero" }, { titulo: "Situação do estoque", largura: 16 }, { titulo: "Devolução média (dias)", largura: 10, tipo: "numero" }, { titulo: "Observação", largura: 30 }, { titulo: "Prazo usadas (dias)", largura: 18, tipo: "numero" }, { titulo: "Regra usadas", largura: 16 }, { titulo: "Prazo novas (dias)", largura: 18, tipo: "numero" }, { titulo: "Regra novas", largura: 16 }, { titulo: "Capital / interior", largura: 18 }],
-    linhas: D.tecnicos.filter((t) => t.temDados || t.tipo === "ignorar").map((t) => [t.nome, t.nomeOriginal, TIPOS_TEC[t.tipo], t.regiao, fmtTelefone(t.telefone), t.email, t.nUsadas, t.nAtrasadas, t.maxDias, t.novasQtd, t.tipo === "tecnico" ? t.meta : "", t.tipo === "tecnico" ? STATUS_NOVAS[t.statusNovas].rotulo : "", t.mediaDiasDev != null ? Math.round(t.mediaDiasDev * 10) / 10 : "", t.obs, t.prazo, prazoValido(t.cad.prazoUsadas) !== null ? "Personalizado" : "Geral", t.prazoNovas, prazoValido(t.cad.prazoNovas) !== null ? "Personalizado" : "Geral", LOCALIDADES[t.localidade] || LOCALIDADES[""]]),
+      { titulo: "Limite máximo", largura: 16, tipo: "numero" }, { titulo: "Situação do estoque", largura: 16 }, { titulo: "Devolução média (dias)", largura: 10, tipo: "numero" }, { titulo: "Observação", largura: 30 }, { titulo: "Prazo usadas (dias)", largura: 18, tipo: "numero" }, { titulo: "Regra usadas", largura: 16 }, { titulo: "Prazo novas (dias)", largura: 18, tipo: "numero" }, { titulo: "Regra novas", largura: 16 }, { titulo: "Capital / interior", largura: 18 }],
+    linhas: D.tecnicos.filter((t) => t.temDados || t.estoqueConhecido || t.tipo === "ignorar").map((t) => [t.nome, t.nomeOriginal, TIPOS_TEC[t.tipo], t.regiao, fmtTelefone(t.telefone), t.email, t.nUsadas, t.nAtrasadas, t.maxDias, t.estoqueConhecido ? t.novasQtd : "", t.tipo === "tecnico" && t.meta ? t.meta : "", t.tipo === "tecnico" ? STATUS_NOVAS[t.statusNovas].rotulo : "", t.mediaDiasDev != null ? Math.round(t.mediaDiasDev * 10) / 10 : "", t.obs, t.prazo, prazoValido(t.cad.prazoUsadas) !== null ? "Personalizado" : "Geral", t.prazoNovas, prazoValido(t.cad.prazoNovas) !== null ? "Personalizado" : "Geral", LOCALIDADES[t.localidade] || LOCALIDADES[""]]),
   }]);
 }

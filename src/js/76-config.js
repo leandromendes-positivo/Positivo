@@ -16,12 +16,11 @@ function renderConfig() {
         <label class="campo"><span>Prazo geral para devolver peça usada</span><div class="com-sufixo"><input type="number" min="1" max="90" name="prazo" value="${esc(c.prazo)}" required><em>dias</em></div><small>Vale para quem não tem prazo próprio no cadastro do técnico.</small></label>
         <label class="campo"><span>Avisar "vence em breve" a partir de</span><div class="com-sufixo"><input type="number" min="0" max="90" name="alerta" value="${esc(c.alerta)}" required><em>dias</em></div><small>Para lembrar o técnico antes de atrasar.</small></label>
         <label class="campo"><span>Prazo geral observado de peças novas</span><div class="com-sufixo"><input type="number" min="1" max="90" name="prazoNovas" value="${esc(c.prazoNovas)}" required><em>dias</em></div><small>Contado da primeira observação do material. Prazos próprios do técnico prevalecem.</small></label>
-        <label class="campo"><span>Meta de peças novas por técnico</span><div class="com-sufixo"><input type="number" min="0" max="10000" name="meta" value="${esc(c.meta)}" required><em>peças</em></div><small>Pode ser trocada por técnico no cadastro.</small></label>
-        <label class="campo"><span>Tolerância da meta</span><div class="com-sufixo"><input type="number" min="0" max="1000" name="tolerancia" value="${esc(c.tolerancia)}" required><em>± peças</em></div><small>Na meta = entre ${Math.max(0, c.meta - c.tolerancia)} e ${Number(c.meta) + Number(c.tolerancia)} peças.</small></label>
+        <label class="campo"><span>Limite máximo de peças novas por técnico</span><div class="com-sufixo"><input type="number" min="0" max="10000" name="meta" value="${esc(c.meta)}" required><em>peças</em></div><small>Até o limite, inclusive zero, está regular. Pode ser personalizado por técnico; 0 desativa o limite.</small></label>
       </div>
       <fieldset class="campo"><legend>Tipos de envio que contam no estoque de novas</legend>
         <div class="checks">${tipos.map((t) => `<label class="check-inline"><input type="checkbox" name="tipo" value="${esc(t)}" ${ignorados.has(t) ? "" : "checked"}> ${tagTipoEnvio(t)}</label>`).join("")}</div>
-        <small>Desmarque um tipo (por exemplo PP, peça enviada para um chamado específico) se ele não deve contar na meta.</small>
+        <small>Desmarque um tipo (por exemplo PP, peça enviada para um chamado específico) se ele não deve contar no limite.</small>
       </fieldset>
       <div class="form-acoes"><button class="btn prim" type="submit">Salvar regras</button></div>
     </form>`)}
@@ -92,12 +91,11 @@ async function salvarFormulario(form) {
     const prazo = Math.max(1, parseInt(dados.get("prazo"), 10) || 7);
     const alerta = Math.min(prazo, Math.max(0, parseInt(dados.get("alerta"), 10) || 0));
     const meta = Math.max(0, parseInt(dados.get("meta"), 10) || 0);
-    const tolerancia = Math.max(0, parseInt(dados.get("tolerancia"), 10) || 0);
     const marcados = new Set(dados.getAll("tipo"));
     const todos = [...form.querySelectorAll('input[name="tipo"]')].map((i) => i.value);
     const tiposIgnorados = todos.filter((t) => !marcados.has(t));
     const prazoNovas = Math.max(1, Math.min(90, parseInt(dados.get("prazoNovas"), 10) || 7));
-    await salvarConfig({ prazo, prazoNovas, alerta, meta, tolerancia, tiposIgnorados });
+    await salvarConfig({ prazo, prazoNovas, alerta, meta, tolerancia: 0, tiposIgnorados });
     toast("Regras salvas. Os números foram recalculados.");
   } else if (form.dataset.form === "mensagens") {
     await salvarConfig({ msgCobranca: String(dados.get("msgCobranca") || ""), msgLembrete: String(dados.get("msgLembrete") || "") });
@@ -118,8 +116,8 @@ async function exportarTudo() {
     },
     {
       nome: "Estoque por técnico",
-      colunas: [{ titulo: "Técnico", largura: 30 }, { titulo: "Tipo", largura: 14 }, { titulo: "UF", largura: 5 }, { titulo: "Peças novas", largura: 10, tipo: "numero" }, { titulo: "Meta", largura: 7, tipo: "numero" }, { titulo: "Situação", largura: 16 }],
-      linhas: D.tecnicos.filter((t) => t.novasLinhas.length).map((t) => [t.nome, TIPOS_TEC[t.tipo], t.regiao, t.novasQtd, t.tipo === "tecnico" ? t.meta : "", t.tipo === "tecnico" ? STATUS_NOVAS[t.statusNovas].rotulo : ""]),
+      colunas: [{ titulo: "Técnico", largura: 30 }, { titulo: "Tipo", largura: 14 }, { titulo: "UF", largura: 5 }, { titulo: "Peças novas", largura: 10, tipo: "numero" }, { titulo: "Limite máximo", largura: 16, tipo: "numero" }, { titulo: "Situação", largura: 16 }],
+      linhas: D.tecnicos.filter((t) => t.estoqueConhecido || t.temDados).map((t) => [t.nome, TIPOS_TEC[t.tipo], t.regiao, t.estoqueConhecido ? t.novasQtd : "", t.tipo === "tecnico" && t.meta ? t.meta : "", t.tipo === "tecnico" ? STATUS_NOVAS[t.statusNovas].rotulo : ""]),
     },
     {
       nome: "Devolvidas",

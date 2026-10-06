@@ -205,15 +205,16 @@ function graficoLinhas(el, { datas, series, vazio }) {
 }
 
 // --------------------------------------------------- medidor de estoque
-/** Barra de estoque: faixa ideal sombreada, marca da meta e a quantidade. */
+/** Barra de estoque: intervalo de zero até o limite, marca do teto e quantidade. */
 function medidorEstoque(t) {
-  const fim = Math.max(t.meta * 2, t.metaMax + 2, 10);
+  if (t.estoqueConhecido === false) return '<span class="nota">Sem relatório</span>';
+  const fim = Math.max(t.meta * 2, 10);
   const pct = (v) => Math.max(0, Math.min(100, (v / fim) * 100));
   const passou = t.novasQtd > fim;
-  const cor = { abaixo: "var(--warn)", ideal: "var(--good)", acima: "var(--serious)", sem_meta: "var(--muted)" }[t.statusNovas];
-  return `<div class="medidor" title="${esc(`${fmtNum(t.novasQtd)} peças · meta ${t.meta} (faixa ${t.metaMin}–${t.metaMax})`)}">
+  const cor = { ideal: "var(--good)", acima: "var(--serious)", sem_meta: "var(--muted)" }[t.statusNovas];
+  return `<div class="medidor" title="${esc(`${fmtNum(t.novasQtd)} peças · ${t.meta ? `limite máximo ${t.meta}` : 'sem limite configurado'}`)}">
     <div class="medidor-trilho">
-      ${t.meta ? `<span class="medidor-faixa" style="left:${pct(t.metaMin)}%;width:${pct(t.metaMax) - pct(t.metaMin)}%"></span>` : ""}
+      ${t.meta ? `<span class="medidor-faixa" style="left:0;width:${pct(t.meta)}%"></span>` : ""}
       <span class="medidor-barra" style="width:${pct(t.novasQtd)}%;background:${cor}"></span>
       ${t.meta ? `<span class="medidor-meta" style="left:${pct(t.meta)}%"></span>` : ""}
     </div>

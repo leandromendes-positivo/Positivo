@@ -230,6 +230,7 @@ button.kpi:hover { border-color: var(--line-2); box-shadow: var(--sombra); }
 .kpi.crit .kpi-valor { color: var(--crit-ink); }
 .kpi.alerta .kpi-valor { color: var(--warn-ink); }
 .kpi.grave .kpi-valor { color: var(--serious-ink); }
+.kpi.bom .kpi-valor { color: var(--good-ink); }
 .kpi-sub { font-size: 13px; color: var(--ink-2); display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; }
 .delta, .tendencia { display: inline-flex; align-items: center; gap: 3px; font-weight: 600; font-size: 12.5px; }
 .delta .ic, .tendencia .ic { width: 13px; height: 13px; stroke-width: 2.4; }

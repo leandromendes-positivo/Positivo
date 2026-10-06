@@ -29,7 +29,7 @@ try {
   assert.equal(ordem, true);
   assert.deepEqual(await page.locator('.kpi-usadas .kpi-partes strong').allTextContents(), ['5', '5']);
   assert.deepEqual(await page.locator('.kpi-cobrancas .kpi-partes strong').allTextContents(), ['3', '0']);
-  assert.deepEqual(await page.locator('.kpi-estoque .kpi-partes strong').allTextContents(), ['1', '2', '1']);
+  assert.deepEqual(await page.locator('.kpi-estoque .kpi-partes strong').allTextContents(), ['2', '2', '0']);
 
   // O estado amplia sem alterar a cor de risco, o estado selecionado ou o alvo do clique.
   const estado = page.locator('.mapa-estado[data-uf="PR"]');
@@ -62,15 +62,15 @@ try {
       cobrarTec: [{ ultimaCobranca: null }, { ultimaCobranca: { em: '2026-10-05T08:00:00' } }],
       frescor: [{ tipo: 'novas', regiao: 'PR', em: '2026-10-05T09:00:00' }],
       tecnicos: [
-        { tipo: 'tecnico', temDados: true, regiao: 'PR', novasQtd: 3, meta: 10, statusNovas: 'abaixo' },
+        { tipo: 'tecnico', temDados: true, regiao: 'PR', novasQtd: 3, meta: 10, statusNovas: 'ideal' },
         { tipo: 'tecnico', temDados: true, regiao: 'PR', novasQtd: 20, meta: 10, statusNovas: 'acima' },
-        { tipo: 'tecnico', temDados: true, regiao: 'SC', novasQtd: 0, meta: 10, statusNovas: 'abaixo' },
+        { tipo: 'tecnico', temDados: true, regiao: 'SC', novasQtd: 0, meta: 10, statusNovas: 'ideal' },
       ] };
     const a = indicadoresOperacionais(D);
-    return [a.noPrazo, a.idadeMedia, a.criticas, a.semContatoHoje, a.reposicao, a.excesso, riscoEstado(D, { regiao: 'PR', total: 5 }, false).percentual];
+    return [a.noPrazo, a.idadeMedia, a.criticas, a.semContatoHoje, a.estoque.dentro.length, a.excesso, riscoEstado(D, { regiao: 'PR', total: 5 }, false).percentual];
   });
-  assert.deepEqual(metricas, [.6, 10.4, 2, 1, 7, 10, 40]);
-  assert.deepEqual(await page.evaluate(() => [0, 10, 25, 50, 75].map((n) => riscoEstado({}, { abaixo: n, acima: 0, ideal: 100 - n }, true).nivel)), ['baixo', 'baixo', 'moderado', 'alto', 'critico']);
+  assert.deepEqual(metricas, [.6, 10.4, 2, 1, 1, 10, 40]);
+  assert.deepEqual(await page.evaluate(() => [0, 10, 25, 50, 75].map((n) => riscoEstado({}, { acima: n, ideal: 100 - n }, true).nivel)), ['baixo', 'baixo', 'moderado', 'alto', 'critico']);
   assert.equal(await page.evaluate(() => riscoEstado({ itens: [] }, { regiao: 'PR', total: 0 }, false).percentual), 0);
   // Uma planilha vazia já importada é dado conhecido; não equivale a ausência de relatório.
   assert.equal(await page.evaluate(() => dadosMapa({ porRegiao: [], frescor: [{ regiao: 'AC', tipo: 'usadas', em: '2026-10-05' }] })[0].total), 0);
@@ -82,7 +82,7 @@ try {
   await parcial.setInputFiles('#entrada-topo', fs.readdirSync('exemplos').filter((f) => f.endsWith('.csv') && f !== 'SC Novas.csv').map((f) => path.resolve('exemplos', f)));
   await parcial.waitForFunction(() => !!UI.im.resultado);
   await parcial.locator('[data-nav="estoque"]').click();
-  assert.equal(await parcial.locator('.kpi-valor').nth(2).innerText(), '0', 'SC sem relatório não entra como estoque abaixo da meta');
+  assert.equal(await parcial.locator('.kpi-valor').nth(2).innerText(), '1', 'SC sem relatório não conta como estoque dentro do limite');
   assert.match(await parcial.locator('.tabela-estoque tbody tr').filter({ hasText: 'Carlos' }).innerText(), /Sem relatório/);
   await parcial.close();
 
@@ -136,7 +136,7 @@ try {
   assert.equal(await page.locator('[data-acao="aba-us"][data-aba="pendentes"] .contador').innerText(), '10', 'soma peças, inclusive chamados com mais de uma unidade');
   assert.equal(await page.locator('[data-acao="status-us"][data-status="todas"] span').innerText(), '10');
   await page.locator('[data-nav="painel"]').click();
-  await page.evaluate(() => { UI.es.regiao = 'ZZ'; UI.es.status = 'abaixo'; });
+  await page.evaluate(() => { UI.es.regiao = 'ZZ'; UI.es.status = 'acima'; });
   await page.locator('.kpi-estoque').click();
   assert.deepEqual(await page.evaluate(() => [UI.es.regiao, UI.es.status]), ['', '']);
 

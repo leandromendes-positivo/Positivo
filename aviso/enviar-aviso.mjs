@@ -64,7 +64,9 @@ export function montarAviso(resumo, hoje, painel = "") {
     extras.push("Prometeram devolver hoje: " + dia.previsoes.map((x) => `${x.nome} (${pecas(x.pecas)})`).join(", "));
   }
   const est = resumo.estoque || {};
-  extras.push(`Estoque de novas: ${tecnicos((est.abaixo || []).length)} abaixo da meta e ${est.acima || 0} acima.`);
+  extras.push(est.regra === 'limite_maximo'
+    ? `Estoque de novas: ${tecnicos(est.ideal || 0)} dentro do limite e ${tecnicos(est.acima || 0)} acima; ${pecas(est.excesso || 0)} em excesso.`
+    : 'Estoque de novas: consulte o painel atualizado para conferir o limite máximo.');
   const ultima = (resumo.atualizacao || []).map((a) => a.em || "").sort().pop() || "";
   if (ultima.slice(0, 10) !== hoje) extras.push("Lembrete: importe as planilhas de hoje no painel para atualizar as devoluções.");
 

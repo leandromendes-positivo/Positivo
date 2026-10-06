@@ -250,9 +250,9 @@ body { font-size: 14px; }
 .historico-inicial strong { font-size: 15px; font-weight: 500; }
 .historico-inicial > .ic { width: 28px; height: 28px; }
 .historico-inicial span { border-radius: 3px; }
-.reposicao-lista .link-forte { font-weight: 500; }
-.reposicao-lista li > strong { font: 500 19px var(--f-mono); }
-.reposicao-lista small { font-family: var(--f-ui); }
+.excesso-lista .link-forte { font-weight: 500; }
+.excesso-lista li > strong { font: 500 19px var(--f-mono); }
+.excesso-lista small { font-family: var(--f-ui); }
 /* Cabeçalhos e áreas de trabalho compartilhados pelas demais seções. */
 .secao-resumo { display: flex; justify-content: space-between; gap: 24px; align-items: center; padding: 22px; background: var(--surface); border: 1px solid var(--line); border-top: 2px solid var(--accent); border-radius: 6px; margin-bottom: 20px; }
 .secao-apresentacao { display: flex; gap: 13px; align-items: center; min-width: 0; }

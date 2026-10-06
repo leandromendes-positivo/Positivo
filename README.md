@@ -1,6 +1,6 @@
 # Controle de Peças
 
-Painel web para acompanhar, todo dia, as **peças usadas** que cada técnico ainda não devolveu (prazo de 7 dias) e o **estoque de peças novas** de cada um (meta de ~10).
+Painel web para acompanhar, todo dia, as **peças usadas** que cada técnico ainda não devolveu (prazo de 7 dias) e o **estoque de peças novas** de cada um (limite máximo padrão de 10 peças).
 
 - **Site:** https://leandromendes-positivo.github.io/Positivo/ (abre no computador e no celular, com login Google ou Microsoft após configurar os provedores)
 - **Dados:** Firebase (Firestore), na conta Google escolhida por você. Nada de planilha ou dado de técnico fica neste repositório.
@@ -81,12 +81,12 @@ A ativação inicial exige configuração no Firebase e, para Microsoft, no Entr
 
 ### Visão geral da operação
 
-- **Indicadores no topo:** peças pendentes, técnicos a cobrar, compromissos de hoje e estoque conhecido. Fotografias cobrem todo o fundo dos cartões nos dois temas, com enquadramento proporcional e sobreposição para leitura dos números. As barras representam peças dentro/fora do prazo, contatos da fila atual, compromissos dos próximos 7 dias e técnicos por faixa de estoque. Os cartões abrem as consultas correspondentes e limpam filtros antigos.
+- **Indicadores no topo:** peças pendentes, técnicos a cobrar, compromissos de hoje e estoque conhecido. Fotografias cobrem todo o fundo dos cartões nos dois temas, com enquadramento proporcional e sobreposição para leitura dos números. As barras representam peças dentro/fora do prazo, contatos da fila atual, compromissos dos próximos 7 dias e técnicos dentro ou acima do limite de estoque. Os cartões abrem as consultas correspondentes e limpam filtros antigos.
 - **Prioridades de cobrança:** técnicos a cobrar, previsões vencidas e devoluções previstas hoje. As promessas vencidas aparecem primeiro, seguidas das peças mais antigas. O botão **Cobrar** abre o registro de contato e previsão.
 - **Agenda de devoluções:** compromissos dos próximos 7 dias, com quantidade de peças e técnicos por data. Registrar uma previsão não confirma a devolução.
-- **Mapa do Brasil:** selecione um estado para conferir pendências ou estoque. A escala de verde a coral representa quatro faixas da taxa de atraso: 0–10%, >10–25%, >25–50% e >50%. No modo Novas, representa a proporção de técnicos fora da faixa de estoque. Estados sem planilha usam hachuras; uma planilha vazia importada conta como dado conhecido. O mapa não usa localização individual dos técnicos.
+- **Mapa do Brasil:** selecione um estado para conferir pendências ou estoque. A escala de verde a coral representa quatro faixas da taxa de atraso: 0–10%, >10–25%, >25–50% e >50%. No modo Novas, representa a proporção de técnicos acima do limite máximo de estoque. Estados sem planilha usam hachuras; uma planilha vazia importada conta como dado conhecido. O mapa não usa localização individual dos técnicos.
 - **Indicadores e gráficos:** cumprimento do prazo, idade média ponderada pela quantidade de peças, atraso crítico (mais de duas vezes o prazo) e devoluções confirmadas em 7 dias. A evolução usa azul para pendências e coral tracejado para atrasos. O histórico começa com suas importações, sem números simulados.
-- **Demais telas:** cobranças, peças, estoque, técnicos, importação e configurações têm resumos operacionais, tabelas e filtros com a mesma organização visual. Relatórios de novas ausentes não contam como estoque zerado nem como necessidade de reposição.
+- **Demais telas:** cobranças, peças, estoque, técnicos, importação e configurações têm resumos operacionais, tabelas e filtros com a mesma organização visual. Relatórios de novas ausentes não contam como estoque zerado nem como estoque dentro do limite.
 - **Celular e acessibilidade:** layout adaptável, filtros por teclado, versões em tabela dos gráficos e animações reduzidas conforme a preferência do dispositivo.
 
 O mapa amplia o estado ao passar o cursor ou receber foco por teclado; sair do estado ou pressionar Escape recolhe o destaque. A ampliação mantém a cor de risco e não muda a seleção. Estados na mesma faixa têm a mesma cor. Os controles também permitem aproximar o mapa inteiro e voltar à visão do Brasil. A evolução tem leitura por dia com as setas ← →, Home e End. Cartões, barras, linhas e medidores têm animações de entrada; os indicadores reagem ao cursor com uma inclinação suave e realce da imagem. Trocar filtros do mapa, da fila ou da agenda atualiza somente aquele componente. As animações respeitam a preferência de movimento reduzido.
@@ -130,10 +130,10 @@ Alertas, mensagens, resumo diário, mapa, consultas e rankings respeitam a regra
 | Prazo para devolver peça usada (a partir da Data FT) | 7 dias |
 | Prazo observado de novas (primeira aparição do material) | 7 dias |
 | Aviso de "vence em breve" | a partir de 5 dias |
-| Meta de peças novas por técnico | 10 (± 3) |
+| Limite máximo de peças novas por técnico | 10, sem tolerância adicional |
 | Tipos de envio que contam no estoque | todos (BACKUP, PP, REP. BACKUP) |
 
-Códigos numéricos no lugar do nome do técnico (ex.: `110301019`) são tratados como **base/depósito** e ficam fora da meta; dá para mudar em **Técnicos**.
+Códigos numéricos no lugar do nome do técnico (ex.: `110301019`) são tratados como **base/depósito** e ficam fora do limite dos técnicos; dá para mudar em **Técnicos**.
 
 ---
 
@@ -190,6 +190,11 @@ node testes/interface-e2e.mjs
 node testes/analises-e2e.mjs
 node testes/prazos-e2e.mjs
 node testes/inventario-e2e.mjs
+node testes/limite-estoque-e2e.mjs
 ```
 
 Os testes abrem `pagina-completa.html` e exigem armazenamento em memória antes de importar dados. Verificam cobranças, previsões, agenda, devoluções, mapa, gráficos, cálculos, filtros combinados, agrupamento, períodos civis, uso sem duplicação, saídas classificadas, devoluções parciais, persistência e desfazer. A regressão de interface cobre contraste dos botões em repouso, com cursor e foco, seleção parcial, quantidades em lote, avisos e navegação por teclado nas janelas dos dois temas. Use `PW_PATH` e `CHROMIUM` para indicar instalações específicas; `URL_PAINEL_TESTE` permite mudar a URL local. O teste de prazos verifica herança, limites, alertas, mensagens, histórico, rankings e falhas de gravação. O teste com emuladores Firebase também verifica prazos personalizados e classificação em dois dispositivos, recarregamento e reversão das saídas de novas.
+
+### Limite de peças novas
+
+Até **10 peças**, inclusive zero, está dentro do limite padrão. **11 peças já significam excesso de 1**; não existe alerta de reposição por estoque baixo nem tolerância adicional. O dashboard, mapa, filtros, ficha do técnico, exportações e aviso diário seguem essa regra. Limites personalizados já cadastrados continuam válidos; 0 na configuração significa sem limite. Sem relatório de novas, o estoque fica como desconhecido, nunca como zero.

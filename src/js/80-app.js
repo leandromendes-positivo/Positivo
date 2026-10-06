@@ -174,8 +174,8 @@ const ACOES = {
       irPara("usadas");
     }
   },
-  "painel-reposicao": () => {
-    Object.assign(UI.es, { regiao: "", status: "abaixo", busca: "", bases: false });
+  "painel-excesso": () => {
+    Object.assign(UI.es, { regiao: "", status: "acima", busca: "", bases: false });
     irPara("estoque");
   },
   tema: () => Tema.alternar(),

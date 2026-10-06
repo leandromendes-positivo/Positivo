@@ -96,8 +96,7 @@ function pillStatus(i, cfg) {
 function pillNovas(t) {
   const s = STATUS_NOVAS[t.statusNovas];
   let texto = s.rotulo;
-  if (t.statusNovas === "abaixo") texto = `Repor ${t.meta - t.novasQtd}`;
-  else if (t.statusNovas === "acima") texto = `Excesso de ${fmtNum(t.novasQtd - t.meta)}`;
+  if (t.statusNovas === "acima") texto = `Excesso de ${fmtNum(t.excessoNovas)}`;
   return pill(s.classe, texto, s.icone);
 }
 function avatar(nome, tipo) {

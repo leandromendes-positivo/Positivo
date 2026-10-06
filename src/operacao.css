@@ -247,16 +247,16 @@ input:focus, select:focus, textarea:focus { box-shadow: 0 0 0 4px var(--accent-s
 .historico-inicial strong { font-size: 16px; font-weight: 750; }
 .historico-inicial p { color: var(--muted); max-width: 42ch; font-size: 12px; }
 .historico-inicial span { font-size: 11px; color: var(--accent); background: var(--accent-soft); padding: 6px 12px; border-radius: 8px; }
-.reposicao-lista { list-style: none; padding: 0; margin: 0 0 18px; }
-.reposicao-lista li { display: flex; align-items: center; gap: 14px; padding: 17px 0; border-bottom: 1px solid var(--line); }
-.reposicao-lista li:last-child { border: 0; }
-.reposicao-lista li > div { flex: 1; min-width: 0; }
-.reposicao-lista .link-forte { font-size: 13px; }
-.reposicao-lista li > div > span { display: block; color: var(--muted); font-size: 11px; margin-top: 5px; }
-.reposicao-lista li > strong { font-size: 22px; font-weight: 800; color: var(--warn-ink); text-align: right; }
-.reposicao-lista small { display: block; font-size: 10px; font-weight: 500; color: var(--muted); }
+.excesso-lista { list-style: none; padding: 0; margin: 0 0 18px; }
+.excesso-lista li { display: flex; align-items: center; gap: 14px; padding: 17px 0; border-bottom: 1px solid var(--line); }
+.excesso-lista li:last-child { border: 0; }
+.excesso-lista li > div { flex: 1; min-width: 0; }
+.excesso-lista .link-forte { font-size: 13px; }
+.excesso-lista li > div > span { display: block; color: var(--muted); font-size: 11px; margin-top: 5px; }
+.excesso-lista li > strong { font-size: 22px; font-weight: 800; color: var(--serious-ink); text-align: right; }
+.excesso-lista small { display: block; font-size: 10px; font-weight: 500; color: var(--muted); }
 .barra-meta { height: 5px; background: var(--surface-3); border-radius: 5px; overflow: hidden; margin-top: 10px; max-width: 230px; }
-.barra-meta i { display: block; height: 100%; background: var(--warn); border-radius: 5px; transform-origin: left; }
+.barra-meta i { display: block; height: 100%; background: var(--serious); border-radius: 5px; transform-origin: left; }
 .cartao-devolucoes .lista-simples { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 30px; }
 .cartao-devolucoes .vazio { padding: 26px; }
 /* Continuidade visual nas listas, formulários e janelas. */
@@ -395,7 +395,7 @@ input:focus, select:focus, textarea:focus { box-shadow: 0 0 0 4px var(--accent-s
   .cartao-devolucoes .lista-simples { grid-template-columns: minmax(0, 1fr); }
   .historico-inicial { padding: 20px 4px; min-height: 200px; }
   .boas-vindas { padding: 24px; }
-  .cartao-reposicao .avatar { display: none; }
+  .cartao-excesso .avatar { display: none; }
   .rail .marca-identidade .logo-positivo { width: 118px; }
   .rail .marca-identidade { gap: 12px; }
   .modal-corpo, .modal-topo { padding: 18px; }

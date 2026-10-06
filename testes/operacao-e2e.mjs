@@ -31,7 +31,7 @@ try {
   await parcial.locator('[data-nav="painel"]').click();
   assert.equal(await parcial.locator(".indicadores-operacao .kpi").last().locator(".kpi-valor").innerText(), "—", "sem relatório de novas não significa estoque zero");
   assert.deepEqual(await parcial.locator('.kpi-estoque .kpi-partes strong').allTextContents(), ['—', '—', '—']);
-  assert.match(await parcial.locator(".cartao-reposicao").innerText(), /Falta a planilha/);
+  assert.match(await parcial.locator(".cartao-excesso").innerText(), /Falta a planilha/);
   await parcial.locator('[data-acao="painel-mapa-modo"][data-modo="novas"]').click();
   assert.equal(await parcial.locator('.mapa-estado[role="button"]').count(), 0);
   await parcial.close();
@@ -128,8 +128,8 @@ try {
   await page.locator('[data-acao="alternar-tabela"][data-grafico="evolucao"]').click();
   assert.equal(await page.locator(".cartao-evolucao tbody tr").count(), 2);
   await page.locator('[data-acao="alternar-tabela"][data-grafico="evolucao"]').click();
-  await page.locator('[data-acao="painel-reposicao"]').click();
-  assert.deepEqual(await page.evaluate(() => [UI.pagina, UI.es.status, UI.es.regiao, UI.es.bases]), ["estoque", "abaixo", "", false]);
+  await page.locator('[data-acao="painel-excesso"]').click();
+  assert.deepEqual(await page.evaluate(() => [UI.pagina, UI.es.status, UI.es.regiao, UI.es.bases]), ["estoque", "acima", "", false]);
   await page.locator('[data-nav="painel"]').click();
   await page.locator('[data-acao="painel-fila"][data-fila="cobrar"]').click();
   await page.locator('[data-acao="painel-mapa-modo"][data-modo="usadas"]').click();

@@ -13,9 +13,9 @@ function renderConfig() {
   return `<div class="grade-config">
     ${cartao("Regras do controle", `<form class="form" data-form="regras">
       <div class="campos-2">
-        <label class="campo"><span>Prazo para devolver peça usada</span><div class="com-sufixo"><input type="number" min="1" max="90" name="prazo" value="${esc(c.prazo)}" required><em>dias</em></div><small>Passou disso, o técnico entra na lista de cobrança.</small></label>
+        <label class="campo"><span>Prazo geral para devolver peça usada</span><div class="com-sufixo"><input type="number" min="1" max="90" name="prazo" value="${esc(c.prazo)}" required><em>dias</em></div><small>Vale para quem não tem prazo próprio no cadastro do técnico.</small></label>
         <label class="campo"><span>Avisar "vence em breve" a partir de</span><div class="com-sufixo"><input type="number" min="0" max="90" name="alerta" value="${esc(c.alerta)}" required><em>dias</em></div><small>Para lembrar o técnico antes de atrasar.</small></label>
-        <label class="campo"><span>Prazo observado de peças novas</span><div class="com-sufixo"><input type="number" min="1" max="90" name="prazoNovas" value="${esc(c.prazoNovas)}" required><em>dias</em></div><small>Contado da primeira observação do material no estoque. Não é a data de recebimento.</small></label>
+        <label class="campo"><span>Prazo geral observado de peças novas</span><div class="com-sufixo"><input type="number" min="1" max="90" name="prazoNovas" value="${esc(c.prazoNovas)}" required><em>dias</em></div><small>Contado da primeira observação do material. Prazos próprios do técnico prevalecem.</small></label>
         <label class="campo"><span>Meta de peças novas por técnico</span><div class="com-sufixo"><input type="number" min="0" max="10000" name="meta" value="${esc(c.meta)}" required><em>peças</em></div><small>Pode ser trocada por técnico no cadastro.</small></label>
         <label class="campo"><span>Tolerância da meta</span><div class="com-sufixo"><input type="number" min="0" max="1000" name="tolerancia" value="${esc(c.tolerancia)}" required><em>± peças</em></div><small>Na meta = entre ${Math.max(0, c.meta - c.tolerancia)} e ${Number(c.meta) + Number(c.tolerancia)} peças.</small></label>
       </div>

@@ -26,11 +26,11 @@ function linhasConsulta(D = derivar()) {
   };
   for (const i of D.itens) completar({ ...i, tipo: 'usadas', origem: 'atual', data: (i.dataFT || i.desde || '').slice(0, 10), referencia: i.dataFT ? 'Data FT' : 'Primeira observação', situacao: STATUS[i.status].rotulo });
   for (const t of D.tecnicos) for (const n of t.novasLinhas) {
-    const prazo = Number(D.cfg.prazoNovas) || 7, atraso = Math.max(0, n.dias - prazo);
-    completar({ ...n, tipo: 'novas', origem: 'atual', data: n.desde, referencia: 'Primeira observação', atraso, atrasada: atraso > 0, status: atraso > 0 ? 'atrasada' : 'no_prazo', situacao: atraso > 0 ? 'Acima de ' + prazo + ' dias' : 'No prazo observado' });
+    const prazo = prazoDoTecnico(n.tid, 'novas', D.cfg), atraso = Math.max(0, n.dias - prazo);
+    completar({ ...n, prazo, tipo: 'novas', origem: 'atual', data: n.desde, referencia: 'Primeira observação', atraso, atrasada: atraso > 0, status: atraso > 0 ? 'atrasada' : 'no_prazo', situacao: atraso > 0 ? 'Acima de ' + prazo + ' dias' : 'No prazo observado' });
   }
-  for (const d of E.devolucoes) completar({ ...d, tipo: 'usadas', origem: 'devolvida', data: d.em.slice(0, 10), referencia: 'Saída do relatório', status: 'devolvida', situacao: 'Devolvida', atrasada: d.dias > (d.prazo || D.cfg.prazo), atraso: Math.max(0, d.dias - (d.prazo || D.cfg.prazo)) });
-  for (const m of E.movimentos) completar({ ...m, tipo: 'novas', origem: 'saida', data: m.em.slice(0, 10), referencia: 'Saída do relatório', status: m.destino, situacao: DESTINOS_NOVAS[m.destino] || DESTINOS_NOVAS.pendente, atrasada: m.dias > m.prazo, atraso: Math.max(0, m.dias - m.prazo) });
+  for (const d of E.devolucoes) completar({ ...d, prazo: prazoDaDevolucao(d, 'usadas', D.cfg), tipo: 'usadas', origem: 'devolvida', data: d.em.slice(0, 10), referencia: 'Saída do relatório', status: 'devolvida', situacao: 'Devolvida', atrasada: d.dias > prazoDaDevolucao(d, 'usadas', D.cfg), atraso: Math.max(0, d.dias - prazoDaDevolucao(d, 'usadas', D.cfg)) });
+  for (const m of E.movimentos) completar({ ...m, prazo: prazoDaDevolucao(m, 'novas', D.cfg), tipo: 'novas', origem: 'saida', data: m.em.slice(0, 10), referencia: 'Saída do relatório', status: m.destino, situacao: DESTINOS_NOVAS[m.destino] || DESTINOS_NOVAS.pendente, atrasada: m.dias > prazoDaDevolucao(m, 'novas', D.cfg), atraso: Math.max(0, m.dias - prazoDaDevolucao(m, 'novas', D.cfg)) });
   return linhas;
 }
 const FILTROS_CONSULTA = { busca: '', correspondencia: 'termos', tecnico: '', tid: '', tipo: '', origem: 'atual', regiao: '', familia: '', situacao: '', envio: '', documento: '', inicio: '', fim: '', diasMin: '', diasMax: '', qtdMin: '', qtdMax: '', responsavel: 'tecnico' };
@@ -81,11 +81,10 @@ function calcularDesempenho({ tipo = 'usadas', periodo = 'semana', referencia = 
   };
   const atual = tipo === 'usadas' ? D.itens : D.tecnicos.flatMap((t) => t.novasLinhas);
   const devolucoes = tipo === 'usadas' ? E.devolucoes : E.movimentos.filter((m) => m.destino === 'devolucao');
-  const prazoAtual = Number(tipo === 'usadas' ? D.cfg.prazo : D.cfg.prazoNovas) || 7;
   // No histórico, uma peça conta uma vez; não somamos repetidamente as fotos diárias.
   const avaliarAtraso = (i, encerrada) => {
     if (!permitido(i)) return;
-    const prazo = i.prazo || prazoAtual;
+    const prazo = encerrada ? prazoDaDevolucao(i, tipo, D.cfg) : prazoDoTecnico(i.tid, tipo, D.cfg);
     const base = (i.dataFT || i.desde || (encerrada ? somaDias(i.em.slice(0,10), -i.dias) : '')).slice(0, 10);
     const observada = (i.desde || base).slice(0, 10);
     if (!base || observada > fim) return;
@@ -97,15 +96,15 @@ function calcularDesempenho({ tipo = 'usadas', periodo = 'semana', referencia = 
     t.atrasadas += i.qtd; t[encerradaNoPeriodo ? 'encerradas' : 'abertas'] += i.qtd;
     const atraso = Math.max(0, diffDias(base, ultimo) - prazo);
     t.maiorAtraso = Math.max(t.maiorAtraso, atraso);
-    t.evidencias.atraso.push({ ...i, atraso, data: saida || '', detalhe: encerradaNoPeriodo ? 'Devolvida com atraso' : 'Pendente no fim do período' });
+    t.evidencias.atraso.push({ ...i, prazo, atraso, data: saida || '', detalhe: encerradaNoPeriodo ? 'Devolvida com atraso' : 'Pendente no fim do período' });
   };
   atual.forEach((i) => avaliarAtraso(i, false));
   devolucoes.forEach((i) => {
     avaliarAtraso(i, true);
     if (!permitido(i) || i.em.slice(0,10) < inicio || i.em.slice(0,10) > fim) return;
-    const t = tecnico(i), emDia = i.dias <= (i.prazo || prazoAtual);
+    const t = tecnico(i), prazo = prazoDaDevolucao(i, tipo, D.cfg), emDia = i.dias <= prazo;
     t.devolvidas += i.qtd; if (emDia) t.noPrazo += i.qtd;
-    t.evidencias.pontualidade.push({ ...i, data: i.em.slice(0,10), detalhe: emDia ? 'Devolvida no prazo' : 'Devolvida com atraso' });
+    t.evidencias.pontualidade.push({ ...i, prazo, data: i.em.slice(0,10), detalhe: emDia ? 'Devolvida no prazo' : 'Devolvida com atraso' });
   });
   const usos = new Map();
   if (tipo === 'usadas') {

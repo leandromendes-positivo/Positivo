@@ -118,7 +118,7 @@ function modalPrevisao(itens, titulo) {
 }
 
 /** Cadastro do técnico: nome de exibição, tipo, meta própria, contato. */
-function modalTecnico(tid) {
+function modalTecnico(tid, focarPrazos = false) {
   const D = derivar();
   const t = D.mapa.get(tid);
   const c = E.cadastro[tid] || {};
@@ -134,6 +134,14 @@ function modalTecnico(tid) {
         <label class="campo"><span>WhatsApp</span><input type="tel" name="telefone" maxlength="20" placeholder="(41) 99999-9999"></label>
         <label class="campo"><span>E-mail</span><input type="email" name="email" maxlength="120" placeholder="nome@empresa.com.br"></label>
       </div>
+      <fieldset class="prazos-personalizados"><legend>${icone('relogio')}Prazos de devolução deste técnico</legend>
+        <p>Defina prazos em dias para as peças em aberto e futuras. Deixe em branco para acompanhar a regra geral.</p>
+        <div class="campos-2">
+          <label class="campo"><span>Peças usadas · dias</span><input type="number" name="prazoUsadas" min="1" max="90" step="1" placeholder="Regra geral: ${prazoGeral()} dias" ${focarPrazos ? 'autofocus' : ''}><small>Contados da Data FT; sem essa data, da primeira importação.</small></label>
+          <label class="campo"><span>Peças novas · dias</span><input type="number" name="prazoNovas" min="1" max="90" step="1" placeholder="Regra geral: ${prazoGeral('novas')} dias"><small>Contados da primeira observação do material no estoque.</small></label>
+        </div>
+        <div class="prazos-personalizados-rodape"><span>Previsões combinadas continuam registradas. Devoluções com prazo salvo mantêm seu histórico.</span><button class="btn pequeno" type="button" data-prazos-gerais>Usar prazos gerais</button></div>
+      </fieldset>
       <label class="campo"><span>Observações</span><textarea name="obs" rows="3" maxlength="500"></textarea></label>
       ${t ? `<p class="nota">${plural(t.nUsadas, "peça usada pendente", "peças usadas pendentes")} · ${plural(t.novasTodas || 0, "peça nova", "peças novas")} no último relatório.</p>` : ""}
     </form>`,
@@ -142,21 +150,31 @@ function modalTecnico(tid) {
   const f = m.el.querySelector("#tec-form");
   f.apelido.value = c.apelido || "";
   f.meta.value = c.meta === 0 || c.meta ? c.meta : "";
+  f.prazoUsadas.value = prazoValido(c.prazoUsadas) ?? '';
+  f.prazoNovas.value = prazoValido(c.prazoNovas) ?? '';
   f.telefone.value = c.telefone || "";
   f.email.value = c.email || "";
   f.obs.value = c.obs || "";
+  m.el.querySelector('[data-prazos-gerais]').addEventListener('click', () => {
+    f.prazoUsadas.value = ''; f.prazoNovas.value = ''; f.prazoUsadas.focus();
+  });
+  const botaoSalvar = m.el.querySelector('[data-salvar]');
   const salvar = async () => {
+    if (botaoSalvar.disabled || !f.reportValidity()) return;
     const metaTxt = String(f.meta.value).trim();
     const campos = {
       apelido: limpar(f.apelido.value), tipo: f.tipo.value,
       meta: metaTxt === "" ? null : Math.max(0, parseInt(metaTxt, 10) || 0),
+      prazoUsadas: f.prazoUsadas.value === '' ? null : Number(f.prazoUsadas.value),
+      prazoNovas: f.prazoNovas.value === '' ? null : Number(f.prazoNovas.value),
       telefone: limpar(f.telefone.value), email: limpar(f.email.value), obs: String(f.obs.value || "").trim(),
     };
     try {
+      botaoSalvar.disabled = true;
       await salvarTecnico(tid, campos);
       m.fechar();
       toast("Cadastro salvo.");
-    } catch (e) { toast(erroAmigavel(e).message, "erro"); }
+    } catch (e) { toast(erroAmigavel(e).message, "erro"); botaoSalvar.disabled = false; }
   };
   m.el.querySelector("[data-salvar]").addEventListener("click", salvar);
   f.addEventListener("submit", (e) => { e.preventDefault(); salvar(); });

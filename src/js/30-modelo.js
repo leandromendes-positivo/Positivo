@@ -206,6 +206,32 @@ function nomeTecnico(tid) {
   return limpar(t.apelido) || nomeBonito(t.nome) || tid;
 }
 
+/** Campos vazios herdam a regra geral; valores próprios são dias inteiros de 1 a 90. */
+function prazoValido(valor) {
+  const n = Number(valor);
+  return valor !== null && valor !== '' && Number.isInteger(n) && n >= 1 && n <= 90 ? n : null;
+}
+function prazoGeral(tipo = 'usadas', cfg = E.config) {
+  return prazoValido(tipo === 'novas' ? cfg.prazoNovas : cfg.prazo) || 7;
+}
+function prazoDoTecnico(tid, tipo = 'usadas', cfg = E.config) {
+  const c = E.cadastro[tid] || {};
+  return prazoValido(tipo === 'novas' ? c.prazoNovas : c.prazoUsadas) || prazoGeral(tipo, cfg);
+}
+function regrasDoTecnico(tid, cfg = E.config) {
+  const geral = prazoGeral('usadas', cfg), prazo = prazoDoTecnico(tid, 'usadas', cfg);
+  const alertaGeral = Math.min(geral, Math.max(0, Number.isFinite(Number(cfg.alerta)) ? Number(cfg.alerta) : 5));
+  return { prazo, prazoNovas: prazoDoTecnico(tid, 'novas', cfg), alerta: Math.max(0, prazo - (geral - alertaGeral)) };
+}
+/** Nunca aplica um novo prazo pessoal retroativamente a uma devolução encerrada. */
+function prazoDaDevolucao(item, tipo = 'usadas', cfg = E.config) {
+  return prazoValido(item.prazo) || prazoGeral(tipo, cfg);
+}
+function temPrazosPersonalizados(tipo = 'usadas') {
+  const campo = tipo === 'novas' ? 'prazoNovas' : 'prazoUsadas';
+  return Object.values(E.cadastro).some((c) => c.tipo !== 'ignorar' && prazoValido(c[campo]) !== null);
+}
+
 function statusUsada(dias, previsao, cfg, hoje) {
   if (previsao && previsao < hoje) return "previsao_vencida";
   if (dias > cfg.prazo) return previsao ? "aguardando" : "atrasada";
@@ -226,7 +252,7 @@ function derivar() {
   const hoje = hojeISO();
   if (cacheDerivado && cacheDerivado.rev === E.rev && cacheDerivado.hoje === hoje) return cacheDerivado;
   const cfg = E.config;
-  const prazo = Number(cfg.prazo) || 7;
+  const prazo = prazoGeral('usadas', cfg);
   const tecs = new Map();
 
   function tec(tid, regiao) {
@@ -235,7 +261,7 @@ function derivar() {
     const c = E.cadastro[tid] || {};
     const metaPropria = c.meta === 0 || c.meta ? Number(c.meta) : null;
     t = {
-      tid, cad: c,
+      tid, cad: c, ...regrasDoTecnico(tid, cfg),
       nome: limpar(c.apelido) || nomeBonito(c.nome) || tid,
       nomeOriginal: c.nome || tid,
       regiao: c.regiao || regiao || "",
@@ -259,14 +285,15 @@ function derivar() {
     const base = (u.dataFT || u.desde || hoje).slice(0, 10);
     const dias = Math.max(0, diffDias(base, hoje));
     const previsao = an.p || "";
-    const status = statusUsada(dias, previsao, { ...cfg, prazo }, hoje);
     const t = tec(u.tid, u.regiao);
+    const status = statusUsada(dias, previsao, t, hoje);
     t.regioes.add(u.regiao);
     const item = {
       ...u, desc: E.catalogo[u.mat] || "", dias, previsao, obs: an.o || "",
       nCobrancas: an.c || 0, ultimaCobranca: an.uc || "",
       status, cobrar: status === "atrasada" || status === "previsao_vencida",
-      atrasada: dias > prazo, atraso: Math.max(0, dias - prazo), venceEm: prazo - dias,
+      prazo: t.prazo, alerta: t.alerta,
+      atrasada: dias > t.prazo, atraso: Math.max(0, dias - t.prazo), venceEm: t.prazo - dias,
       nome: t.nome, tipoTec: t.tipo,
     };
     itens.push(item);
@@ -282,7 +309,7 @@ function derivar() {
     const t = tec(n.tid, n.regiao);
     t.regioes.add(n.regiao);
     tiposEnvio.set(n.tipoEnvio, (tiposEnvio.get(n.tipoEnvio) || 0) + n.qtd);
-    t.novasLinhas.push({ ...n, desc: E.catalogo[n.mat] || "", conta: !ignorados.has(n.tipoEnvio), dias: Math.max(0, diffDias(n.desde, hoje)) });
+    t.novasLinhas.push({ ...n, prazo: t.prazoNovas, desc: E.catalogo[n.mat] || "", conta: !ignorados.has(n.tipoEnvio), dias: Math.max(0, diffDias(n.desde, hoje)) });
   }
   // técnicos cadastrados sem peças continuam aparecendo (exceto ignorados)
   for (const [tid, c] of Object.entries(E.cadastro)) if (c.tipo !== "ignorar" && !tecs.has(tid)) tec(tid, c.regiao);
@@ -335,7 +362,7 @@ function derivar() {
     const devs = devPorTec.get(t.tid) || [];
     t.devolvidas90 = somar(devs, (d) => d.qtd);
     t.mediaDiasDev = devs.length ? somar(devs, (d) => d.dias * d.qtd) / Math.max(1, t.devolvidas90) : null;
-    t.noPrazoDev = devs.length ? somar(devs.filter((d) => d.dias <= prazo), (d) => d.qtd) / Math.max(1, t.devolvidas90) : null;
+    t.noPrazoDev = devs.length ? somar(devs.filter((d) => d.dias <= prazoDaDevolucao(d)), (d) => d.qtd) / Math.max(1, t.devolvidas90) : null;
 
     if (!t.regiao && t.regioes.size) t.regiao = [...t.regioes][0];
     t.temDados = u.length > 0 || t.novasLinhas.length > 0;
@@ -363,7 +390,7 @@ function derivar() {
     maisAntiga: itens.reduce((m, i) => Math.max(m, i.dias), 0),
     previsoesHoje: itens.filter((i) => i.previsao === hoje),
     devolvidas7: somar(dev7, (d) => d.qtd),
-    devolvidas7NoPrazo: somar(dev7.filter((d) => d.dias <= prazo), (d) => d.qtd),
+    devolvidas7NoPrazo: somar(dev7.filter((d) => d.dias <= prazoDaDevolucao(d)), (d) => d.qtd),
     temHistoricoDev: E.importacoes.filter((i) => !i.desfeito).length > 1 || E.devolucoes.length > 0,
     novas: somar(ativosTec, (t) => t.novasQtd),
     novasTecnicos: ativosTec.length,
@@ -384,7 +411,11 @@ function derivar() {
   let ini = prazo * 2 + 1;
   for (const fim of [30, 60, 90]) if (fim >= ini) { faixas.push({ rotulo: `${ini}–${fim}`, min: ini, max: fim, status: "crit" }); ini = fim + 1; }
   faixas.push({ rotulo: `+${ini - 1}`, min: ini, max: Infinity, status: "crit" });
-  for (const f of faixas) f.valor = somar(itens.filter((i) => i.dias >= f.min && i.dias <= f.max), (i) => i.qtd);
+  const prazosPessoais = temPrazosPersonalizados();
+  for (const f of faixas) {
+    f.valor = somar(itens.filter((i) => i.dias >= f.min && i.dias <= f.max), (i) => i.qtd);
+    if (prazosPessoais) f.status = 'info'; // uma faixa de idade pode conter prazos diferentes
+  }
 
   // ---- por região
   const regioes = [...new Set([...itens.map((i) => i.regiao), ...E.novas.map((n) => n.regiao)])].sort();
@@ -427,7 +458,6 @@ function derivar() {
 // ============================================================ mensagens
 
 function montarMensagem(t, itens, modelo) {
-  const cfg = E.config;
   const max = 15;
   const ordenados = [...itens].sort((a, b) => b.dias - a.dias);
   let lista = ordenados.slice(0, max).map((i) =>
@@ -436,7 +466,7 @@ function montarMensagem(t, itens, modelo) {
   if (ordenados.length > max) lista += `\n• ... e mais ${ordenados.length - max} peça(s)`;
   const valores = {
     saudacao: saudacao(), nome: primeiroNome(t.nome), nome_completo: t.nome,
-    qtd: somar(itens, (i) => i.qtd), lista, prazo: cfg.prazo, regiao: t.regiao,
+    qtd: somar(itens, (i) => i.qtd), lista, prazo: prazoDoTecnico(t.tid), regiao: t.regiao,
   };
   return String(modelo || "").replace(/\{(\w+)\}/g, (m, k) => (k in valores ? valores[k] : m));
 }
@@ -461,9 +491,9 @@ function montarResumo() {
       for (const i of t.usadas) {
         const d = Math.max(0, diffDias((i.dataFT || i.desde).slice(0, 10), dia));
         pend += i.qtd;
-        if (d > cfg.prazo) atr += i.qtd;
+        if (d > t.prazo) atr += i.qtd;
         const prevVencida = i.previsao && i.previsao < dia;
-        if ((d > cfg.prazo && !(i.previsao && i.previsao >= dia)) || prevVencida) {
+        if ((d > t.prazo && !(i.previsao && i.previsao >= dia)) || prevVencida) {
           pecas += i.qtd;
           if (prevVencida) vencidas += i.qtd;
           maxDias = Math.max(maxDias, d);
@@ -472,7 +502,7 @@ function montarResumo() {
       if (pecas) {
         const uc = t.ultimaCobranca;
         cobrar.push({
-          nome: t.nome, regiao: t.regiao, tipo: t.tipo, pecas, maxDias, previsaoVencida: vencidas,
+          nome: t.nome, regiao: t.regiao, tipo: t.tipo, pecas, maxDias, prazo: t.prazo, previsaoVencida: vencidas,
           telefone: t.telefone ? fmtTelefone(t.telefone) : "",
           ultimaCobranca: uc ? uc.em : "", proxPrevisao: t.proxPrevisao || "",
         });
@@ -498,7 +528,7 @@ function montarResumo() {
       abaixo: D.tecnicos.filter((t) => t.tipo === "tecnico" && t.temDados && t.statusNovas === "abaixo").map((t) => ({ nome: t.nome, regiao: t.regiao, qtd: t.novasQtd })).slice(0, 40),
       acima: k.acima, ideal: k.ideal, totalNovas: k.novas,
     },
-    vencendoAmanha: somar(D.itens.filter((i) => i.dias === cfg.prazo), (i) => i.qtd),
+    vencendoAmanha: somar(D.itens.filter((i) => i.dias === i.prazo), (i) => i.qtd),
     previsoesHoje: k.previsoesHoje.length,
     atualizacao: D.frescor.map((f) => ({ arquivo: `${f.regiao} ${f.tipo}`, em: f.em || "" })),
   };
@@ -585,11 +615,19 @@ async function registrarCobranca(tid, { canal, previsao, obs, itens }) {
 }
 
 async function salvarTecnico(tid, campos) {
-  const atual = E.cadastro[tid] || {};
-  E.cadastro = { ...E.cadastro, [tid]: { ...atual, ...campos } };
-  mudou();
+  campos = { ...campos };
+  for (const campo of ['prazoUsadas', 'prazoNovas']) if (campo in campos) {
+    if (campos[campo] === null || campos[campo] === '') campos[campo] = null;
+    else {
+      const valor = prazoValido(campos[campo]);
+      if (valor === null) throw new Error('Informe um prazo inteiro entre 1 e 90 dias ou deixe em branco para usar a regra geral.');
+      campos[campo] = valor;
+    }
+  }
   await Armazem.mesclar("cadastro/tecnicos", { t: { [tid]: campos } }, E.existe.cadastro);
+  E.cadastro = { ...E.cadastro, [tid]: { ...(E.cadastro[tid] || {}), ...campos } };
   E.existe.cadastro = true;
+  mudou();
   agendarResumo();
 }
 

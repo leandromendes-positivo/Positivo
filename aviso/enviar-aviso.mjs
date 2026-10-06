@@ -51,9 +51,9 @@ export function montarAviso(resumo, hoje, painel = "") {
   const prazo = resumo.prazo || 7;
   const n = dia.totalTecnicos || 0;
   const tecnicos = (q) => `${q} ${q === 1 ? "técnico" : "técnicos"}`;
-  const cabecalho = n ? `${tecnicos(n)} para cobrar · ${pecas(dia.totalPecas)} com mais de ${prazo} dias` : "Nenhum técnico precisa ser cobrado hoje.";
+  const cabecalho = n ? `${tecnicos(n)} para cobrar · ${pecas(dia.totalPecas)} pendentes de cobrança` : "Nenhum técnico precisa ser cobrado hoje.";
   const itens = (dia.cobrar || []).slice(0, 10).map((c) => {
-    let l = `${c.nome} (${c.regiao}) — ${pecas(c.pecas)}, mais antiga com ${c.maxDias} dias`;
+    let l = `${c.nome} (${c.regiao}) — ${pecas(c.pecas)}, mais antiga com ${c.maxDias} dias · prazo de ${c.prazo || prazo} dias`;
     if (c.previsaoVencida > 0) l += " · previsão vencida";
     if (c.ultimaCobranca) l += ` · última cobrança ${ddmm(c.ultimaCobranca)}`;
     return l;

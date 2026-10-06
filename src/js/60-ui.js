@@ -62,7 +62,7 @@ function abrirModal({ titulo, subtitulo = "", corpo = "", rodape = "", largura =
   fundo.addEventListener("mousedown", (e) => { if (e.target === fundo) fechar(); });
   fundo.querySelectorAll("[data-fechar]").forEach((b) => b.addEventListener("click", fechar));
   document.body.appendChild(fundo);
-  const foco = fundo.querySelector("[autofocus], .modal-corpo input, .modal-corpo textarea, .modal-corpo select, .modal-rodape .prim") || fundo.querySelector("[data-fechar]");
+  const foco = fundo.querySelector('[autofocus]') || fundo.querySelector(".modal-corpo input, .modal-corpo textarea, .modal-corpo select, .modal-rodape .prim") || fundo.querySelector("[data-fechar]");
   setTimeout(() => { if (fundo.isConnected && janelaAtual() === fundo) foco.focus(); }, 30);
   return { el: fundo, fechar };
 }

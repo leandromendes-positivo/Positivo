@@ -47,7 +47,7 @@ function devolvidasRecentes(D) {
   }
   return `<ul class="lista-simples">${recentes.map((d) => `<li>
     <span class="ls-principal"><strong>${esc(nomeTecnico(d.tid))}</strong><span>${esc(E.catalogo[d.mat] || d.mat)}</span></span>
-    <span class="ls-lado">${pill(d.dias <= D.cfg.prazo ? "ok" : "grave", `${d.dias} ${d.dias === 1 ? "dia" : "dias"}`, d.dias <= D.cfg.prazo ? "ok" : "relogio")}<small>${fmtQuando(d.em)}</small></span>
+    <span class="ls-lado">${pill(d.dias <= prazoDaDevolucao(d) ? "ok" : "grave", `${d.dias} ${d.dias === 1 ? "dia" : "dias"}`, d.dias <= prazoDaDevolucao(d) ? "ok" : "relogio")}<small>${fmtQuando(d.em)}</small></span>
   </li>`).join("")}</ul>`;
 }
 
@@ -85,7 +85,7 @@ function renderPainel() {
   const operacao = indicadoresOperacionais(D);
   const agenda = agendaDoPainel(D);
   const indicadores = [
-    kpiOperacional({ tipo: "usadas", rotulo: "Peças usadas pendentes", valor: fmtNum(k.usadas), unidade: "peças em aberto", sub: at ? delta(k.usadas, at.usadas, true, ant.data) : `Prazo de devolução: ${cfg.prazo} dias`, legenda: "Peças por prazo", partes: [{ nome: "No prazo", valor: k.usadas - k.atrasadas, cor: "good" }, { nome: "Em atraso", valor: k.atrasadas, cor: "crit" }], rodape: "Consultar pendências", acao: 'data-acao="painel-usadas" data-status="todas"', icone: "retorno" }),
+    kpiOperacional({ tipo: "usadas", rotulo: "Peças usadas pendentes", valor: fmtNum(k.usadas), unidade: "peças em aberto", sub: at ? delta(k.usadas, at.usadas, true, ant.data) : temPrazosPersonalizados() ? 'Prazos personalizados por técnico' : `Prazo de devolução: ${cfg.prazo} dias`, legenda: "Peças por prazo", partes: [{ nome: "No prazo", valor: k.usadas - k.atrasadas, cor: "good" }, { nome: "Em atraso", valor: k.atrasadas, cor: "crit" }], rodape: "Consultar pendências", acao: 'data-acao="painel-usadas" data-status="todas"', icone: "retorno" }),
     kpiOperacional({ tipo: "cobrancas", rotulo: "Técnicos para cobrar", valor: fmtNum(k.cobrarTecnicos), unidade: "técnicos na fila", sub: `${plural(k.cobrarPecas, "peça exige", "peças exigem")} acompanhamento`, legenda: "Contatos da fila de hoje", partes: [{ nome: "Sem contato", valor: operacao.semContatoHoje, cor: "crit" }, { nome: "Contatados", valor: k.cobrarTecnicos - operacao.semContatoHoje, cor: "good" }], rodape: "Abrir cobranças", acao: 'data-acao="painel-cobrancas" data-aba="cobrar"', icone: "sino" }),
     kpiOperacional({ tipo: "devolucoes", rotulo: "Devoluções previstas hoje", valor: fmtNum(previstas), unidade: "peças previstas", sub: `${plural(new Set(k.previsoesHoje.map((i) => i.tid)).size, "técnico com compromisso", "técnicos com compromisso")}`, legenda: "Peças na agenda de 7 dias", partes: [{ nome: "Hoje", valor: previstas, cor: "warn" }, { nome: "Próximos dias", valor: somar(agenda.slice(1), (d) => d.qtd), cor: "series-1" }], rodape: "Conferir previsões", acao: 'data-acao="painel-cobrancas" data-aba="previsoes"', icone: "calendario" }),
     kpiOperacional({ tipo: "estoque", rotulo: "Peças novas com técnicos", valor: estoque.temRelatorio ? fmtNum(estoque.total) : "—", unidade: "peças em estoque", sub: estoque.temRelatorio ? `${plural(estoque.tecnicos.length, "técnico acompanhado", "técnicos acompanhados")}` : "Importe a planilha de peças novas", legenda: estoque.temRelatorio ? "Técnicos por faixa de estoque" : "Sem relatório de estoque", partes: [{ nome: "Abaixo", valor: estoque.temRelatorio ? estoque.abaixo.length : null, cor: "warn" }, { nome: "Na faixa", valor: estoque.temRelatorio ? estoque.tecnicos.filter((t) => t.statusNovas === "ideal").length : null, cor: "good" }, { nome: "Acima", valor: estoque.temRelatorio ? estoque.tecnicos.filter((t) => t.statusNovas === "acima").length : null, cor: "serious" }], rodape: "Analisar estoque", acao: 'data-acao="painel-estoque"', icone: "caixa" }),
@@ -103,7 +103,7 @@ function renderPainel() {
     ${agendaDevolucoes(D)}
     ${renderRankings(D)}
     <div class="grade-analise">${saudePrazos(D)}${cartao("Evolução das pendências", tab("evolucao", evolucao, tabelaEvolucao()), { sub: "Peças pendentes e atrasadas nas importações do período.", acoes: periodo + botaoTabela("evolucao"), classe: "cartao-evolucao" })}</div>
-    <div class="grade-2">${cartao("Onde o atraso se concentra", tab("idade", `<div class="grafico" data-grafico="idade"></div>`, tabelaFaixas(D)), { sub: "Clique em uma faixa para abrir as peças correspondentes.", acoes: botaoTabela("idade") })}${reposicaoPainel(D)}</div>
+    <div class="grade-2">${cartao("Idade das peças pendentes", tab("idade", `<div class="grafico" data-grafico="idade"></div>`, tabelaFaixas(D)), { sub: "Clique em uma faixa de idade. A situação respeita o prazo de cada técnico.", acoes: botaoTabela("idade") })}${reposicaoPainel(D)}</div>
     ${cartao("Devoluções confirmadas", devolvidasRecentes(D), { sub: "Peças que saíram do relatório após uma nova importação.", classe: "cartao-devolucoes" })}
   </div>`;
 }

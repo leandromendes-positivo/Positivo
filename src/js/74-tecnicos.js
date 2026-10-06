@@ -42,6 +42,7 @@ function renderTecnicos() {
         ${thOrdenavel("Mais antiga", "maxDias", s.ordem, "tc", "num")}
         ${thOrdenavel("Novas", "novas", s.ordem, "tc", "num")}
         <th class="num">Meta</th>
+        <th>Prazos de devolução</th>
         ${thOrdenavel("Devolução média", "media", s.ordem, "tc", "num")}
         <th></th>
       </tr></thead>
@@ -55,6 +56,7 @@ function renderTecnicos() {
         <td class="num">${t.usadas.length ? `${t.maxDias} d` : "—"}</td>
         <td class="num">${fmtNum(t.novasQtd)}</td>
         <td class="num">${t.tipo === "tecnico" ? t.meta : "—"}</td>
+        <td><button class="botao-prazos" data-acao="editar-prazos" data-tid="${esc(t.tid)}" aria-label="Personalizar prazos de ${esc(t.nome)}"><span>Usadas <strong>${t.prazo} dias</strong>${prazoValido(t.cad.prazoUsadas) !== null ? '<small>próprio</small>' : ''}</span><span>Novas <strong>${t.prazoNovas} dias</strong>${prazoValido(t.cad.prazoNovas) !== null ? '<small>próprio</small>' : ''}</span></button></td>
         <td class="num">${t.mediaDiasDev != null ? `${fmtNum1(t.mediaDiasDev)} d` : "—"}</td>
         <td><button class="btn-icone" data-acao="editar-tecnico" data-tid="${esc(t.tid)}" aria-label="Editar ${esc(t.nome)}" title="Editar cadastro">${icone("lapis")}</button></td>
       </tr>`).join("")}</tbody></table></div>` : vazio("pessoas", "Ninguém nesta lista", s.tipo === "ignorar" ? "Técnicos marcados como ignorados somem de todas as contas. Use para quem saiu da empresa ou não deve ser acompanhado." : "Mude os filtros acima.")}`;
@@ -71,13 +73,12 @@ function renderFicha(tid) {
   }
   const s = UI.ficha;
   if (s.tid !== tid) Object.assign(s, { tid, aba: t.usadas.length ? "usadas" : "novas", pagina: 1 });
-  const cfg = D.cfg;
   const cobrancas = ((E.acomp[tid] && E.acomp[tid].cobrancas) || []).slice().reverse();
   const devs = E.devolucoes.filter((d) => d.tid === tid).sort((a, b) => comparar(b.em, a.em));
 
   const kpis = `<div class="kpis kpis-6">
     ${kpi({ rotulo: "Usadas pendentes", valor: fmtNum(t.nUsadas), sub: t.nVencendo ? `${fmtNum(t.nVencendo)} vencem em breve` : "&nbsp;" })}
-    ${kpi({ rotulo: `Atrasadas (+${cfg.prazo} dias)`, valor: fmtNum(t.nAtrasadas), classe: t.nAtrasadas ? "crit" : "", sub: t.nAguardando ? `${fmtNum(t.nAguardando)} com previsão` : "&nbsp;" })}
+    ${kpi({ rotulo: `Atrasadas (+${t.prazo} dias)`, valor: fmtNum(t.nAtrasadas), classe: t.nAtrasadas ? "crit" : "", sub: t.nAguardando ? `${fmtNum(t.nAguardando)} com previsão` : "&nbsp;" })}
     ${kpi({ rotulo: "Peça mais antiga", valor: t.usadas.length ? `${t.maxDias} <small>dias</small>` : "—", sub: t.usadas.length ? `desde ${fmtData(t.usadas[0].dataFT)}` : "&nbsp;" })}
     ${kpi({ rotulo: "Peças novas", valor: fmtNum(t.novasQtd), classe: t.statusNovas === "abaixo" ? "alerta" : t.statusNovas === "acima" ? "grave" : "", sub: t.tipo === "tecnico" ? `meta ${t.meta} · ${STATUS_NOVAS[t.statusNovas].rotulo.toLowerCase()}` : "base / depósito" })}
     ${kpi({ rotulo: "Tempo médio de devolução", valor: t.mediaDiasDev != null ? `${fmtNum1(t.mediaDiasDev)} <small>dias</small>` : "—", sub: "últimos 90 dias" })}
@@ -98,7 +99,7 @@ function renderFicha(tid) {
       <div><strong>${esc(CANAIS[c.canal] || c.canal)}</strong> · ${plural(c.pecas || 0, "peça", "peças")}${c.previsao ? ` · previsão para ${fmtData(c.previsao)}` : ""}${c.obs ? `<p></p>` : ""}</div>
     </li>`).join("")}</ol>` : vazio("mensagem", "Nenhuma cobrança registrada", "Use o botão Cobrar para enviar a mensagem e registrar.");
   else corpo = devs.length ? `<div class="tabela-rolagem"><table class="tabela compacta"><thead><tr><th>Chamado</th><th>Material</th><th>Data FT</th><th>Saiu do relatório</th><th class="num">Dias</th><th>Prazo</th></tr></thead><tbody>
-      ${devs.slice(0, 200).map((d) => `<tr><td class="mono">${esc(d.chamado || "—")}</td><td><span class="mat"><span class="mono">${esc(d.mat)}</span>${esc(E.catalogo[d.mat] || "")}</span></td><td class="mono">${fmtData(d.dataFT)}</td><td>${fmtDataHora(d.em)}</td><td class="num"><strong>${d.dias}</strong></td><td>${d.dias <= cfg.prazo ? pill("ok", "No prazo", "ok") : pill("grave", "Atrasada", "relogio")}</td></tr>`).join("")}
+      ${devs.slice(0, 200).map((d) => `<tr><td class="mono">${esc(d.chamado || "—")}</td><td><span class="mat"><span class="mono">${esc(d.mat)}</span>${esc(E.catalogo[d.mat] || "")}</span></td><td class="mono">${fmtData(d.dataFT)}</td><td>${fmtDataHora(d.em)}</td><td class="num"><strong>${d.dias}</strong></td><td>${d.dias <= prazoDaDevolucao(d) ? pill("ok", "No prazo", "ok") : pill("grave", "Atrasada", "relogio")}</td></tr>`).join("")}
     </tbody></table></div>` : vazio("retorno", "Nenhuma devolução registrada", "As peças que saírem do relatório de usadas aparecem aqui.");
 
   const html = `
@@ -115,6 +116,7 @@ function renderFicha(tid) {
         <button class="btn" data-acao="editar-tecnico" data-tid="${esc(t.tid)}">${icone("lapis")}Editar cadastro</button>
       </div>
     </section>
+    <section class="ficha-prazos" aria-label="Prazos de devolução do técnico">${icone('relogio')}<div><h3>Prazos de devolução</h3><p>A regra pessoal prevalece sobre a geral.</p></div><dl>${[['usadas','Usadas',t.prazo,t.cad.prazoUsadas],['novas','Novas',t.prazoNovas,t.cad.prazoNovas]].map(([tipo,nome,dias,proprio]) => `<div><dt>${nome}</dt><dd>${dias} dias <small>${prazoValido(proprio) !== null ? 'Personalizado' : 'Regra geral'}</small></dd></div>`).join('')}</dl><button class="btn pequeno" data-acao="editar-prazos" data-tid="${esc(t.tid)}">${icone('ajustes')}Alterar prazos</button></section>
     ${kpis}
     <div class="abas" role="tablist">${abas.map(([id, rot, n]) => `<button role="tab" class="aba${s.aba === id ? " ativa" : ""}" data-acao="aba-ficha" data-aba="${id}">${rot}<span class="contador">${fmtNum(n)}</span></button>`).join("")}</div>
     <div class="ficha-corpo">${corpo}</div>`;
@@ -160,7 +162,7 @@ async function exportarTecnicos() {
     colunas: [{ titulo: "Nome", largura: 30 }, { titulo: "Nome no relatório", largura: 30 }, { titulo: "Tipo", largura: 14 }, { titulo: "UF", largura: 5 },
       { titulo: "WhatsApp", largura: 16 }, { titulo: "E-mail", largura: 26 }, { titulo: "Usadas pendentes", largura: 10, tipo: "numero" },
       { titulo: "Atrasadas", largura: 10, tipo: "numero" }, { titulo: "Dias da mais antiga", largura: 10, tipo: "numero" }, { titulo: "Peças novas", largura: 10, tipo: "numero" },
-      { titulo: "Meta", largura: 7, tipo: "numero" }, { titulo: "Situação do estoque", largura: 16 }, { titulo: "Devolução média (dias)", largura: 10, tipo: "numero" }, { titulo: "Observação", largura: 30 }],
-    linhas: D.tecnicos.filter((t) => t.temDados || t.tipo === "ignorar").map((t) => [t.nome, t.nomeOriginal, TIPOS_TEC[t.tipo], t.regiao, fmtTelefone(t.telefone), t.email, t.nUsadas, t.nAtrasadas, t.maxDias, t.novasQtd, t.tipo === "tecnico" ? t.meta : "", t.tipo === "tecnico" ? STATUS_NOVAS[t.statusNovas].rotulo : "", t.mediaDiasDev != null ? Math.round(t.mediaDiasDev * 10) / 10 : "", t.obs]),
+      { titulo: "Meta", largura: 7, tipo: "numero" }, { titulo: "Situação do estoque", largura: 16 }, { titulo: "Devolução média (dias)", largura: 10, tipo: "numero" }, { titulo: "Observação", largura: 30 }, { titulo: "Prazo usadas (dias)", largura: 18, tipo: "numero" }, { titulo: "Regra usadas", largura: 16 }, { titulo: "Prazo novas (dias)", largura: 18, tipo: "numero" }, { titulo: "Regra novas", largura: 16 }],
+    linhas: D.tecnicos.filter((t) => t.temDados || t.tipo === "ignorar").map((t) => [t.nome, t.nomeOriginal, TIPOS_TEC[t.tipo], t.regiao, fmtTelefone(t.telefone), t.email, t.nUsadas, t.nAtrasadas, t.maxDias, t.novasQtd, t.tipo === "tecnico" ? t.meta : "", t.tipo === "tecnico" ? STATUS_NOVAS[t.statusNovas].rotulo : "", t.mediaDiasDev != null ? Math.round(t.mediaDiasDev * 10) / 10 : "", t.obs, t.prazo, prazoValido(t.cad.prazoUsadas) !== null ? "Personalizado" : "Geral", t.prazoNovas, prazoValido(t.cad.prazoNovas) !== null ? "Personalizado" : "Geral"]),
   }]);
 }

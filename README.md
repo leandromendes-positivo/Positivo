@@ -93,11 +93,17 @@ Na **Visão geral**, os rankings têm filtros de **esta semana** (segunda-feira 
 - **Devoluções em dia:** percentual das quantidades devolvidas dentro do prazo, com volume no prazo como desempate. Técnicos sem devolução não recebem uma taxa artificial de 100%.
 - **Uso por técnico:** no modo usadas, trocas registradas por Data FT; cada registro conta uma vez mesmo após devolução parcial. No modo novas, saídas classificadas como uso em atendimento. Os dois modos são separados, não somados. Clique no técnico para ver códigos, descrições, tipos, quantidades e registros que compõem o indicador. O ranking completo fica disponível quando há mais de cinco técnicos.
 
-**Novas: 7 dias a partir da primeira observação do material no estoque.** O relatório não informa data de recebimento nem identifica individualmente cada unidade; a idade acompanha o saldo do material e não comprova a idade de cada unidade após uma reposição. Uma troca de tipo de envio não reinicia essa referência. Quedas de saldo entre importações geram saídas a classificar, sem presumir consumo. Somente saídas classificadas como devolução entram na pontualidade; transferências e ajustes não contam como uso. As datas de saída são as datas em que a diferença foi observada na importação, não uma confirmação do horário físico da movimentação.
+**Novas: 7 dias por padrão, a partir da primeira observação do material no estoque.** O relatório não informa data de recebimento nem identifica individualmente cada unidade; a idade acompanha o saldo do material e não comprova a idade de cada unidade após uma reposição. Uma troca de tipo de envio não reinicia essa referência. Quedas de saldo entre importações geram saídas a classificar, sem presumir consumo. Somente saídas classificadas como devolução entram na pontualidade; transferências e ajustes não contam como uso. As datas de saída são as datas em que a diferença foi observada na importação, não uma confirmação do horário físico da movimentação.
 
 Se uma saída tiver destinos diferentes, informe a quantidade de cada parte ao classificá-la; o restante mantém o destino anterior. As saídas de novas começam a ser registradas com esta versão e também entram em **Baixar tudo em Excel**. O histórico disponível cobre os últimos 120 dias; lacunas entre importações e períodos anteriores ao acompanhamento não são reconstruídos. Os gráficos respeitam movimento reduzido e oferecem detalhes acessíveis por teclado.
 
 ### Parâmetros
+
+**Prazos por técnico:** abra **Técnicos**, clique no nome e em **Alterar prazos**. Também é possível clicar diretamente nos prazos da lista ou usar **Editar cadastro**. Informe separadamente os dias para **usadas** e **novas** (inteiros de 1 a 90). Deixar um campo vazio faz aquele tipo seguir a regra geral; **Usar prazos gerais** limpa os dois campos, e **Salvar** confirma a mudança.
+
+O prazo próprio recalcula as peças em aberto e vale para futuras importações. Usadas contam da Data FT (ou da primeira importação, se não houver data); novas contam da primeira observação do material. O alerta antecipado mantém a distância da regra geral: com prazo geral de 7 dias e aviso no 5º, um prazo próprio de 14 dias avisa a partir do 12º. Previsões combinadas com o técnico continuam registradas e, quando vencidas, continuam na fila de cobrança.
+
+Alertas, mensagens, resumo diário, mapa, consultas e rankings respeitam a regra de cada responsável. Ao importar uma devolução ou saída de novas, o sistema guarda o prazo vigente; mudanças posteriores no cadastro não alteram esse registro. Registros antigos sem prazo salvo usam a regra geral. O prazo aplicado aparece na consulta e no detalhe do ranking, e os prazos do cadastro também constam na exportação de técnicos.
 
 | Regra | Padrão |
 |---|---|
@@ -156,6 +162,7 @@ node testes/operacao-e2e.mjs
 node testes/gestao-e2e.mjs
 node testes/interface-e2e.mjs
 node testes/analises-e2e.mjs
+node testes/prazos-e2e.mjs
 ```
 
-Os testes abrem `pagina-completa.html` e exigem armazenamento em memória antes de importar dados. Verificam cobranças, previsões, agenda, devoluções, mapa, gráficos, cálculos, filtros combinados, agrupamento, períodos civis, uso sem duplicação, saídas classificadas, devoluções parciais, persistência e desfazer. A regressão de interface cobre contraste dos botões em repouso, com cursor e foco, seleção parcial, quantidades em lote, avisos e navegação por teclado nas janelas dos dois temas. Use `PW_PATH` e `CHROMIUM` para indicar instalações específicas; `URL_PAINEL_TESTE` permite mudar a URL local. O teste com emuladores Firebase também verifica classificação e atualização em dois dispositivos, recarregamento e reversão das saídas de novas.
+Os testes abrem `pagina-completa.html` e exigem armazenamento em memória antes de importar dados. Verificam cobranças, previsões, agenda, devoluções, mapa, gráficos, cálculos, filtros combinados, agrupamento, períodos civis, uso sem duplicação, saídas classificadas, devoluções parciais, persistência e desfazer. A regressão de interface cobre contraste dos botões em repouso, com cursor e foco, seleção parcial, quantidades em lote, avisos e navegação por teclado nas janelas dos dois temas. Use `PW_PATH` e `CHROMIUM` para indicar instalações específicas; `URL_PAINEL_TESTE` permite mudar a URL local. O teste de prazos verifica herança, limites, alertas, mensagens, histórico, rankings e falhas de gravação. O teste com emuladores Firebase também verifica prazos personalizados e classificação em dois dispositivos, recarregamento e reversão das saídas de novas.

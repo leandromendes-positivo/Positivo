@@ -124,9 +124,9 @@ function tabelaDevolvidas(D) {
   }
   const pag = Math.max(1, Math.min(s.paginaDev || 1, Math.ceil(lista.length / POR_PAGINA)));
   const pagina = lista.slice((pag - 1) * POR_PAGINA, pag * POR_PAGINA);
-  const noPrazo = somar(lista.filter((d) => d.dias <= D.cfg.prazo), (d) => d.qtd);
+  const noPrazo = somar(lista.filter((d) => d.dias <= prazoDaDevolucao(d)), (d) => d.qtd);
   const total = somar(lista, (d) => d.qtd);
-  return `<p class="nota-aba">${icone("info")}<span>${plural(total, "peça devolvida", "peças devolvidas")}, ${fmtPct(noPrazo / Math.max(1, total))} dentro do prazo de ${D.cfg.prazo} dias. Tempo médio com o técnico: ${fmtNum1(somar(lista, (d) => d.dias * d.qtd) / Math.max(1, total))} dias.</span></p>
+  return `<p class="nota-aba">${icone("info")}<span>${plural(total, "peça devolvida", "peças devolvidas")}, ${fmtPct(noPrazo / Math.max(1, total))} dentro do prazo aplicado na devolução. Tempo médio com o técnico: ${fmtNum1(somar(lista, (d) => d.dias * d.qtd) / Math.max(1, total))} dias.</span></p>
   <div class="tabela-rolagem"><table class="tabela">
     <thead><tr><th>Técnico</th><th>UF</th><th>Chamado</th><th>Material</th><th>Data FT</th><th>Saiu do relatório</th><th class="num">Dias com o técnico</th><th>Prazo</th></tr></thead>
     <tbody>${pagina.map((d) => `<tr>
@@ -137,7 +137,7 @@ function tabelaDevolvidas(D) {
       <td class="mono nowrap">${fmtData(d.dataFT)}</td>
       <td class="nowrap">${fmtDataHora(d.em)}</td>
       <td class="num"><strong>${d.dias}</strong></td>
-      <td>${d.dias <= D.cfg.prazo ? pill("ok", "No prazo", "ok") : pill("grave", `${d.dias - D.cfg.prazo} dias após`, "relogio")}</td>
+      <td>${d.dias <= prazoDaDevolucao(d) ? pill("ok", "No prazo", "ok") : pill("grave", `${d.dias - prazoDaDevolucao(d)} dias após`, "relogio")}</td>
     </tr>`).join("")}</tbody></table></div>
     ${paginacao(lista.length, pag, POR_PAGINA, "dev")}`;
 }
@@ -145,7 +145,7 @@ function tabelaDevolvidas(D) {
 async function exportarUsadas() {
   const D = derivar();
   if (UI.us.aba === "devolvidas") {
-    const linhas = [...E.devolucoes].sort((a, b) => comparar(b.em, a.em)).map((d) => [nomeTecnico(d.tid), d.regiao, d.chamado, d.mat, E.catalogo[d.mat] || "", d.dataFT, d.em, d.dias, d.dias <= D.cfg.prazo ? "No prazo" : "Atrasada", d.qtd]);
+    const linhas = [...E.devolucoes].sort((a, b) => comparar(b.em, a.em)).map((d) => [nomeTecnico(d.tid), d.regiao, d.chamado, d.mat, E.catalogo[d.mat] || "", d.dataFT, d.em, d.dias, d.dias <= prazoDaDevolucao(d) ? "No prazo" : "Atrasada", d.qtd]);
     return exportarExcel(`pecas-devolvidas-${D.hoje}.xlsx`, [{
       nome: "Devolvidas",
       colunas: [{ titulo: "Técnico", largura: 30 }, { titulo: "UF", largura: 5 }, { titulo: "Chamado", largura: 14 }, { titulo: "Material", largura: 11 }, { titulo: "Descrição", largura: 40 }, { titulo: "Data FT", largura: 12, tipo: "data" }, { titulo: "Saiu do relatório", largura: 16, tipo: "data" }, { titulo: "Dias com o técnico", largura: 10, tipo: "numero" }, { titulo: "Prazo", largura: 10 }, { titulo: "Qtd", largura: 6, tipo: "numero" }],

@@ -50,7 +50,7 @@ function compararFoto(lido, hoje, agoraS, lote) {
     const devolvidas = saidas.map((u) => [
       u.k, u.tid, u.mat, u.chamado, u.dataFT || "", u.qtd, agoraS,
       Math.max(0, diffDias((u.dataFT || u.desde).slice(0, 10), hoje)), R, lote,
-      u.qtdUso, Number(E.config.prazo) || 7, u.desde, u.nf || "", u.remessa || "",
+      u.qtdUso, prazoDoTecnico(u.tid), u.desde, u.nf || "", u.remessa || "",
     ]);
     return {
       linhas: novas, devolvidas, movimentos: [],
@@ -100,7 +100,7 @@ function compararFoto(lido, hoje, agoraS, lote) {
   for (const [chave, ant] of saldosAntes) {
     const qtd = ant.qtd - (saldosDepois.get(chave)?.qtd || 0);
     if (qtd > 0) movimentos.push({ k: `${lote}-${hash36(R + '|' + chave)}`, lote, tid: ant.tid, regiao: R, mat: ant.mat, qtd, desde: ant.desde,
-      em: agoraS, dias: Math.max(0, diffDias(ant.desde, hoje)), prazo: Number(E.config.prazoNovas) || 7, destino: "pendente" });
+      em: agoraS, dias: Math.max(0, diffDias(ant.desde, hoje)), prazo: prazoDoTecnico(ant.tid, 'novas'), destino: "pendente" });
   }
   return {
     linhas, devolvidas: [], movimentos,

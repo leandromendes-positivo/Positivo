@@ -6,7 +6,7 @@ function indicadoresOperacionais(D) {
   return {
     noPrazo: k.usadas ? (k.usadas - k.atrasadas) / k.usadas : null,
     idadeMedia: k.usadas ? somar(D.itens, (i) => i.dias * i.qtd) / k.usadas : null,
-    criticas: somar(D.itens.filter((i) => i.dias > prazo * 2), (i) => i.qtd),
+    criticas: somar(D.itens.filter((i) => i.dias > (i.prazo || prazo) * 2), (i) => i.qtd),
     semContatoHoje: D.cobrarTec.filter((t) => !t.ultimaCobranca || t.ultimaCobranca.em.slice(0, 10) !== D.hoje).length,
     agendadas: somar(D.itens.filter((i) => i.previsao && i.previsao >= D.hoje), (i) => i.qtd),
     reposicao: somar(estoque.abaixo, (t) => Math.max(0, t.meta - t.novasQtd)),
@@ -39,9 +39,9 @@ function leituraOperacional(D) {
 function faixaGestao(D) {
   const a = indicadoresOperacionais(D);
   const itens = [
-    ["Dentro do prazo", a.noPrazo == null ? "—" : fmtPct(a.noPrazo), `Até ${D.cfg.prazo} dias · peças pendentes`, "ok"],
+    ["Dentro do prazo", a.noPrazo == null ? "—" : fmtPct(a.noPrazo), "Respeita o prazo de cada técnico", "ok"],
     ["Idade média das pendências", a.idadeMedia == null ? "—" : `${fmtNum1(a.idadeMedia)} <small>dias</small>`, "Ponderada pela quantidade de peças", "azul"],
-    ["Atraso crítico", fmtNum(a.criticas), `Peças há mais de ${Number(D.cfg.prazo) * 2} dias`, "crit"],
+    ["Atraso crítico", fmtNum(a.criticas), "Mais de duas vezes o prazo do técnico", "crit"],
     ["Devolvidas em 7 dias", D.kpi.temHistoricoDev ? fmtNum(D.kpi.devolvidas7) : "—", "Confirmadas em nova importação", "ok"],
   ];
   return `<section class="faixa-gestao" aria-label="Indicadores de prazo e devolução">${itens.map(([nome, valor, ajuda, tom]) => `<div class="gestao-item ${tom}"><span>${nome}</span><strong>${valor}</strong><small>${ajuda}</small></div>`).join("")}</section>`;
@@ -58,7 +58,7 @@ function cabecalhoSecao(pagina, D) {
   const tecs = D.tecnicos.filter((t) => t.tipo === "tecnico" && t.temDados);
   const textos = {
     cobrancas: ["Acompanhamento de devoluções", "Registre cada contato e acompanhe as datas combinadas.", [["Na fila", fmtNum(k.cobrarTecnicos), "técnicos"], ["Sem contato hoje", fmtNum(a.semContatoHoje), "na fila atual"], ["Previsões vencidas", fmtNum(k.prevVencida), "peças"]]],
-    usadas: ["Rastreabilidade das peças", "Consulte chamados, idade, previsões e histórico de devoluções.", [["Em aberto", fmtNum(k.usadas), "peças"], ["Acima do prazo", fmtNum(k.atrasadas), `mais de ${D.cfg.prazo} dias`], ["Idade média", a.idadeMedia == null ? "—" : fmtNum1(a.idadeMedia), "dias por peça"]]],
+    usadas: ["Rastreabilidade das peças", "Consulte chamados, idade, previsões e histórico de devoluções.", [["Em aberto", fmtNum(k.usadas), "peças"], ["Acima do prazo", fmtNum(k.atrasadas), "respeita prazos individuais"], ["Idade média", a.idadeMedia == null ? "—" : fmtNum1(a.idadeMedia), "dias por peça"]]],
     estoque: ["Distribuição de estoque", "Compare o saldo de cada técnico com a meta e planeje a reposição.", [["Reposição até a meta", a.estoque.temRelatorio ? fmtNum(a.reposicao) : "—", "peças necessárias"], ["Excesso até a meta", a.estoque.temRelatorio ? fmtNum(a.excesso) : "—", "peças para redistribuir"]]],
     tecnicos: ["Equipe em campo", "Cadastro, contatos e desempenho de cada técnico em um só lugar.", [["Em operação", fmtNum(tecs.length), "técnicos com dados"], ["Com pendências", fmtNum(tecs.filter((t) => t.nCobrar).length), "técnicos a cobrar"], ["Sem WhatsApp", fmtNum(tecs.filter((t) => !t.telefone).length), "cadastros a completar"]]],
     importar: ["Atualização da operação", "Envie os relatórios de novas e usadas. O sistema identifica as mudanças.", [["Arquivos do dia", fmtNum(D.frescor.filter((f) => f.em && f.dias === 0).length), `de ${D.frescor.length} acompanhados`], ["Importações", fmtNum(E.importacoes.filter((i) => !i.desfeito).length), "no histórico"]]],

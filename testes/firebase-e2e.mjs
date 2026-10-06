@@ -119,6 +119,19 @@ conferir(await page.evaluate(() => calcularDesempenho({ tipo: 'novas' }).uso[0]?
 await page.evaluate(async (lote) => desfazerImportacao(E.importacoes.find(i => i.id === lote)), loteNovas);
 await segundo.page.waitForFunction(() => E.movimentos.length === 0);
 conferir(true, 'desfazer remove a movimentação nos dois dispositivos');
+// Prazos próprios acompanham o cadastro entre dispositivos e podem voltar à regra geral.
+const tidPrazos = await page.evaluate(async () => {
+  const tid = derivar().tecnicos.find(t => t.nome.startsWith('Ana')).tid;
+  await salvarTecnico(tid, { prazoUsadas: 21, prazoNovas: 14 });
+  return tid;
+});
+await segundo.page.waitForFunction(tid => prazoDoTecnico(tid) === 21 && prazoDoTecnico(tid, 'novas') === 14, tidPrazos);
+conferir(await segundo.page.evaluate(tid => derivar().mapa.get(tid).nAtrasadas === 0, tidPrazos), 'prazos personalizados recalculam pendências no outro dispositivo');
+await page.reload(); await pronto(page);
+conferir(await page.evaluate(tid => E.cadastro[tid].prazoUsadas === 21 && E.cadastro[tid].prazoNovas === 14, tidPrazos), 'prazos personalizados persistem após reabrir');
+await segundo.page.evaluate(tid => salvarTecnico(tid, { prazoUsadas: null, prazoNovas: null }), tidPrazos);
+await page.waitForFunction(tid => E.cadastro[tid].prazoUsadas === null && E.cadastro[tid].prazoNovas === null, tidPrazos);
+conferir(await page.evaluate(tid => prazoDoTecnico(tid) === prazoGeral() && prazoDoTecnico(tid, 'novas') === prazoGeral('novas'), tidPrazos), 'retorno à regra geral sincroniza os dois tipos');
 await segundo.ctx.close(); await ctx.close();
 
 // 4) conta sem permissão

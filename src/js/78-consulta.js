@@ -51,7 +51,7 @@ function tabelaConsultaPecas(lista) {
     <td><button class="link-forte" data-acao="tecnico" data-tid="${esc(i.tid)}">${esc(i.nome)}</button><small class="sub-celula">${esc(i.regiao)} · ${TIPOS_TEC[i.tipoTec]}</small></td>
     <td>${pill(i.tipo === 'usadas' ? 'alerta' : 'info',i.tipo === 'usadas' ? 'Usada' : 'Nova')}</td><td class="num"><strong>${fmtNum(i.qtd)}</strong></td>
     <td>${pill(i.origem === 'atual' && i.atrasada ? 'crit' : i.origem === 'atual' ? 'ok' : i.status === 'pendente' ? 'alerta' : 'neutro',i.situacao)}${i.previsao ? `<small class="sub-celula">Previsão ${fmtData(i.previsao)}</small>` : ''}</td>
-    <td class="nowrap">${i.data ? fmtData(i.data) : '—'}<small class="sub-celula">${esc(i.referencia)}</small></td><td class="num">${i.dias == null ? '—' : fmtNum(i.dias)}</td>
+    <td class="nowrap">${i.data ? fmtData(i.data) : '—'}<small class="sub-celula">${esc(i.referencia)}</small></td><td class="num">${i.dias == null ? '—' : fmtNum(i.dias)}<small class="sub-celula">Prazo ${i.prazo} d</small></td>
     <td>${i.chamado ? `<span class="mono">${esc(i.chamado)}</span>` : i.tipoEnvio ? esc(i.tipoEnvio) : '—'}${i.nf ? `<small class="sub-celula">NF ${esc(i.nf)}</small>` : ''}${i.remessa ? `<small class="sub-celula">Remessa ${esc(i.remessa)}</small>` : ''}</td>
     <td>${i.origem === 'saida' ? `<button class="btn pequeno" data-acao="consulta-classificar" data-k="${esc(i.k)}">${i.destino === 'pendente' ? 'Classificar saída' : 'Alterar destino'}</button>` : `<button class="btn pequeno" data-acao="tecnico" data-tid="${esc(i.tid)}">Ver técnico</button>`}</td></tr>`).join('')}</tbody></table></div>${paginacao(lista.length,UIconsulta.pagina,50,'consulta')}`;
 }
@@ -62,7 +62,7 @@ function tabelaConsultaTecnicos(lista) {
 }
 async function exportarConsulta() {
   const lista = consultaOrdenada();
-  await exportarExcel(`consulta-pecas-${hojeISO()}.xlsx`, [{ nome: 'Peças filtradas', colunas: ['Código','Descrição','Família','Responsável','UF','Tipo','Origem','Quantidade','Situação','Data de referência','Referência da data','Dias','Chamado','NF','Remessa','Tipo de envio'].map((titulo,n) => ({ titulo, largura: [1,3].includes(n) ? 36 : 20, tipo: [7,11].includes(n) ? 'numero' : 'texto' })), linhas: lista.map((i) => [i.mat,i.desc,i.familia,i.nome,i.regiao,i.tipo,i.origem,i.qtd,i.situacao,i.data,i.referencia,i.dias,i.chamado || '',i.nf || '',i.remessa || '',i.tipoEnvio || '']) }]);
+  await exportarExcel(`consulta-pecas-${hojeISO()}.xlsx`, [{ nome: 'Peças filtradas', colunas: ['Código','Descrição','Família','Responsável','UF','Tipo','Origem','Quantidade','Situação','Data de referência','Referência da data','Dias','Chamado','NF','Remessa','Tipo de envio','Prazo aplicado (dias)'].map((titulo,n) => ({ titulo, largura: [1,3].includes(n) ? 36 : 20, tipo: [7,11,16].includes(n) ? 'numero' : 'texto' })), linhas: lista.map((i) => [i.mat,i.desc,i.familia,i.nome,i.regiao,i.tipo,i.origem,i.qtd,i.situacao,i.data,i.referencia,i.dias,i.chamado || '',i.nf || '',i.remessa || '',i.tipoEnvio || '',i.prazo]) }]);
 }
 function modalClassificarSaida(k) {
   const i = E.movimentos.find((m) => m.k === k); if (!i) return;

@@ -187,6 +187,7 @@ const ACOES = {
   "voltar-tecnicos": () => irPara("tecnicos"),
   cobrar: (el) => modalCobrar(el.dataset.tid, el.dataset.aba || "cobrar"),
   "editar-tecnico": (el) => modalTecnico(el.dataset.tid),
+  "editar-prazos": (el) => modalTecnico(el.dataset.tid, true),
   "previsao-tecnico": (el) => {
     const D = derivar();
     const t = D.mapa.get(el.dataset.tid);

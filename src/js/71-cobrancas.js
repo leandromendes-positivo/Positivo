@@ -3,9 +3,9 @@
    ========================================================================== */
 
 const ABAS_COB = [
-  { id: "cobrar", rotulo: "Cobrar hoje", dica: "Peças com mais de {prazo} dias sem previsão, ou com a previsão vencida" },
+  { id: "cobrar", rotulo: "Cobrar hoje", dica: "Peças acima do prazo do técnico sem previsão, ou com a previsão vencida" },
   { id: "vencidas", rotulo: "Previsões vencidas", dica: "O técnico informou uma data de devolução que já passou e a peça continua no relatório" },
-  { id: "vencendo", rotulo: "Vencem em breve", dica: "Peças entre {alerta} e {prazo} dias: dá para lembrar o técnico antes de atrasar" },
+  { id: "vencendo", rotulo: "Vencem em breve", dica: "Peças próximas do prazo de cada técnico: dá para lembrar antes de atrasar" },
   { id: "aguardando", rotulo: "Com previsão", dica: "Peças atrasadas com previsão de devolução informada pelo técnico" },
   { id: "previsoes", rotulo: "Previsões de hoje", dica: "Técnicos que prometeram devolver hoje: confira na próxima importação" },
   { id: "todos", rotulo: "Todos com pendência", dica: "Todos os técnicos com peças usadas no relatório" },
@@ -28,9 +28,9 @@ function cartaoCobranca(t, aba, D) {
   const aberto = UI.cob.abertos.has(t.tid);
   const uc = t.ultimaCobranca;
   const maxDias = itens.length ? Math.max(...itens.map((i) => i.dias)) : 0;
-  const sev = t.nPrevVencida ? "crit" : t.nCobrar ? (maxDias > D.cfg.prazo * 2 ? "crit" : "grave") : t.nVencendo ? "alerta" : "ok";
+  const sev = t.nPrevVencida ? "crit" : t.nCobrar ? (maxDias > t.prazo * 2 ? "crit" : "grave") : t.nVencendo ? "alerta" : "ok";
   const rotuloQtd = { cobrar: "para cobrar", vencidas: "com previsão vencida", vencendo: "vencem em breve", aguardando: "com previsão", previsoes: "previstas p/ hoje", todos: "pendentes" }[aba];
-  const infos = [];
+  const infos = [pill("neutro", `Prazo: ${t.prazo} dias${prazoValido(t.cad.prazoUsadas) !== null ? ' · próprio' : ' · geral'}`, 'relogio')];
   if (t.nPrevVencida) infos.push(pill("crit", `${plural(t.nPrevVencida, "peça", "peças")} com previsão vencida`, "quebra"));
   if (t.proxPrevisao) infos.push(pill("info", `Próxima previsão: ${fmtPrevisao(t.proxPrevisao)}`, "calendario"));
   else if (aba === "cobrar" && !t.nPrevVencida) infos.push(pill("alerta", "Sem previsão", "calendario"));
@@ -52,7 +52,7 @@ function cartaoCobranca(t, aba, D) {
         <div><strong>${fmtNum(qtd)}</strong><span>${palavra(qtd, "peça", "peças")} ${rotuloQtd}</span></div>
         <div><strong>${maxDias}</strong><span>dias (mais antiga)</span></div>
       </div>
-      ${reguaPrazo(maxDias, D.cfg)}
+      ${reguaPrazo(maxDias, t)}
     </div>
     <div class="cob-rodape">
       <div class="cob-infos">${infos.join("")}</div>

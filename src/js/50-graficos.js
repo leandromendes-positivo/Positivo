@@ -99,7 +99,7 @@ function graficoColunas(el, { faixas, titulo, aoClicar }) {
     g.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); ir(); } });
   });
 }
-const STATUS_FAIXA = { ok: "no prazo", alerta: "vencendo", grave: "atrasadas", crit: "muito atrasadas" };
+const STATUS_FAIXA = { ok: "no prazo", alerta: "vencendo", grave: "atrasadas", crit: "muito atrasadas", info: "situação conforme o prazo do técnico" };
 
 // ---------------------------------------------- barras horizontais empilhadas
 function graficoEmpilhado(el, { linhas, series, aoClicar, unidade = ["peça", "peças"] }) {

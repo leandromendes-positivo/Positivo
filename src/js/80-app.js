@@ -53,15 +53,13 @@ function atualizarNavegacaoSecoes() {
 }
 
 function irPara(pagina, { tid = null } = {}) {
+  MenuLateral.fechar({ restaurarFoco: false });
   if (!PAGINAS[pagina]) pagina = "painel";
   UI.pagina = pagina;
   UI.tid = pagina === "tecnicos" ? tid : null;
   try { history.replaceState(null, "", "#" + pagina); } catch (_) { /* moldura sem histórico */ }
   renderizar(true);
   window.scrollTo({ top: 0 });
-  document.querySelector(".app")?.classList.remove("menu-aberto");
-  document.querySelector(".btn-menu")?.setAttribute("aria-expanded", "false");
-  document.querySelector(".btn-menu")?.setAttribute("aria-label", "Abrir menu");
   Dica.esconder();
 }
 
@@ -313,11 +311,7 @@ const ACOES = {
   },
   "exportar-tudo": () => exportarTudo(),
   "alternar-tabela": (el) => { const s = UIpainel.tabelas; s.has(el.dataset.grafico) ? s.delete(el.dataset.grafico) : s.add(el.dataset.grafico); renderizar(true); },
-  menu: () => {
-    const aberto = document.querySelector(".app").classList.toggle("menu-aberto");
-    document.querySelector(".btn-menu").setAttribute("aria-expanded", String(aberto));
-    document.querySelector(".btn-menu").setAttribute("aria-label", aberto ? "Fechar menu" : "Abrir menu");
-  },
+  menu: () => MenuLateral.alternarMovel(),
 };
 
 const MUDANCAS = {
@@ -412,7 +406,7 @@ function ligarEventos() {
     }, 50);
   });
   document.addEventListener("keydown", (ev) => {
-    if (ev.key === "/" && !/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName) && !document.querySelector(".modal-fundo")) {
+    if (ev.key === "/" && !document.querySelector('.principal').inert && !/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName) && !document.querySelector(".modal-fundo")) {
       const busca = document.querySelector("#conteudo .busca-campo input");
       if (busca) { ev.preventDefault(); busca.focus(); }
     }
@@ -458,6 +452,7 @@ function montarMoldura() {
 
 async function iniciar() {
   MenuLateral.iniciar();
+  Camadas.iniciar();
   RolagemHorizontal.iniciar();
   montarMoldura();
   ligarEventos();

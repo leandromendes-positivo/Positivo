@@ -40,6 +40,7 @@ function abrirModal({ titulo, subtitulo = "", corpo = "", rodape = "", largura =
   const fechar = () => {
     if (!fundo.isConnected) return;
     fundo.remove();
+    Camadas.atualizar();
     document.removeEventListener("keydown", tecla);
     const substituto = anterior?.dataset?.acao && document.querySelector(`#conteudo [data-acao="${CSS.escape(anterior.dataset.acao)}"]`);
     const destino = anterior?.isConnected ? anterior : substituto;
@@ -62,6 +63,7 @@ function abrirModal({ titulo, subtitulo = "", corpo = "", rodape = "", largura =
   fundo.addEventListener("mousedown", (e) => { if (e.target === fundo) fechar(); });
   fundo.querySelectorAll("[data-fechar]").forEach((b) => b.addEventListener("click", fechar));
   document.body.appendChild(fundo);
+  Camadas.atualizar();
   const foco = fundo.querySelector('[autofocus]') || fundo.querySelector(".modal-corpo input, .modal-corpo textarea, .modal-corpo select, .modal-rodape .prim") || fundo.querySelector("[data-fechar]");
   setTimeout(() => { if (fundo.isConnected && janelaAtual() === fundo) foco.focus(); }, 30);
   return { el: fundo, fechar };

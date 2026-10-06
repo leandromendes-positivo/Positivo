@@ -111,6 +111,7 @@ async function salvarUsuario(email, perfil, ativo) {
 }
 
 function bloquearSessao(mensagem = 'Seu acesso foi desativado. Procure o administrador.') {
+  MenuLateral.fechar({ restaurarFoco: false });
   Acesso.perfil = null;
   limparHistoricoRanking();
   Object.assign(UIinventario,{devolucoes:[],movimentos:[],chave:null,carregando:false,erro:''});

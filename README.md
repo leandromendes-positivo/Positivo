@@ -105,6 +105,8 @@ No Firebase, as saídas de usadas e novas, o registro de importação e a troca 
 
 O botão **Recolher**, no topo do menu lateral, amplia a área do painel no computador. Use **Mostrar menu lateral**, ao lado do título, para reabrir; a preferência é lembrada no navegador. As setas do topo e do rodapé percorrem as seções permitidas para o usuário, e as tabelas mantêm setas próprias de paginação.
 
+No celular e em tablets com menu compacto, o menu abre sobre a página e tem **rolagem independente**. O fundo fica imóvel e não recebe cliques ou foco. Feche pelo botão, por Escape ou tocando na área escurecida: a página volta à mesma posição. Selecionar uma seção fecha o menu e abre a seção no topo. Ao passar para uma largura de computador, o menu compacto é encerrado automaticamente. Janelas e login também isolam a rolagem do fundo; os formulários acompanham a altura útil da tela, inclusive com teclado virtual.
+
 Quando as colunas não cabem na tela, uma **barra horizontal inferior** acompanha a tabela visível, sem precisar descer até a última linha. Arraste o controle, toque na barra, use suas setas ou a roda do mouse sobre ela; não é necessário segurar Shift. Pelo teclado, as setas deslocam as colunas, e Home/End vão ao início/fim. Funciona também nas fichas de técnicos e nos detalhes em janelas, adapta-se ao menu recolhido e desaparece quando a tabela cabe inteira.
 
 ### Consulta avançada e rankings
@@ -199,6 +201,7 @@ node testes/inventario-e2e.mjs
 node testes/limite-estoque-e2e.mjs
 node testes/intervalo-navegacao-e2e.mjs
 node testes/rolagem-e2e.mjs
+node testes/responsividade-e2e.mjs
 ```
 
 Os testes abrem `pagina-completa.html` e exigem armazenamento em memória antes de importar dados. Verificam cobranças, previsões, agenda, devoluções, mapa, gráficos, cálculos, filtros combinados, agrupamento, períodos civis, uso sem duplicação, saídas classificadas, devoluções parciais, persistência e desfazer. A regressão de interface cobre contraste dos botões em repouso, com cursor e foco, seleção parcial, quantidades em lote, avisos e navegação por teclado nas janelas dos dois temas. Use `PW_PATH` e `CHROMIUM` para indicar instalações específicas; `URL_PAINEL_TESTE` permite mudar a URL local. O teste de prazos verifica herança, limites, alertas, mensagens, histórico, rankings e falhas de gravação. O teste com emuladores Firebase também verifica prazos personalizados e classificação em dois dispositivos, recarregamento e reversão das saídas de novas.

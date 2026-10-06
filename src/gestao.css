@@ -41,8 +41,8 @@ body { font-size: 14px; }
 .principal { padding: 25px 30px 44px; max-width: 1880px; }
 .rail { padding: 24px 15px; gap: 0; background-image: none; }
 .marca-painel { padding: 0 8px 23px; margin-bottom: 7px; }
-.marca-identidade .logo-positivo { mix-blend-mode: multiply; }
-:root[data-theme="dark"] .marca-identidade .logo-positivo { mix-blend-mode: screen; }
+.logo-positivo { mix-blend-mode: multiply; }
+:root[data-theme="dark"] .logo-positivo { mix-blend-mode: screen; }
 .marca-produto { padding: 12px 0 0; }
 .marca-produto strong { font-size: 16px; font-weight: 600; letter-spacing: -.02em; }
 .marca-produto span { font-size: 11px; }

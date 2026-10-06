@@ -6,13 +6,15 @@
 Gera:
   dist/site/index.html          o site (GitHub Pages): documento completo, com a configuração
                                 do Firebase de firebase-config.json embutida, se existir
-  dist/site/favicon.svg         ícone da Positivo, também embutido nos documentos HTML
+  dist/site/favicon.svg/.png/.ico  ícones da Positivo para abas e favoritos
+  dist/site/apple-touch-icon.png   ícone de atalho no iPhone/iPad
   dist/controle-de-pecas.html   versão para publicar no Claude (sem <html>/<head>: o Claude envolve)
   dist/pagina-completa.html     documento completo sem Firebase embutido (abre em qualquer navegador;
                                 sem banco, usa memória ou a configuração colada em Configurações)
 """
 
 import base64
+import hashlib
 import json
 import pathlib
 import re
@@ -32,13 +34,13 @@ RESET = (
 ESQUELETO = (
     "<!doctype html><html><head><meta charset=utf8>"
     '<meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover">'
-    + RESET + "</head><body>{conteudo}</body></html>"
+    + RESET + "{cabecalho}</head><body>{conteudo}</body></html>"
 )
 SITE = (
     '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">'
     '<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">'
     '<meta name="robots" content="noindex,nofollow">'
-    + RESET + "{config}</head><body>{conteudo}</body></html>"
+    + RESET + "{config}{cabecalho}</head><body>{conteudo}</body></html>"
 )
 
 
@@ -70,19 +72,37 @@ def main() -> int:
         print("ERRO: o JavaScript contém '</script'; escreva '<\\/script'.", file=sys.stderr)
         return 1
     pagina = (SRC / "pagina.html").read_text(encoding="utf-8")
-    favicon = base64.b64encode((SRC / "assets" / "favicon.svg").read_bytes()).decode("ascii")
+    icones = []
+    for nome, mime, marcador in (
+        ("favicon.svg", "image/svg+xml", "/*__FAVICON__*/"),
+        ("favicon.png", "image/png", "/*__FAVICON_PNG__*/"),
+        ("favicon.ico", "image/x-icon", "/*__FAVICON_ICO__*/"),
+        ("apple-touch-icon.png", "image/png", "/*__ICONE_TOQUE__*/"),
+    ):
+        dados = (SRC / "assets" / nome).read_bytes()
+        uri = f"data:{mime};base64," + base64.b64encode(dados).decode("ascii")
+        pagina = pagina.replace(marcador, uri)
+        icones.append((nome, dados, uri))
     ilustracao = base64.b64encode((SRC / "assets" / "indicadores-tecnologia.png").read_bytes()).decode("ascii")
     css = css.replace("/*__INDICADORES_IMAGEM__*/", "data:image/png;base64," + ilustracao)
     botao_tema = (SRC / "botao-tema.html").read_text(encoding="utf-8").strip()
     pagina = (pagina.replace("/*__CSS__*/", css).replace("/*__JS__*/", js)
-              .replace("/*__TEMA__*/", tema).replace("/*__FAVICON__*/", "data:image/svg+xml;base64," + favicon)
+              .replace("/*__TEMA__*/", tema)
               .replace("<!--__BOTAO_TEMA__-->", botao_tema))
     config = config_firebase()
     (DIST / "site").mkdir(parents=True, exist_ok=True)
-    (DIST / "site" / "favicon.svg").write_bytes((SRC / "assets" / "favicon.svg").read_bytes())
-    (DIST / "site" / "index.html").write_text(SITE.replace("{config}", config).replace("{conteudo}", pagina), encoding="utf-8")
-    (DIST / "controle-de-pecas.html").write_text(pagina, encoding="utf-8")
-    (DIST / "pagina-completa.html").write_text(ESQUELETO.replace("{conteudo}", pagina), encoding="utf-8")
+    cabecalho, corpo = pagina.split("<!--__CORPO__-->", 1)
+    cabecalho_site = cabecalho
+    # Arquivos reais e URLs relativas funcionam no Pages e em domínio próprio.
+    # A versão muda com o conteúdo para não manter um ícone antigo em cache.
+    for nome, dados, uri in icones:
+        (DIST / "site" / nome).write_bytes(dados)
+        versao = hashlib.sha256(dados).hexdigest()[:12]
+        cabecalho_site = cabecalho_site.replace(uri, f"./{nome}?v={versao}")
+    site = SITE.replace("{config}", config).replace("{cabecalho}", cabecalho_site).replace("{conteudo}", corpo)
+    (DIST / "site" / "index.html").write_text(site, encoding="utf-8")
+    (DIST / "controle-de-pecas.html").write_text(cabecalho + corpo, encoding="utf-8")
+    (DIST / "pagina-completa.html").write_text(ESQUELETO.replace("{cabecalho}", cabecalho).replace("{conteudo}", corpo), encoding="utf-8")
     print(f"ok: dist/site/index.html ({'com' if config else 'sem'} Firebase), dist/controle-de-pecas.html "
           f"e dist/pagina-completa.html ({len(pagina.encode('utf-8')) / 1024:.0f} KB)")
     return 0

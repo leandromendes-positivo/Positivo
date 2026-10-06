@@ -64,11 +64,22 @@ function tabelaUsadas(D) {
   const sel = s.sel;
   for (const k of [...sel]) if (!D.itens.some((i) => i.k === k)) sel.delete(k);
   const todosMarcados = pagina.length && pagina.every((i) => sel.has(i.k));
-  const barraLote = sel.size ? `<div class="barra-lote">
-      <strong>${plural(sel.size, "peça selecionada", "peças selecionadas")}</strong>
+  UI.posRender = () => {
+    const marcarPagina = document.querySelector('[data-mudar="marcar-pagina"]');
+    if (marcarPagina) marcarPagina.indeterminate = !todosMarcados && pagina.some((i) => sel.has(i.k));
+  };
+  const selecionados = D.itens.filter((i) => sel.has(i.k));
+  const qtdSelecionada = somar(selecionados, (i) => i.qtd);
+  const tecnicosSelecionados = new Set(selecionados.map((i) => i.tid)).size;
+  const visiveis = new Set(lista.map((i) => i.k));
+  const foraDoFiltro = selecionados.filter((i) => !visiveis.has(i.k)).length;
+  const barraLote = sel.size ? `<div class="barra-lote" role="region" aria-label="Ações da seleção">
+      <div class="lote-resumo"><strong aria-live="polite">${plural(qtdSelecionada, "peça selecionada", "peças selecionadas")}</strong><small>${plural(sel.size, "registro", "registros")} · ${plural(tecnicosSelecionados, "técnico", "técnicos")}${foraDoFiltro ? ` · ${plural(foraDoFiltro, "registro fora do filtro", "registros fora do filtro")}` : ""}</small></div>
+      <div class="lote-acoes">
       <button class="btn pequeno prim" data-acao="lote-previsao">${icone("calendario")}Definir previsão</button>
       <button class="btn pequeno" data-acao="lote-cobranca">${icone("mensagem")}Registrar cobrança</button>
       <button class="btn pequeno fantasma" data-acao="lote-limpar">Limpar seleção</button>
+      </div>
     </div>` : "";
   if (!lista.length) return barraLote + vazio("filtro", "Nenhuma peça com estes filtros", "Mude os filtros acima para ver outras peças.");
   return `${barraLote}<div class="tabela-rolagem"><table class="tabela">

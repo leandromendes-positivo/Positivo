@@ -42,6 +42,8 @@ function renderizar(forcar = false) {
   const conteudo = document.getElementById("conteudo");
   if (!conteudo) return;
   const ativo = document.activeElement;
+  const seletorFoco = ativo && conteudo.contains(ativo)
+    ? [...ativo.attributes].filter((a) => a.name.startsWith("data-")).map((a) => `[${a.name}="${CSS.escape(a.value)}"]`).join("") : "";
   // não atrapalha quem está digitando: refaz a tela quando sair do campo
   if (!forcar && ativo && conteudo.contains(ativo) && /^(INPUT|TEXTAREA|SELECT)$/.test(ativo.tagName) && ativo.type !== "checkbox") {
     renderPendente = true;
@@ -67,6 +69,10 @@ function renderizar(forcar = false) {
   if (p.depois) p.depois();
   if (UI.posRender) UI.posRender();
   Movimento.preparar();
+  if (seletorFoco && !ativo.isConnected) {
+    const substituto = conteudo.querySelector(ativo.localName + seletorFoco);
+    if (substituto && !substituto.disabled && substituto.getClientRects().length) substituto.focus({ preventScroll: true });
+  }
 }
 
 function atualizarMoldura() {

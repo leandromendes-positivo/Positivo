@@ -21,32 +21,49 @@ function toast(msg, tipo = "ok", { acao, aoAgir, duracao = 4200 } = {}) {
   setTimeout(() => el.remove(), duracao + 400);
 }
 
+let sequenciaModal = 0;
 /** Janela modal. Devolve {el, fechar}. */
 function abrirModal({ titulo, subtitulo = "", corpo = "", rodape = "", largura = "", aoFechar }) {
   const fundo = document.createElement("div");
+  const idTitulo = `modal-titulo-${++sequenciaModal}`;
   fundo.className = "modal-fundo";
-  fundo.innerHTML = `<div class="modal ${largura}" role="dialog" aria-modal="true" aria-labelledby="modal-titulo">
-    <header class="modal-topo"><div><h2 id="modal-titulo"></h2>${subtitulo ? `<p class="modal-sub"></p>` : ""}</div>
+  fundo.innerHTML = `<div class="modal ${largura}" role="dialog" aria-modal="true" aria-labelledby="${idTitulo}" tabindex="-1">
+    <header class="modal-topo"><div><h2 id="${idTitulo}"></h2>${subtitulo ? `<p class="modal-sub"></p>` : ""}</div>
     <button class="btn-icone" data-fechar aria-label="Fechar">${icone("fechar")}</button></header>
     <div class="modal-corpo">${corpo}</div>
     ${rodape ? `<footer class="modal-rodape">${rodape}</footer>` : ""}
   </div>`;
-  fundo.querySelector("#modal-titulo").textContent = titulo;
+  fundo.querySelector("h2").textContent = titulo;
   if (subtitulo) fundo.querySelector(".modal-sub").textContent = subtitulo;
   const anterior = document.activeElement;
+  const janelaAtual = () => [...document.querySelectorAll(".modal-fundo")].at(-1);
   const fechar = () => {
+    if (!fundo.isConnected) return;
     fundo.remove();
     document.removeEventListener("keydown", tecla);
-    if (anterior && anterior.focus) anterior.focus();
+    const substituto = anterior?.dataset?.acao && document.querySelector(`#conteudo [data-acao="${CSS.escape(anterior.dataset.acao)}"]`);
+    const destino = anterior?.isConnected ? anterior : substituto;
+    if (destino && (!janelaAtual() || janelaAtual().contains(destino))) destino.focus({ preventScroll: true });
     aoFechar && aoFechar();
   };
-  const tecla = (e) => { if (e.key === "Escape") fechar(); };
+  const tecla = (e) => {
+    if (janelaAtual() !== fundo) return;
+    if (e.key === "Escape") { e.preventDefault(); fechar(); return; }
+    if (e.key !== "Tab") return;
+    const focaveis = [...fundo.querySelectorAll('button, a[href], input, textarea, select, [tabindex]')]
+      .filter((el) => !el.disabled && el.tabIndex >= 0 && el.getClientRects().length && getComputedStyle(el).visibility !== "hidden");
+    const primeiro = focaveis[0], ultimo = focaveis.at(-1);
+    if (!primeiro) { e.preventDefault(); fundo.querySelector(".modal").focus(); }
+    else if (!fundo.contains(document.activeElement) || (e.shiftKey && document.activeElement === primeiro) || (!e.shiftKey && document.activeElement === ultimo)) {
+      e.preventDefault(); (e.shiftKey ? ultimo : primeiro).focus();
+    }
+  };
   document.addEventListener("keydown", tecla);
   fundo.addEventListener("mousedown", (e) => { if (e.target === fundo) fechar(); });
   fundo.querySelectorAll("[data-fechar]").forEach((b) => b.addEventListener("click", fechar));
   document.body.appendChild(fundo);
-  const foco = fundo.querySelector("[autofocus], .modal-corpo input, .modal-corpo textarea, .modal-corpo select, .modal-rodape .prim");
-  if (foco) setTimeout(() => foco.focus(), 30);
+  const foco = fundo.querySelector("[autofocus], .modal-corpo input, .modal-corpo textarea, .modal-corpo select, .modal-rodape .prim") || fundo.querySelector("[data-fechar]");
+  setTimeout(() => { if (fundo.isConnected && janelaAtual() === fundo) foco.focus(); }, 30);
   return { el: fundo, fechar };
 }
 

@@ -54,7 +54,7 @@ function modalCobrar(tid, aba = "cobrar", itensEscolhidos = null) {
         <label class="campo"><span>Previsão de devolução que o técnico informou</span><input type="date" name="previsao" id="cob-prev" min="${somaDias(D.hoje, -30)}"></label>
         ${atalhosData("#cob-prev")}
         <label class="campo"><span>Observação</span><input type="text" name="obs" maxlength="300" placeholder="Ex.: vai deixar na base na sexta"></label>
-        <small class="nota">A previsão vale para as ${plural(itens.length, "peça", "peças")} desta cobrança. Até a data, elas saem da lista de cobrança.</small>
+        <small class="nota">A previsão vale para ${plural(qtd, "peça", "peças")} desta cobrança. Até a data, elas saem da lista de cobrança.</small>
       </form>
     </div>`,
     rodape: `<button class="btn" data-fechar>Fechar</button><button class="btn prim" data-registrar>${icone("ok")}Registrar cobrança</button>`,
@@ -88,9 +88,10 @@ function modalCobrar(tid, aba = "cobrar", itensEscolhidos = null) {
 function modalPrevisao(itens, titulo) {
   if (!itens.length) { toast("Nenhuma peça selecionada.", "info"); return; }
   const atual = itens.every((i) => i.previsao === itens[0].previsao) ? itens[0].previsao : "";
+  const qtd = somar(itens, (i) => i.qtd);
   const m = abrirModal({
     titulo: titulo || "Previsão de devolução",
-    subtitulo: `${plural(itens.length, "peça", "peças")}`,
+    subtitulo: `${plural(qtd, "peça", "peças")}`,
     corpo: `<form class="form" id="prev-form">
       <label class="campo"><span>Data em que o técnico disse que vai devolver</span><input type="date" id="prev-data" value="${esc(atual)}" required></label>
       ${atalhosData("#prev-data")}
@@ -103,7 +104,7 @@ function modalPrevisao(itens, titulo) {
     try {
       await definirPrevisao(itens, valor);
       m.fechar();
-      toast(valor ? `Previsão ${fmtPrevisao(valor)} salva para ${plural(itens.length, "peça", "peças")}.` : "Previsão removida.");
+      toast(valor ? `Previsão ${fmtPrevisao(valor)} salva para ${plural(qtd, "peça", "peças")}.` : "Previsão removida.");
     } catch (e) { toast(erroAmigavel(e).message, "erro"); }
   };
   m.el.querySelector("[data-salvar]").addEventListener("click", () => {

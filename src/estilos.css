@@ -66,7 +66,7 @@ a { color: var(--accent); }
 .nowrap { white-space: nowrap; }
 .nota { color: var(--muted); font-size: 13px; margin: 0; }
 .nota .ic { width: 15px; height: 15px; vertical-align: -3px; margin-right: 4px; }
-.apagado { opacity: .5; }
+.apagado { color: var(--muted); }
 .txt-crit { color: var(--crit-ink); font-weight: 700; }
 .txt-grave { color: var(--serious-ink); font-weight: 700; }
 .txt-alerta { color: var(--warn-ink); font-weight: 700; }
@@ -286,7 +286,7 @@ button.kpi:hover { border-color: var(--line-2); box-shadow: var(--sombra); }
 .legenda span { display: inline-flex; align-items: center; }
 .amostra { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; }
 .dica {
-  position: fixed; z-index: 80; pointer-events: none; background: var(--ink); color: var(--surface);
+  position: fixed; z-index: 80; pointer-events: none; background: var(--surface); color: var(--ink);
   padding: 8px 11px; border-radius: 8px; font-size: 12.5px; box-shadow: var(--sombra-alta); max-width: 280px; line-height: 1.4;
 }
 .dica strong { font-size: 15px; }
@@ -351,11 +351,14 @@ th.ordenado { color: var(--ink); }
 .paginacao > div { display: flex; gap: 8px; align-items: center; }
 .pag-num { font-variant-numeric: tabular-nums; }
 .barra-lote {
-  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
-  background: var(--ink); color: var(--surface); padding: 8px 12px; border-radius: var(--raio); margin-bottom: 10px;
+  position: sticky; top: calc(8px + env(safe-area-inset-top, 0px)); z-index: 5; display: flex; flex-wrap: wrap; gap: 12px; align-items: center;
+  background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-left: 3px solid var(--accent);
+  padding: 12px 14px; border-radius: 8px; margin-bottom: 12px; box-shadow: var(--sombra);
 }
-.barra-lote .btn:not(.prim) { background: transparent; color: inherit; border-color: color-mix(in srgb, var(--surface) 35%, transparent); }
-.barra-lote strong { margin-right: 6px; }
+.lote-resumo { margin-right: auto; min-width: 0; }
+.lote-resumo strong { display: block; font-size: 13px; font-weight: 600; }
+.lote-resumo small { display: block; margin-top: 2px; color: var(--muted); font-size: 11px; }
+.lote-acoes { display: flex; flex-wrap: wrap; gap: 8px; }
 
 /* ------------------------------------------------------------ formulários */
 input[type="text"], input[type="search"], input[type="date"], input[type="number"], input[type="email"], input[type="tel"], select, textarea {
@@ -397,7 +400,7 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
 .chip:hover { border-color: var(--muted); }
 .chip span { color: var(--muted); font-weight: 500; font-variant-numeric: tabular-nums; }
 .chip.ativo { background: var(--ink); border-color: var(--ink); color: var(--surface); }
-.chip.ativo span { color: inherit; opacity: .72; }
+.chip.ativo span { color: inherit; }
 .chip .ic { width: 14px; height: 14px; }
 .abas { display: flex; gap: 2px; border-bottom: 1px solid var(--line); margin-bottom: 14px; overflow-x: auto; scrollbar-width: thin; }
 .aba { all: unset; padding: 10px 14px 9px; font-weight: 600; color: var(--muted); border-bottom: 2px solid transparent; cursor: pointer; display: inline-flex; gap: 8px; align-items: center; white-space: nowrap; }
@@ -530,7 +533,7 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
 
 /* -------------------------------------------------------------------- avisos */
 #toasts { position: fixed; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 8px; z-index: 100; max-width: min(430px, calc(100vw - 32px)); }
-.toast { display: flex; align-items: center; gap: 10px; background: var(--ink); color: var(--surface); padding: 10px 10px 10px 14px; border-radius: 10px; box-shadow: var(--sombra-alta); font-size: 14px; transition: opacity .3s, transform .3s; }
+.toast { display: flex; align-items: center; gap: 10px; background: var(--surface); color: var(--ink); border: 1px solid var(--line); padding: 10px 10px 10px 14px; border-radius: 10px; box-shadow: var(--sombra-alta); font-size: 14px; transition: opacity .3s, transform .3s; }
 .toast.sair { opacity: 0; transform: translateY(6px); }
 .toast > .ic { width: 18px; height: 18px; }
 .toast.ok > .ic { color: #63d463; }

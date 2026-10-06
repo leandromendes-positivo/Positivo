@@ -133,6 +133,7 @@ python3 -m http.server 8000 --directory dist
 # Em outro terminal, com Playwright e Chromium instalados:
 node testes/operacao-e2e.mjs
 node testes/gestao-e2e.mjs
+node testes/interface-e2e.mjs
 ```
 
-Os testes abrem `pagina-completa.html` e exigem armazenamento em memória antes de importar dados. Verificam cobranças, previsões vencidas, agenda, devolução na importação seguinte, mapa, gráficos, cálculos dos indicadores, contraste dos dois temas e as sete telas em desktop e celular. Use `PW_PATH` e `CHROMIUM` para indicar instalações específicas; `URL_PAINEL_TESTE` permite mudar a URL local.
+Os testes abrem `pagina-completa.html` e exigem armazenamento em memória antes de importar dados. Verificam cobranças, previsões vencidas, agenda, devolução na importação seguinte, mapa, gráficos, cálculos dos indicadores e as sete telas em desktop e celular. A regressão de interface cobre contraste dos botões em repouso, com cursor e foco, seleção parcial, quantidades em lote, avisos e navegação por teclado nas janelas dos dois temas. Use `PW_PATH` e `CHROMIUM` para indicar instalações específicas; `URL_PAINEL_TESTE` permite mudar a URL local.

@@ -9,6 +9,7 @@
      dados/<u|n>-<UF>-<geração>-<parte>   linhas compactas da foto atual
      acompanhamento/<tid>        previsões, observações e cobranças do técnico
      devolucoes/<AAAA-MM-DD>     peças usadas que saíram do relatório naquele dia
+     movimentos/<lote-parte>     saídas de novas, com destino classificado pelo operador
      historico/<AAAA-MM-DD>      totais do dia por técnico (gráfico de evolução)
      importacoes/<lote>          registro de cada importação
      resumo/atual                resumo dos próximos 7 dias (lido pela notificação diária)
@@ -16,6 +17,7 @@
 
 const PADROES = {
   prazo: 7,          // dias máximos com peça usada
+  prazoNovas: 7,     // dias desde a primeira observação de estoque novo
   alerta: 5,         // a partir de quantos dias avisar "vence em breve"
   meta: 10,          // peças novas por técnico
   tolerancia: 3,     // faixa aceitável: meta ± tolerância
@@ -58,6 +60,7 @@ const E = {
   acomp: {},
   historico: [],
   devolucoes: [],
+  movimentos: [],    // saídas de novas: destino informado pelo operador
   importacoes: [],
   usuario: { id: null, podeEscrever: null },
   versoesProprias: new Set(), // versões do índice gravadas por esta tela
@@ -70,9 +73,9 @@ function mudou() { E.rev++; for (const f of aoMudar) f(); }
 const caminhoParte = (tipo, regiao, gen, parte) => `dados/${tipo === "usadas" ? "u" : "n"}-${regiao}-${gen}-${parte}`;
 
 function decodificarUsada(l, regiao) {
-  return { k: l[0], tid: l[1], regiao, nf: l[2], remessa: l[3], mat: l[4], chamado: l[5], dataFT: l[6] || null, qtd: l[7], desde: l[8], matSol: l[9] || "" };
+  return { k: l[0], tid: l[1], regiao, nf: l[2], remessa: l[3], mat: l[4], chamado: l[5], dataFT: l[6] || null, qtd: l[7], desde: l[8], matSol: l[9] || "", qtdUso: l[10] || l[7] };
 }
-const codificarUsada = (u) => [u.k, u.tid, u.nf, u.remessa, u.mat, u.chamado, u.dataFT || "", u.qtd, u.desde, u.matSol || ""];
+const codificarUsada = (u) => [u.k, u.tid, u.nf, u.remessa, u.mat, u.chamado, u.dataFT || "", u.qtd, u.desde, u.matSol || "", u.qtdUso || u.qtd];
 function decodificarNova(l, regiao) {
   return { tid: l[0], regiao, mat: l[1], tipoEnvio: l[2], qtd: l[3], linhas: l[4], desde: l[5] };
 }
@@ -100,17 +103,24 @@ async function carregarFotos() {
 
 async function carregarHistoricos() {
   const corte = somaDias(hojeISO(), -120);
-  const [hist, devs, imps] = await Promise.all([
+  const [hist, devs, imps, movs] = await Promise.all([
     Armazem.consultar("historico", { onde: [["data", ">=", corte]] }),
     Armazem.consultar("devolucoes", { onde: [["data", ">=", corte]] }),
     Armazem.consultar("importacoes", { ordem: ["em", "desc"], limite: 40 }),
+    Armazem.consultar("movimentos", { onde: [["data", ">=", corte]] }),
   ]);
   E.historico = hist.sort((a, b) => comparar(a.data, b.data));
   E.devolucoes = [];
   for (const d of devs) for (const l of d.itens || []) {
-    E.devolucoes.push({ k: l[0], tid: l[1], mat: l[2], chamado: l[3], dataFT: l[4], qtd: l[5], em: l[6], dias: l[7], regiao: l[8], lote: l[9], doc: d.id });
+    E.devolucoes.push(decodificarDevolucao(l, d.id));
   }
+  E.movimentos = movs.flatMap((d) => (d.itens || []).map((m) => ({ ...m, doc: d.id })));
   E.importacoes = imps;
+}
+
+function decodificarDevolucao(l, doc) {
+  return { k: l[0], tid: l[1], mat: l[2], chamado: l[3], dataFT: l[4], qtd: l[5], em: l[6], dias: l[7], regiao: l[8], lote: l[9], doc,
+    qtdUso: l[10] || null, prazo: l[11] || null, desde: l[12] || "", nf: l[13] || "", remessa: l[14] || "" };
 }
 
 async function carregarTudo() {
@@ -182,6 +192,10 @@ function assinarMudancas() {
     E.acomp = novo;
     mudou();
   }));
+  E.ouvintes.push(Armazem.ouvirColecao("movimentos", (docs) => {
+    E.movimentos = docs.flatMap((d) => (d.itens || []).map((m) => ({ ...m, doc: d.id })));
+    mudou();
+  }, (q) => q.where('data', '>=', somaDias(hojeISO(), -120))));
 }
 
 // ============================================================ regras

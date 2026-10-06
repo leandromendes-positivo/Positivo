@@ -15,6 +15,7 @@ function renderConfig() {
       <div class="campos-2">
         <label class="campo"><span>Prazo para devolver peça usada</span><div class="com-sufixo"><input type="number" min="1" max="90" name="prazo" value="${esc(c.prazo)}" required><em>dias</em></div><small>Passou disso, o técnico entra na lista de cobrança.</small></label>
         <label class="campo"><span>Avisar "vence em breve" a partir de</span><div class="com-sufixo"><input type="number" min="0" max="90" name="alerta" value="${esc(c.alerta)}" required><em>dias</em></div><small>Para lembrar o técnico antes de atrasar.</small></label>
+        <label class="campo"><span>Prazo observado de peças novas</span><div class="com-sufixo"><input type="number" min="1" max="90" name="prazoNovas" value="${esc(c.prazoNovas)}" required><em>dias</em></div><small>Contado da primeira observação do material no estoque. Não é a data de recebimento.</small></label>
         <label class="campo"><span>Meta de peças novas por técnico</span><div class="com-sufixo"><input type="number" min="0" max="10000" name="meta" value="${esc(c.meta)}" required><em>peças</em></div><small>Pode ser trocada por técnico no cadastro.</small></label>
         <label class="campo"><span>Tolerância da meta</span><div class="com-sufixo"><input type="number" min="0" max="1000" name="tolerancia" value="${esc(c.tolerancia)}" required><em>± peças</em></div><small>Na meta = entre ${Math.max(0, c.meta - c.tolerancia)} e ${Number(c.meta) + Number(c.tolerancia)} peças.</small></label>
       </div>
@@ -95,7 +96,8 @@ async function salvarFormulario(form) {
     const marcados = new Set(dados.getAll("tipo"));
     const todos = [...form.querySelectorAll('input[name="tipo"]')].map((i) => i.value);
     const tiposIgnorados = todos.filter((t) => !marcados.has(t));
-    await salvarConfig({ prazo, alerta, meta, tolerancia, tiposIgnorados });
+    const prazoNovas = Math.max(1, Math.min(90, parseInt(dados.get("prazoNovas"), 10) || 7));
+    await salvarConfig({ prazo, prazoNovas, alerta, meta, tolerancia, tiposIgnorados });
     toast("Regras salvas. Os números foram recalculados.");
   } else if (form.dataset.form === "mensagens") {
     await salvarConfig({ msgCobranca: String(dados.get("msgCobranca") || ""), msgLembrete: String(dados.get("msgLembrete") || "") });
@@ -121,8 +123,13 @@ async function exportarTudo() {
     },
     {
       nome: "Devolvidas",
-      colunas: [{ titulo: "Técnico", largura: 30 }, { titulo: "UF", largura: 5 }, { titulo: "Chamado", largura: 14 }, { titulo: "Material", largura: 11 }, { titulo: "Descrição", largura: 40 }, { titulo: "Data FT", largura: 12, tipo: "data" }, { titulo: "Saiu do relatório", largura: 16, tipo: "data" }, { titulo: "Dias com o técnico", largura: 10, tipo: "numero" }],
-      linhas: [...E.devolucoes].sort((a, b) => comparar(b.em, a.em)).map((d) => [nomeTecnico(d.tid), d.regiao, d.chamado, d.mat, E.catalogo[d.mat] || "", d.dataFT, d.em, d.dias]),
+      colunas: [{ titulo: "Técnico", largura: 30 }, { titulo: "UF", largura: 5 }, { titulo: "Chamado", largura: 14 }, { titulo: "Material", largura: 11 }, { titulo: "Descrição", largura: 40 }, { titulo: "Data FT", largura: 12, tipo: "data" }, { titulo: "Saiu do relatório", largura: 16, tipo: "data" }, { titulo: "Dias com o técnico", largura: 10, tipo: "numero" }, { titulo: "Quantidade", largura: 10, tipo: "numero" }],
+      linhas: [...E.devolucoes].sort((a, b) => comparar(b.em, a.em)).map((d) => [nomeTecnico(d.tid), d.regiao, d.chamado, d.mat, E.catalogo[d.mat] || "", d.dataFT, d.em, d.dias, d.qtd]),
+    },
+    {
+      nome: "Saídas de novas",
+      colunas: [{ titulo: "Técnico", largura: 30 }, { titulo: "UF", largura: 5 }, { titulo: "Material", largura: 14 }, { titulo: "Descrição", largura: 40 }, { titulo: "Quantidade", largura: 10, tipo: "numero" }, { titulo: "Primeira observação", largura: 18, tipo: "data" }, { titulo: "Saída observada", largura: 18, tipo: "data" }, { titulo: "Dias observados", largura: 12, tipo: "numero" }, { titulo: "Destino", largura: 24 }],
+      linhas: [...E.movimentos].sort((a,b) => comparar(b.em,a.em)).map((m) => [nomeTecnico(m.tid),m.regiao,m.mat,E.catalogo[m.mat] || '',m.qtd,m.desde,m.em,m.dias,DESTINOS_NOVAS[m.destino] || m.destino]),
     },
     {
       nome: "Cobranças",

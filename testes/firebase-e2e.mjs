@@ -100,6 +100,27 @@ await page.waitForTimeout(400);
 await page.screenshot({ path: `${saida}/fb-2-painel-dia2.png`, fullPage: true });
 await ctx.close();
 
+// Novas: saída persistida, classificação entre dispositivos e reversão da importação.
+({ ctx, page } = await abrir({ agora: "2026-10-13T10:00:00" }));
+await pronto(page);
+conferir(await page.evaluate(() => firebase.app().options.projectId === 'demo-controle-pecas'), 'movimentações usam somente o projeto de demonstração');
+const segundo = await abrir({ agora: "2026-10-13T10:00:00" });
+await pronto(segundo.page);
+const loteNovas = await page.evaluate(async () => {
+  const itens = E.novas.filter(n => n.regiao === 'PR').map(n => ({ tecChave: E.cadastro[n.tid].chave, tecNome: E.cadastro[n.tid].nome, mat: n.mat, desc: E.catalogo[n.mat], tipoEnvio: n.tipoEnvio, qtd: n.qtd === 9 ? 6 : n.qtd }));
+  return (await importarLote([{ tipo: 'novas', regiao: 'PR', nome: 'PR Novas.csv', itens, linhasLidas: itens.length, avisos: [], hash: 'novas-13' }])).lote;
+});
+await segundo.page.waitForFunction(() => E.movimentos.length === 1);
+conferir(await segundo.page.evaluate(() => E.movimentos[0].qtd === 3 && E.movimentos[0].destino === 'pendente'), 'baixa de 3 peças aparece no outro dispositivo');
+await segundo.page.evaluate(() => classificarSaida(E.movimentos[0].k, 'uso', 2));
+await page.waitForFunction(() => E.movimentos.length === 2 && E.movimentos.some(m => m.destino === 'uso' && m.qtd === 2));
+await page.reload(); await pronto(page);
+conferir(await page.evaluate(() => calcularDesempenho({ tipo: 'novas' }).uso[0]?.uso === 2 && E.movimentos.some(m => m.destino === 'pendente' && m.qtd === 1)), 'classificação parcial persiste e conserva o saldo após reabrir');
+await page.evaluate(async (lote) => desfazerImportacao(E.importacoes.find(i => i.id === lote)), loteNovas);
+await segundo.page.waitForFunction(() => E.movimentos.length === 0);
+conferir(true, 'desfazer remove a movimentação nos dois dispositivos');
+await segundo.ctx.close(); await ctx.close();
+
 // 4) conta sem permissão
 ({ ctx, page } = await abrir({ email: "intruso@exemplo.com" }));
 await pronto(page);

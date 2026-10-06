@@ -77,7 +77,7 @@ const UIpainel = { tabelas: new Set(), fila: "cobrar", dia: "", mapaModo: "usada
 
 function renderPainel() {
   const D = derivar();
-  if (!E.usadas.length && !E.novas.length) return leituraOperacional(D) + boasVindas();
+  if (!E.usadas.length && !E.novas.length && !E.devolucoes.length && !E.movimentos.length) return leituraOperacional(D) + boasVindas();
   const k = D.kpi, cfg = D.cfg;
   const ant = historicoAnterior(), at = ant && ant.tot;
   const previstas = somar(k.previsoesHoje, (i) => i.qtd);
@@ -101,6 +101,7 @@ function renderPainel() {
     ${faixaGestao(D)}${barraPrioridade(D)}${avisoAtualizacao(D)}
     <div class="grade-operacao">${filaHoje(D)}${mapaOperacao(D)}</div>
     ${agendaDevolucoes(D)}
+    ${renderRankings(D)}
     <div class="grade-analise">${saudePrazos(D)}${cartao("Evolução das pendências", tab("evolucao", evolucao, tabelaEvolucao()), { sub: "Peças pendentes e atrasadas nas importações do período.", acoes: periodo + botaoTabela("evolucao"), classe: "cartao-evolucao" })}</div>
     <div class="grade-2">${cartao("Onde o atraso se concentra", tab("idade", `<div class="grafico" data-grafico="idade"></div>`, tabelaFaixas(D)), { sub: "Clique em uma faixa para abrir as peças correspondentes.", acoes: botaoTabela("idade") })}${reposicaoPainel(D)}</div>
     ${cartao("Devoluções confirmadas", devolvidasRecentes(D), { sub: "Peças que saíram do relatório após uma nova importação.", classe: "cartao-devolucoes" })}

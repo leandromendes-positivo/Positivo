@@ -27,7 +27,7 @@ const Movimento = {
       });
     }, { threshold: .08 });
     document.querySelectorAll("#conteudo .kpi, #conteudo .cartao, #conteudo .cob, #conteudo .boas-vindas, #conteudo .secao-resumo, #conteudo > .tabela-rolagem").forEach((el, n) => {
-      const chave = el.className + ":" + n;
+      const chave = el.className + ":" + n + (el.classList.contains('ranking-cartao') ? `:${UIranking.tipo}:${UIranking.periodo}:${UIranking.regiao}:${E.rev}` : '');
       if (this.vistos.has(chave)) return;
       el.dataset.movimento = chave;
       el.style.setProperty("--atraso", `${Math.min(n % 4 * 45, 135)}ms`);

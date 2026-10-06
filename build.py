@@ -54,7 +54,7 @@ def config_firebase() -> str:
 
 
 def main() -> int:
-    css = "\n".join((SRC / nome).read_text(encoding="utf-8") for nome in ("estilos.css", "operacao.css", "gestao.css"))
+    css = "\n".join((SRC / nome).read_text(encoding="utf-8") for nome in ("estilos.css", "operacao.css", "gestao.css", "analises.css"))
     # Imagens embutidas preservam as três versões de HTML autocontidas.
     for nome, marcador in (("positivo-claro.png", "/*__LOGO_CLARA__*/"), ("positivo-escuro.png", "/*__LOGO_ESCURA__*/")):
         imagem = base64.b64encode((SRC / "assets" / nome).read_bytes()).decode("ascii")

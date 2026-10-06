@@ -67,7 +67,7 @@ Abra o site → **Entrar com Google** → arraste as planilhas do dia (Novas e U
 1. Exporte do sistema os relatórios de peças **Novas** e **Usadas** de cada região (`PR Usadas.csv`, `PR Novas.csv`…).
 2. Abra o painel e **arraste as planilhas** (todas de uma vez).
 3. **Cobranças → Cobrar hoje**: o botão **Cobrar** monta a mensagem para o WhatsApp; registre a cobrança e a **previsão de devolução** que o técnico informar.
-4. Peça que some do relatório no dia seguinte conta como **devolvida**.
+4. Peça **usada** que sai do relatório (inclusive redução parcial da quantidade) conta como **devolvida**. Para novas, confira **Consulta avançada → Saídas de novas** e classifique a baixa como devolução, uso em atendimento ou transferência/ajuste.
 
 ### Visão geral da operação
 
@@ -83,9 +83,26 @@ O mapa amplia o estado ao passar o cursor ou receber foco por teclado; sair do e
 
 ## Regras (ajustáveis em Configurações)
 
+### Consulta avançada e rankings
+
+**Consulta avançada**, no menu lateral, localiza materiais por nome ou código, inclusive códigos com zeros à esquerda. Combine palavras para refinar a descrição ou separe códigos por vírgula/ponto e vírgula. Os filtros incluem técnico, UF, novas/usadas, posição atual/histórico, família, situação, tipo de envio, chamado/NF/remessa, datas, dias e quantidade por registro. Campos ausentes no relatório não são inventados. A visão por responsável agrupa as quantidades; **Ver peças** abre seu detalhamento. **Exportar resultado** exporta todas as linhas filtradas, não apenas a página exibida.
+
+Na **Visão geral**, os rankings têm filtros de **esta semana** (segunda-feira até hoje), **este mês** (dia 1 até hoje), UF e novas/usadas, com usadas selecionadas inicialmente:
+
+- **Maior volume em atraso:** quantidade de peças que ficaram acima do prazo no período, incluindo pendências e devoluções atrasadas. O maior atraso desempata; fotos diárias não são somadas repetidamente.
+- **Devoluções em dia:** percentual das quantidades devolvidas dentro do prazo, com volume no prazo como desempate. Técnicos sem devolução não recebem uma taxa artificial de 100%.
+- **Uso por técnico:** no modo usadas, trocas registradas por Data FT; cada registro conta uma vez mesmo após devolução parcial. No modo novas, saídas classificadas como uso em atendimento. Os dois modos são separados, não somados. Clique no técnico para ver códigos, descrições, tipos, quantidades e registros que compõem o indicador. O ranking completo fica disponível quando há mais de cinco técnicos.
+
+**Novas: 7 dias a partir da primeira observação do material no estoque.** O relatório não informa data de recebimento nem identifica individualmente cada unidade; a idade acompanha o saldo do material e não comprova a idade de cada unidade após uma reposição. Uma troca de tipo de envio não reinicia essa referência. Quedas de saldo entre importações geram saídas a classificar, sem presumir consumo. Somente saídas classificadas como devolução entram na pontualidade; transferências e ajustes não contam como uso. As datas de saída são as datas em que a diferença foi observada na importação, não uma confirmação do horário físico da movimentação.
+
+Se uma saída tiver destinos diferentes, informe a quantidade de cada parte ao classificá-la; o restante mantém o destino anterior. As saídas de novas começam a ser registradas com esta versão e também entram em **Baixar tudo em Excel**. O histórico disponível cobre os últimos 120 dias; lacunas entre importações e períodos anteriores ao acompanhamento não são reconstruídos. Os gráficos respeitam movimento reduzido e oferecem detalhes acessíveis por teclado.
+
+### Parâmetros
+
 | Regra | Padrão |
 |---|---|
 | Prazo para devolver peça usada (a partir da Data FT) | 7 dias |
+| Prazo observado de novas (primeira aparição do material) | 7 dias |
 | Aviso de "vence em breve" | a partir de 5 dias |
 | Meta de peças novas por técnico | 10 (± 3) |
 | Tipos de envio que contam no estoque | todos (BACKUP, PP, REP. BACKUP) |
@@ -100,13 +117,17 @@ Códigos numéricos no lugar do nome do técnico (ex.: `110301019`) são tratado
 src/pagina.html, src/estilos.css   moldura e visual
 src/operacao.css                   visual da central de operações
 src/gestao.css                     temas, paleta funcional e composição das telas
+src/analises.css                   consulta avançada e gráficos dos rankings
 src/tema.js, src/botao-tema.html   escolha de tema e preferência local
 src/assets/                      logos, favicon, ilustração e mapa (atribuição em MAPA-LICENCA.txt)
 src/js/00…80                       lógica e telas (JavaScript puro, sem framework)
 src/js/25-firebase.js              banco Firebase + login Google
+src/js/31-analises.js              filtros, períodos, rankings e classificação de saídas
 src/js/55-movimento.js             animações progressivas e preferência de movimento reduzido
 src/js/62-indicadores.js           cálculos de gestão e resumos das seções
 src/js/65-operacao.js              fila de cobranças, mapa e agenda
+src/js/66-desempenho.js            rankings com detalhamento por material
+src/js/78-consulta.js              tela de consulta avançada e exportação filtrada
 build.py                           monta dist/site/index.html (o site)
 aviso/enviar-aviso.mjs             e-mail diário (roda no GitHub Actions)
 .github/workflows/                 publicar-site.yml e aviso-diario.yml
@@ -134,6 +155,7 @@ python3 -m http.server 8000 --directory dist
 node testes/operacao-e2e.mjs
 node testes/gestao-e2e.mjs
 node testes/interface-e2e.mjs
+node testes/analises-e2e.mjs
 ```
 
-Os testes abrem `pagina-completa.html` e exigem armazenamento em memória antes de importar dados. Verificam cobranças, previsões vencidas, agenda, devolução na importação seguinte, mapa, gráficos, cálculos dos indicadores e as sete telas em desktop e celular. A regressão de interface cobre contraste dos botões em repouso, com cursor e foco, seleção parcial, quantidades em lote, avisos e navegação por teclado nas janelas dos dois temas. Use `PW_PATH` e `CHROMIUM` para indicar instalações específicas; `URL_PAINEL_TESTE` permite mudar a URL local.
+Os testes abrem `pagina-completa.html` e exigem armazenamento em memória antes de importar dados. Verificam cobranças, previsões, agenda, devoluções, mapa, gráficos, cálculos, filtros combinados, agrupamento, períodos civis, uso sem duplicação, saídas classificadas, devoluções parciais, persistência e desfazer. A regressão de interface cobre contraste dos botões em repouso, com cursor e foco, seleção parcial, quantidades em lote, avisos e navegação por teclado nas janelas dos dois temas. Use `PW_PATH` e `CHROMIUM` para indicar instalações específicas; `URL_PAINEL_TESTE` permite mudar a URL local. O teste com emuladores Firebase também verifica classificação e atualização em dois dispositivos, recarregamento e reversão das saídas de novas.

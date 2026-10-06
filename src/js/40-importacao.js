@@ -41,22 +41,29 @@ function compararFoto(lido, hoje, agoraS, lote) {
       novas.push({
         k, tid: idSeguro(it.tecChave), regiao: R, nf: it.nf, remessa: it.remessa, mat: it.mat,
         chamado: it.chamado, dataFT: it.dataFT, qtd: it.qtd, desde: ant ? ant.desde : hoje,
+        qtdUso: Math.max(it.qtd, ant ? ant.qtdUso || ant.qtd : 0),
         matSol: it.matSol && it.matSol !== it.mat ? it.matSol : "",
       });
     }
-    const chaves = new Set(novas.map((u) => u.k));
-    const saidas = [...anteriores.values()].filter((u) => !chaves.has(u.k));
+    const quantidades = new Map(novas.map((u) => [u.k, u.qtd]));
+    const saidas = [...anteriores.values()].map((u) => ({ ...u, qtd: Math.max(0, u.qtd - (quantidades.get(u.k) || 0)), qtdUso: u.qtdUso || u.qtd })).filter((u) => u.qtd > 0);
     const devolvidas = saidas.map((u) => [
       u.k, u.tid, u.mat, u.chamado, u.dataFT || "", u.qtd, agoraS,
       Math.max(0, diffDias((u.dataFT || u.desde).slice(0, 10), hoje)), R, lote,
+      u.qtdUso, Number(E.config.prazo) || 7, u.desde, u.nf || "", u.remessa || "",
     ]);
     return {
-      linhas: novas, devolvidas,
+      linhas: novas, devolvidas, movimentos: [],
       resumo: { entradas, mantidos, saidas: saidas.length, saidasQtd: somar(saidas, (u) => u.qtd), qtd: somar(novas, (u) => u.qtd), itens: novas.length },
     };
   }
   // novas: agrega por técnico + material + tipo de envio
   const anteriores = new Map(E.novas.filter((n) => n.regiao === R).map((n) => [`${n.tid}|${n.mat}|${n.tipoEnvio}`, n]));
+  const primeiraObservacao = new Map();
+  for (const n of anteriores.values()) {
+    const chave = `${n.tid}|${n.mat}`, anterior = primeiraObservacao.get(chave);
+    if (!anterior || n.desde < anterior) primeiraObservacao.set(chave, n.desde);
+  }
   const agg = new Map();
   for (const it of lido.itens) {
     const tid = idSeguro(it.tecChave);
@@ -64,7 +71,7 @@ function compararFoto(lido, hoje, agoraS, lote) {
     let a = agg.get(chave);
     if (!a) {
       const ant = anteriores.get(chave);
-      agg.set(chave, (a = { tid, regiao: R, mat: it.mat, tipoEnvio: it.tipoEnvio, qtd: 0, linhas: 0, desde: ant ? ant.desde : hoje }));
+      agg.set(chave, (a = { tid, regiao: R, mat: it.mat, tipoEnvio: it.tipoEnvio, qtd: 0, linhas: 0, desde: ant ? ant.desde : primeiraObservacao.get(`${tid}|${it.mat}`) || hoje }));
     }
     a.qtd += it.qtd;
     a.linhas++;
@@ -77,8 +84,26 @@ function compararFoto(lido, hoje, agoraS, lote) {
   }
   const saidas = [...anteriores.keys()].filter((c) => !agg.has(c)).length;
   const linhas = [...agg.values()];
+  // Tipo de envio pode mudar sem saída física; compare o total por técnico/material.
+  const agruparSaldo = (lista) => {
+    const mapa = new Map();
+    for (const n of lista) {
+      const chave = `${n.tid}|${n.mat}`;
+      const a = mapa.get(chave) || { ...n, qtd: 0 };
+      a.qtd += n.qtd; if (n.desde < a.desde) a.desde = n.desde;
+      mapa.set(chave, a);
+    }
+    return mapa;
+  };
+  const saldosAntes = agruparSaldo([...anteriores.values()]), saldosDepois = agruparSaldo(linhas);
+  const movimentos = [];
+  for (const [chave, ant] of saldosAntes) {
+    const qtd = ant.qtd - (saldosDepois.get(chave)?.qtd || 0);
+    if (qtd > 0) movimentos.push({ k: `${lote}-${hash36(R + '|' + chave)}`, lote, tid: ant.tid, regiao: R, mat: ant.mat, qtd, desde: ant.desde,
+      em: agoraS, dias: Math.max(0, diffDias(ant.desde, hoje)), prazo: Number(E.config.prazoNovas) || 7, destino: "pendente" });
+  }
   return {
-    linhas, devolvidas: [],
+    linhas, devolvidas: [], movimentos,
     resumo: {
       entradas, alterados, saidas, qtd: somar(linhas, (n) => n.qtd), itens: linhas.length,
       qtdAntes: somar([...anteriores.values()], (n) => n.qtd),
@@ -155,11 +180,13 @@ async function importarLote(lidos, aoProgresso = () => {}) {
   // novas fotos
   const resultados = [];
   const devolvidas = [];
+  const movimentos = [];
   const fotos = new Map();
   for (const [chave, l] of grupos) {
     const r = compararFoto(l, hoje, agoraS, lote);
     fotos.set(chave, r);
     devolvidas.push(...r.devolvidas);
+    movimentos.push(...r.movimentos);
     resultados.push({ nome: l.nome, regiao: l.regiao, tipo: l.tipo, linhas: l.linhasLidas, avisos: l.avisos, ...r.resumo });
   }
 
@@ -222,7 +249,7 @@ async function importarLote(lidos, aoProgresso = () => {}) {
     else E.novas = [...E.novas.filter((x) => x.regiao !== regiao), ...r.linhas];
   }
   for (const d of devolvidas) {
-    E.devolucoes.push({ k: d[0], tid: d[1], mat: d[2], chamado: d[3], dataFT: d[4], qtd: d[5], em: d[6], dias: d[7], regiao: d[8], lote: d[9], doc: hoje });
+    E.devolucoes.push(decodificarDevolucao(d, hoje));
   }
   const registro = {
     em: agoraS, por: E.usuario.id || "", arquivos: resultados, avisos, chaves: [...fotos.keys()],
@@ -234,6 +261,12 @@ async function importarLote(lidos, aoProgresso = () => {}) {
   aoProgresso("Registrando o histórico…");
   for (const c of apagar) { try { await Armazem.apagar(c); } catch (e) { console.warn("limpeza", c, e); } }
   await gravarDevolucoes(hoje, devolvidas);
+  const partesMovimentos = movimentos.length ? dividirEmPartes(movimentos) : [];
+  for (let i = 0; i < partesMovimentos.length; i++) {
+    const id = `${lote}-${i}`;
+    await Armazem.gravar(`movimentos/${id}`, { data: hoje, lote, itens: partesMovimentos[i] });
+    E.movimentos = [...E.movimentos.filter((m) => m.doc !== id), ...partesMovimentos[i].map((m) => ({ ...m, doc: id }))];
+  }
   await Armazem.gravar(`importacoes/${lote}`, registro);
   await gravarHistoricoDoDia();
   try { await Armazem.gravar("resumo/atual", montarResumo()); } catch (e) { console.warn("resumo", e); }
@@ -278,6 +311,8 @@ async function desfazerImportacao(imp) {
     else await Armazem.apagar(`devolucoes/${id}`);
   }
   await Armazem.mesclar(`importacoes/${imp.id}`, { desfeito: true, desfeitoEm: agoraISO() }, true);
+  const movs = await Armazem.consultar("movimentos", { onde: [["lote", "==", imp.id]] });
+  for (const doc of movs) await Armazem.apagar(`movimentos/${doc.id}`);
   await Promise.all([carregarFotos(), carregarHistoricos()]);
   mudou();
   await gravarHistoricoDoDia();

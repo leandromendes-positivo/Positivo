@@ -18,6 +18,7 @@ const PAGINAS = {
   painel: { titulo: "Controle operacional", nav: "Visão geral", icone: "painel", render: renderPainel, depois: desenharPainel },
   cobrancas: { titulo: "Cobranças", icone: "sino", render: renderCobrancas },
   usadas: { titulo: "Peças usadas", icone: "retorno", render: renderUsadas },
+  consulta: { titulo: "Consulta de peças", nav: "Consulta avançada", icone: "busca", render: renderConsulta },
   estoque: { titulo: "Estoque de novas", icone: "caixa", render: renderEstoque },
   tecnicos: { titulo: "Técnicos", icone: "pessoas", render: renderTecnicos },
   importar: { titulo: "Importar planilhas", icone: "upload", render: renderImportar },
@@ -135,6 +136,16 @@ function itensSelecionados() {
 }
 
 const ACOES = {
+  "ranking-filtro": (el) => { if (['tipo','periodo'].includes(el.dataset.campo)) UIranking[el.dataset.campo] = el.dataset.valor; renderizar(true); },
+  "ranking-detalhe": (el) => modalRanking(el.dataset.tid, el.dataset.modo),
+  "ranking-completo": (el) => modalRankingCompleto(el.dataset.modo),
+  "consultar-saidas": () => { UIconsulta.filtros = { ...FILTROS_CONSULTA, tipo: 'novas', origem: 'saida', situacao: 'pendente', regiao: UIranking.regiao }; UIconsulta.pagina = 1; UIconsulta.visao = 'pecas'; irPara('consulta'); },
+  "consulta-remover": (el) => { UIconsulta.filtros[el.dataset.campo] = FILTROS_CONSULTA[el.dataset.campo]; UIconsulta.pagina = 1; renderizar(true); },
+  "consulta-limpar": () => { UIconsulta.filtros = { ...FILTROS_CONSULTA }; UIconsulta.pagina = 1; renderizar(true); },
+  "consulta-visao": (el) => { UIconsulta.visao = el.dataset.valor; if (UIconsulta.visao === 'tecnicos' && UIconsulta.ordem === 'material') UIconsulta.ordem = 'tecnico'; UIconsulta.pagina = 1; renderizar(true); },
+  "consulta-responsavel": (el) => { UIconsulta.filtros.tid = el.dataset.tid; UIconsulta.visao = 'pecas'; UIconsulta.pagina = 1; renderizar(true); },
+  "consulta-exportar": () => exportarConsulta(),
+  "consulta-classificar": (el) => modalClassificarSaida(el.dataset.k),
   "painel-usadas": (el) => {
     Object.assign(UI.us, { aba: "pendentes", status: el.dataset.status || "todas", faixa: null, tid: "", regiao: "", busca: "", pagina: 1 });
     UI.us.sel.clear(); irPara("usadas");
@@ -207,6 +218,7 @@ const ACOES = {
     if (alvo === "us") UI.us.pagina = p;
     else if (alvo === "dev") UI.us.paginaDev = p;
     else if (alvo === "ficha") UI.ficha.pagina = p;
+    else if (alvo === "consulta") UIconsulta.pagina = p;
     renderizar(true);
   },
   ordenar: (el) => {
@@ -258,6 +270,8 @@ const ACOES = {
 };
 
 const MUDANCAS = {
+  "ranking-regiao": (el) => { UIranking.regiao = el.value; renderizar(true); },
+  "consulta-ordem": (el) => { UIconsulta.ordem = el.value; UIconsulta.pagina = 1; renderizar(true); },
   "previsao-item": async (el) => {
     const D = derivar();
     const item = D.itens.find((i) => i.k === el.dataset.k && i.tid === el.dataset.tid);
@@ -327,6 +341,7 @@ function ligarEventos() {
     const form = ev.target.closest("[data-form]");
     if (!form) return;
     ev.preventDefault();
+    if (form.dataset.form === 'consulta') { aplicarConsulta(form); return; }
     salvarFormulario(form).catch((e) => toast(erroAmigavel(e).message, "erro"));
   });
   document.addEventListener("focusout", () => {

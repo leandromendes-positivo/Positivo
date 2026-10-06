@@ -15,7 +15,7 @@ const UI = {
 };
 
 const PAGINAS = {
-  painel: { titulo: "Visão geral", icone: "painel", render: renderPainel, depois: desenharPainel },
+  painel: { titulo: "Controle operacional", nav: "Visão geral", icone: "painel", render: renderPainel, depois: desenharPainel },
   cobrancas: { titulo: "Cobranças", icone: "sino", render: renderCobrancas },
   usadas: { titulo: "Peças usadas", icone: "retorno", render: renderUsadas },
   estoque: { titulo: "Estoque de novas", icone: "caixa", render: renderEstoque },
@@ -62,7 +62,8 @@ function renderizar(forcar = false) {
   }
   const p = PAGINAS[UI.pagina];
   UI.posRender = null;
-  conteudo.innerHTML = p.render();
+  conteudo.dataset.pagina = UI.pagina;
+  conteudo.innerHTML = cabecalhoSecao(UI.pagina, derivar()) + p.render();
   if (p.depois) p.depois();
   if (UI.posRender) UI.posRender();
   Movimento.preparar();
@@ -128,6 +129,11 @@ function itensSelecionados() {
 }
 
 const ACOES = {
+  "painel-usadas": (el) => {
+    Object.assign(UI.us, { aba: "pendentes", status: el.dataset.status || "todas", faixa: null, tid: "", regiao: "", busca: "", pagina: 1 });
+    UI.us.sel.clear(); irPara("usadas");
+  },
+  "painel-estoque": () => { Object.assign(UI.es, { regiao: "", status: "", busca: "", bases: false }); irPara("estoque"); },
   "painel-cobrancas": (el) => abrirCobrancasPainel(el.dataset.aba || "cobrar"),
   "painel-zoom": (el) => ajustarZoomMapa(Number(el.dataset.passo)),
   "painel-fila": (el) => atualizarFiltroPainel("fila", el.dataset.fila, `[data-acao="painel-fila"][data-fila="${el.dataset.fila}"]`),
@@ -365,7 +371,7 @@ function ligarEventos() {
 
 function montarMoldura() {
   document.getElementById("nav").innerHTML = Object.entries(PAGINAS).map(([id, p]) =>
-    `<a href="#${id}" data-nav="${id}" data-acao="ir" data-pagina="${id}">${icone(p.icone)}<span>${esc(p.titulo)}</span>${id === "cobrancas" ? `<b class="nav-contador" id="contador-cobrancas" hidden></b>` : ""}</a>`
+    `${id === "painel" ? '<span class="nav-grupo">Monitoramento</span>' : id === "estoque" ? '<span class="nav-grupo">Recursos</span>' : id === "importar" ? '<span class="nav-grupo">Administração</span>' : ""}<a href="#${id}" data-nav="${id}" data-acao="ir" data-pagina="${id}">${icone(p.icone)}<span>${esc(p.nav || p.titulo)}</span>${id === "cobrancas" ? `<b class="nav-contador" id="contador-cobrancas" hidden></b>` : ""}</a>`
   ).join("");
 }
 

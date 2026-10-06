@@ -20,8 +20,6 @@ try {
   await page.waitForFunction(() => E.status === "pronto");
   assert.equal(await page.evaluate(() => Acesso.modo), "memoria", "teste exige o HTML local sem Firebase");
   assert.equal(await page.locator(".boas-vindas").count(), 1);
-  await page.locator(".hero-arte").evaluate((img) => img.decode());
-  assert.ok(await page.locator(".hero-arte").evaluate((img) => img.naturalWidth > 0));
 
   const arquivos = fs.readdirSync("exemplos").filter((f) => f.endsWith(".csv")).map((f) => path.resolve("exemplos", f));
   const parcial = await context.newPage();
@@ -45,8 +43,8 @@ try {
   assert.equal(await page.locator(".anel-prazos strong").innerText(), "50%");
 
   // O enquadramento preserva a arte e os filtros não remontam a página inteira.
-  assert.equal(await page.locator(".hero-arte").evaluate((img) => getComputedStyle(img).objectFit), "contain");
-  const heroOriginal = await page.locator(".operacao-hero").elementHandle();
+  assert.equal(await page.locator(".operacao-hero").count(), 0, "indicadores ocupam o topo, sem banner decorativo");
+  const heroOriginal = await page.locator(".indicadores-operacao").elementHandle();
   await page.locator('[data-acao="painel-zoom"][data-passo="1"]').click();
   assert.equal(await page.evaluate(() => UIpainel.zoom), 1.5);
   assert.match(await page.locator(".mapa-cena").getAttribute("style"), /scale\(1.5\)/);
@@ -135,7 +133,7 @@ try {
   await page.locator('[data-acao="painel-fila"][data-fila="cobrar"]').click();
   await page.locator('[data-acao="painel-mapa-modo"][data-modo="usadas"]').click();
   await page.evaluate(() => { document.getElementById("toasts").innerHTML = ""; });
-  await page.locator(".hero-arte").evaluate((img) => img.decode());
+  await page.locator(".kpi-arte").first().evaluate(async (el) => { const img = new Image(); img.src = getComputedStyle(el).backgroundImage.slice(5, -2); await img.decode(); });
   await page.waitForTimeout(1200);
   await page.screenshot({ path: `${saida}/claro.png`, fullPage: true, animations: "disabled" });
   await page.screenshot({ path: `${saida}/claro-topo.png` });
@@ -155,10 +153,10 @@ try {
   await page.locator('[data-acao="menu"]').click();
   await page.locator('[data-nav="painel"]').click();
   await page.emulateMedia({ reducedMotion: "reduce" });
-  assert.equal(await page.locator(".operacao-hero").evaluate((el) => getComputedStyle(el).animationName), "none");
+  assert.equal(await page.locator(".kpi-operacional").first().evaluate((el) => getComputedStyle(el).animationName), "none");
   assert.deepEqual(erros, []);
   assert.equal(await page.locator('.mapa-cena').evaluate((el) => getComputedStyle(el).transitionDuration), '0s');
-  console.log("PASSOU: mapa, zoom, dicas, enquadramento, filtros locais, cobrança, agenda, devoluções, gráficos por teclado, temas, menu móvel e movimento reduzido (320/390px).");
+  console.log("PASSOU: mapa, zoom, dicas, indicadores, filtros locais, cobrança, agenda, devoluções, gráficos por teclado, temas, menu móvel e movimento reduzido (320/390px).");
   await context.close();
 } finally {
   await browser.close();

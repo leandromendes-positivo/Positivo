@@ -148,7 +148,7 @@ function graficoLinhas(el, { datas, series, vazio }) {
   const x = (d) => datas.length === 1 ? m.l + iw / 2 : m.l + ((numDia(d) - d0) / intervalo) * iw;
   const y = (v) => m.t + ih - (v / topo) * ih;
   const id = `serie-${++graficoSequencia}`;
-  const legenda = `<div class="grafico-legenda">${series.map((s) => `<span><i style="background:${s.cor}"></i>${esc(s.nome)}<strong>${fmtNum(s.valores.at(-1))}</strong></span>`).join("")}</div>`;
+  const legenda = `<div class="grafico-legenda">${series.map((s) => `<span><i class="${s.tracejado ? "tracejada" : "continua"}" style="${s.tracejado ? "--cor-serie" : "background"}:${s.cor}"></i>${esc(s.nome)}<strong>${fmtNum(s.valores.at(-1))}</strong></span>`).join("")}</div>`;
   let svg = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="group" aria-label="Evolução das peças por dia importado"><defs>${series.map((s, n) => `<linearGradient id="${id}-${n}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${s.cor}" stop-opacity=".22"/><stop offset="100%" stop-color="${s.cor}" stop-opacity="0"/></linearGradient>`).join("")}</defs>`;
   for (const t of ticks) {
     svg += `<line x1="${m.l}" x2="${m.l + iw}" y1="${y(t)}" y2="${y(t)}" class="grade${t === 0 ? " base" : ""}"/><text x="${m.l - 8}" y="${y(t) + 4}" class="eixo" text-anchor="end">${fmtCompacto(t)}</text>`;
@@ -162,7 +162,7 @@ function graficoLinhas(el, { datas, series, vazio }) {
     const linha = pts.map((p, i) => `${i ? "L" : "M"}${p[0].toFixed(1)},${y(p[1]).toFixed(1)}`).join("");
     if (pts.length > 1) {
       svg += `<path class="area-serie" d="${linha}L${pts.at(-1)[0]},${y(0)}L${pts[0][0]},${y(0)}Z" fill="url(#${id}-${n})"/>`;
-      svg += `<path class="linha-serie" pathLength="100" d="${linha}" fill="none" stroke="${s.cor}" stroke-width="2.8" stroke-linejoin="round" stroke-linecap="round"/>`;
+      svg += `<path class="linha-serie" stroke-dasharray="${s.tracejado ? "2 1.5" : "none"}" pathLength="100" d="${linha}" fill="none" stroke="${s.cor}" stroke-width="2.8" stroke-linejoin="round" stroke-linecap="round"/>`;
     }
     if (pts.length <= 14) pts.forEach((p) => { svg += `<circle cx="${p[0]}" cy="${y(p[1])}" r="3.5" fill="${s.cor}" stroke="var(--surface)" stroke-width="2"/>`; });
     svg += `<circle class="ponto-serie" data-serie="${n}" cx="${pts.at(-1)[0]}" cy="${y(pts.at(-1)[1])}" r="5" fill="${s.cor}" stroke="var(--surface)" stroke-width="2.5"/>`;

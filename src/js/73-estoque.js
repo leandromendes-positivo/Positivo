@@ -5,7 +5,9 @@
 function renderEstoque() {
   const D = derivar();
   const s = UI.es;
-  if (!E.novas.length) {
+  const estoque = estoqueConhecidoPainel(D);
+  const conhecidas = new Set(D.frescor.filter((f) => f.tipo === "novas" && f.em).map((f) => f.regiao));
+  if (!estoque.temRelatorio) {
     return vazio("caixa", "Sem peças novas importadas", "Importe as planilhas de peças novas para comparar o estoque de cada técnico com a meta.", `<button class="btn prim" data-acao="ir" data-pagina="importar">Importar planilhas</button>`);
   }
   const cfg = D.cfg;
@@ -13,12 +15,12 @@ function renderEstoque() {
   const base = D.tecnicos.filter((t) => t.tipo === (s.bases ? "base" : "tecnico") && (t.novasLinhas.length || t.usadas.length));
   let lista = base.filter((t) =>
     (!s.regiao || t.regiao === s.regiao) &&
-    (!s.status || t.statusNovas === s.status) &&
+    (!s.status || (conhecidas.has(t.regiao) && t.statusNovas === s.status)) &&
     (!busca || normBusca(t.nome + " " + t.nomeOriginal).includes(busca)));
   lista = ordenarLista(lista, s.ordem, { nome: (t) => t.nome, novasQtd: (t) => t.novasQtd, dif: (t) => t.difNovas, itens: (t) => t.novasItens });
   const tipos = D.tiposEnvio;
-  const k = D.kpi;
-  const contagem = (st) => base.filter((t) => (!s.regiao || t.regiao === s.regiao) && t.statusNovas === st).length;
+  const k = { novas: estoque.total, novasTecnicos: estoque.tecnicos.length, mediaNovas: estoque.tecnicos.length ? estoque.total / estoque.tecnicos.length : 0, abaixo: estoque.abaixo.length, acima: estoque.tecnicos.filter((t) => t.statusNovas === "acima").length };
+  const contagem = (st) => base.filter((t) => conhecidas.has(t.regiao) && (!s.regiao || t.regiao === s.regiao) && t.statusNovas === st).length;
 
   const kpis = s.bases ? "" : `<div class="kpis kpis-4">
     ${kpi({ rotulo: "Peças novas com técnicos", valor: fmtNum(k.novas), sub: `${plural(k.novasTecnicos, "técnico", "técnicos")} com estoque` })}
@@ -58,12 +60,12 @@ function renderEstoque() {
       return `<tr class="${aberto ? "aberta" : ""}">
         <td><span class="celula-tec">${avatar(t.nome, t.tipo)}<button class="link-forte" data-acao="tecnico" data-tid="${esc(t.tid)}">${esc(t.nome)}</button></span></td>
         <td>${regiaoTag(t.regiao)}</td>
-        <td>${s.bases ? `<strong>${fmtNum(t.novasQtd)}</strong>` : medidorEstoque(t)}</td>
-        <td class="num">${fmtNum(t.novasItens)}</td>
+        <td>${s.bases ? `<strong>${fmtNum(t.novasQtd)}</strong>` : conhecidas.has(t.regiao) ? medidorEstoque(t) : `<span class="nota">Sem relatório</span>`}</td>
+        <td class="num">${conhecidas.has(t.regiao) ? fmtNum(t.novasItens) : "—"}</td>
         ${tipos.map((tp) => `<td class="num">${t.porTipo[tp] ? fmtNum(t.porTipo[tp]) : `<span class="apagado">—</span>`}</td>`).join("")}
         ${s.bases ? "" : `<td class="num">${t.meta}${t.metaPropria != null ? `<small class="sub-celula">própria</small>` : ""}</td>
-        <td class="num ${t.difNovas > 0 ? "txt-grave" : t.difNovas < 0 ? "txt-alerta" : ""}">${t.difNovas > 0 ? "+" : ""}${fmtNum(t.difNovas)}</td>
-        <td>${pillNovas(t)}</td>`}
+        <td class="num ${t.difNovas > 0 ? "txt-grave" : t.difNovas < 0 ? "txt-alerta" : ""}">${conhecidas.has(t.regiao) ? `${t.difNovas > 0 ? "+" : ""}${fmtNum(t.difNovas)}` : "—"}</td>
+        <td>${conhecidas.has(t.regiao) ? pillNovas(t) : pill("neutro", "Sem relatório", "arquivo")}</td>`}
         <td><button class="btn-icone" data-acao="abrir-es" data-tid="${esc(t.tid)}" aria-expanded="${aberto}" aria-label="Ver peças">${icone(aberto ? "cima" : "baixo")}</button></td>
       </tr>${aberto ? `<tr class="detalhe"><td colspan="${5 + tipos.length + (s.bases ? 0 : 3)}">${tabelaLinhasNovas(t)}</td></tr>` : ""}`;
     }).join("")}</tbody></table></div>` : vazio("filtro", "Ninguém com estes filtros", "Mude os filtros acima.");

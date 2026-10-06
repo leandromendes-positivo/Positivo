@@ -22,7 +22,7 @@ const Tema = (() => {
     const tema = preferencia || (sistema.matches ? "dark" : "light");
     document.documentElement.dataset.theme = tema;
     const cor = document.querySelector('meta[name="theme-color"]');
-    if (cor) cor.content = tema === "dark" ? "#0c1116" : "#f1f5f6";
+    if (cor) cor.content = tema === "dark" ? "#050505" : "#ffffff";
     atualizarBotoes();
   }
 

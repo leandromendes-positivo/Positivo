@@ -54,7 +54,7 @@ def config_firebase() -> str:
 
 
 def main() -> int:
-    css = "\n".join((SRC / nome).read_text(encoding="utf-8") for nome in ("estilos.css", "operacao.css"))
+    css = "\n".join((SRC / nome).read_text(encoding="utf-8") for nome in ("estilos.css", "operacao.css", "gestao.css"))
     # Imagens embutidas preservam as três versões de HTML autocontidas.
     for nome, marcador in (("positivo-claro.png", "/*__LOGO_CLARA__*/"), ("positivo-escuro.png", "/*__LOGO_ESCURA__*/")):
         imagem = base64.b64encode((SRC / "assets" / nome).read_bytes()).decode("ascii")
@@ -68,11 +68,11 @@ def main() -> int:
         return 1
     pagina = (SRC / "pagina.html").read_text(encoding="utf-8")
     favicon = base64.b64encode((SRC / "assets" / "favicon.svg").read_bytes()).decode("ascii")
-    ilustracao = base64.b64encode((SRC / "assets" / "operacao-pecas.png").read_bytes()).decode("ascii")
+    ilustracao = base64.b64encode((SRC / "assets" / "indicadores-tecnologia.png").read_bytes()).decode("ascii")
+    css = css.replace("/*__INDICADORES_IMAGEM__*/", "data:image/png;base64," + ilustracao)
     botao_tema = (SRC / "botao-tema.html").read_text(encoding="utf-8").strip()
     pagina = (pagina.replace("/*__CSS__*/", css).replace("/*__JS__*/", js)
               .replace("/*__TEMA__*/", tema).replace("/*__FAVICON__*/", "data:image/svg+xml;base64," + favicon)
-              .replace("/*__OPERACAO_IMAGEM__*/", "data:image/png;base64," + ilustracao)
               .replace("<!--__BOTAO_TEMA__-->", botao_tema))
     config = config_firebase()
     (DIST / "site").mkdir(parents=True, exist_ok=True)

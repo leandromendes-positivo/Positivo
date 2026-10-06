@@ -34,13 +34,13 @@ function renderUsadas() {
     return vazio("upload", "Sem peças usadas importadas", "Importe as planilhas de peças usadas para acompanhar os prazos.", `<button class="btn prim" data-acao="ir" data-pagina="importar">Importar planilhas</button>`);
   }
   const abas = `<div class="abas" role="tablist">
-    <button role="tab" class="aba${s.aba === "pendentes" ? " ativa" : ""}" data-acao="aba-us" data-aba="pendentes">Pendentes<span class="contador">${fmtNum(D.itens.length)}</span></button>
-    <button role="tab" class="aba${s.aba === "devolvidas" ? " ativa" : ""}" data-acao="aba-us" data-aba="devolvidas">Devolvidas (últimos 120 dias)<span class="contador">${fmtNum(E.devolucoes.length)}</span></button>
+    <button role="tab" class="aba${s.aba === "pendentes" ? " ativa" : ""}" data-acao="aba-us" data-aba="pendentes">Pendentes<span class="contador">${fmtNum(D.kpi.usadas)}</span></button>
+    <button role="tab" class="aba${s.aba === "devolvidas" ? " ativa" : ""}" data-acao="aba-us" data-aba="devolvidas">Devolvidas (últimos 120 dias)<span class="contador">${fmtNum(somar(E.devolucoes, (d) => d.qtd))}</span></button>
   </div>`;
   const tecnicosComPeca = D.tecnicos.filter((t) => t.usadas.length || E.devolucoes.some((d) => d.tid === t.tid));
   const filtros = `<div class="barra-filtros">
     ${s.aba === "pendentes" ? `<div class="chips">${FILTROS_STATUS.map((f) => {
-      const n = f.f ? D.itens.filter(f.f).length : D.itens.length;
+      const n = somar(f.f ? D.itens.filter(f.f) : D.itens, (i) => i.qtd);
       return `<button class="chip${s.status === f.id ? " ativo" : ""}" data-acao="status-us" data-status="${f.id}">${esc(f.rotulo)} <span>${fmtNum(n)}</span></button>`;
     }).join("")}</div>` : ""}
     <select data-mudar="regiao-us" aria-label="Região"><option value="">Todas as regiões</option>${D.regioes.map((r) => `<option value="${esc(r)}"${s.regiao === r ? " selected" : ""}>${esc(r)}</option>`).join("")}</select>
@@ -78,6 +78,7 @@ function tabelaUsadas(D) {
       <th>UF</th>
       ${thOrdenavel("Chamado", "chamado", s.ordem, "us")}
       ${thOrdenavel("Material", "mat", s.ordem, "us")}
+      <th class="num">Qtd</th>
       ${thOrdenavel("Data FT", "dataFT", s.ordem, "us")}
       ${thOrdenavel("Dias", "dias", s.ordem, "us", "num")}
       ${thOrdenavel("Situação", "status", s.ordem, "us")}
@@ -90,6 +91,7 @@ function tabelaUsadas(D) {
       <td>${regiaoTag(i.regiao)}</td>
       <td class="mono">${esc(i.chamado || "—")}</td>
       <td><span class="mat"><span class="mono">${esc(i.mat)}</span>${esc(i.desc)}</span></td>
+      <td class="num">${fmtNum(i.qtd)}</td>
       <td class="mono nowrap">${fmtData(i.dataFT)}</td>
       <td class="num"><strong>${i.dias}</strong></td>
       <td>${pillStatus(i, D.cfg)}${i.nCobrancas ? `<small class="sub-celula">${plural(i.nCobrancas, "cobrança", "cobranças")}, última ${fmtQuando(i.ultimaCobranca)}</small>` : ""}</td>

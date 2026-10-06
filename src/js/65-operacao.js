@@ -1,23 +1,6 @@
 /* Visão operacional: todos os números vêm das planilhas e previsões existentes. */
 const MAPA_BRASIL = /*__MAPA_BRASIL__*/;
 
-function cabecalhoOperacao(D, vazio = false) {
-  const previstas = somar(D.kpi.previsoesHoje, (i) => i.qtd);
-  const completas = D.frescor.length && D.frescor.every((f) => f.em && f.dias === 0);
-  const titulo = vazio ? "Sua operação começa aqui." : D.kpi.cobrarTecnicos
-    ? `${plural(D.kpi.cobrarTecnicos, "técnico precisa", "técnicos precisam")} do seu contato.`
-    : "Nenhuma cobrança pendente nesta leitura.";
-  const texto = vazio ? "Importe suas planilhas. Encontre as pendências. Acompanhe cada devolução."
-    : `${plural(D.kpi.cobrarPecas, "peça para cobrar", "peças para cobrar")}. ${plural(previstas, "peça com devolução prevista", "peças com devolução prevista")} para hoje. Seu próximo passo está aqui.`;
-  return `<section class="operacao-hero">
-    <div class="hero-texto"><span class="hero-eyebrow">POSITIVO TECNOLOGIA <i></i> CONTROLE DE PEÇAS</span>
-      <h2>${titulo}</h2><p>${texto}</p>
-      <div class="hero-acoes"><button class="btn prim" data-acao="${vazio ? "ir" : "painel-cobrancas"}" ${vazio ? 'data-pagina="importar"' : `data-aba="${D.kpi.cobrarTecnicos ? "cobrar" : "previsoes"}"`}>${icone(vazio ? "upload" : "seta")}${vazio ? "Importar primeiras planilhas" : D.kpi.cobrarTecnicos ? "Começar cobranças" : "Acompanhar devoluções"}</button>
-      <span class="hero-status"><i class="${completas ? "em-dia" : ""}"></i>${vazio ? "Novas e usadas, em um só lugar" : completas ? "Planilhas de hoje importadas" : "Confira a atualização das planilhas"}</span></div>
-    </div><div class="hero-imagem" aria-hidden="true">${document.getElementById("imagem-operacao").innerHTML}</div>
-  </section>`;
-}
-
 function filaDoPainel(D, tipo = UIpainel.fila) {
   return D.tecnicos.map((t) => {
     const itens = tipo === "vencidas" ? t.usadas.filter((i) => i.status === "previsao_vencida")
@@ -33,7 +16,7 @@ function filaHoje(D) {
   const aba = UIpainel.fila === "hoje" ? "previsoes" : UIpainel.fila;
   const chips = `<div class="filtros-segmentados fila-abas" aria-label="Filtrar a fila de trabalho">${abas.map(([id, nome]) => `<button type="button" data-acao="painel-fila" data-fila="${id}" aria-pressed="${UIpainel.fila === id}" class="${UIpainel.fila === id ? "ativo" : ""}">${nome}<span>${filaDoPainel(D, id).length}</span></button>`).join("")}</div>`;
   const vazios = { cobrar: ["Nenhuma cobrança pendente", "A próxima importação atualiza esta fila automaticamente."], vencidas: ["Nenhuma previsão vencida", "As promessas de devolução em atraso aparecerão aqui."], hoje: ["Sem devoluções previstas para hoje", "Registre a data combinada ao cobrar o técnico."] };
-  return cartao("Sua fila de hoje", chips + (lista.length ? `<ol class="fila-operacao">${lista.slice(0, 4).map(({ t, qtd, dias }, n) => `<li>
+  return cartao("Prioridades de cobrança", chips + (lista.length ? `<ol class="fila-operacao">${lista.slice(0, 4).map(({ t, qtd, dias }, n) => `<li>
     <span class="fila-ordem">${String(n + 1).padStart(2, "0")}</span>${avatar(t.nome, t.tipo)}
     <div class="fila-pessoa"><button class="link-forte" data-acao="tecnico" data-tid="${esc(t.tid)}">${esc(t.nome)}</button>
       <span>${regiaoTag(t.regiao)} ${plural(qtd, "peça", "peças")} · ${dias} dias com a mais antiga</span>
@@ -65,30 +48,40 @@ function agendaDevolucoes(D) {
 
 function dadosMapa(D) {
   const tipo = UIpainel.mapaModo === "novas" ? "novas" : "usadas";
-  return D.porRegiao.filter((r) => D.frescor.some((f) => f.regiao === r.regiao && f.tipo === tipo && f.em));
+  return D.frescor.filter((f) => f.tipo === tipo && f.em).map((f) => D.porRegiao.find((r) => r.regiao === f.regiao) || { regiao: f.regiao, no_prazo: 0, vencendo: 0, cobrar: 0, aguardando: 0, total: 0, abaixo: 0, ideal: 0, acima: 0, novas: 0 });
+}
+
+function riscoEstado(D, r, novas = UIpainel.mapaModo === "novas") {
+  const total = novas ? r.abaixo + r.ideal + r.acima : r.total;
+  const afetadas = novas ? r.abaixo + r.acima : somar(D.itens.filter((i) => i.regiao === r.regiao && i.atrasada), (i) => i.qtd);
+  const percentual = total ? afetadas / total * 100 : 0;
+  const nivel = percentual <= 10 ? "baixo" : percentual <= 25 ? "moderado" : percentual <= 50 ? "alto" : "critico";
+  return { total, afetadas, percentual, nivel };
 }
 
 function mapaOperacao(D) {
-  const novas = UIpainel.mapaModo === "novas";
-  const dados = dadosMapa(D);
+  const novas = UIpainel.mapaModo === "novas", dados = dadosMapa(D);
   const metrica = (r) => novas ? r.abaixo + r.acima : r.cobrar;
   if (!dados.some((r) => r.regiao === UIpainel.regiao)) UIpainel.regiao = [...dados].sort((a, b) => metrica(b) - metrica(a))[0]?.regiao || "";
-  const r = dados.find((r) => r.regiao === UIpainel.regiao);
-  const maximo = Math.max(1, ...dados.map(metrica));
+  const r = dados.find((x) => x.regiao === UIpainel.regiao);
+  const riscos = new Map(dados.map((x) => [x.regiao, riscoEstado(D, x, novas)]));
   const caminho = [...MAPA_BRASIL].sort((a, b) => (a.uf === UIpainel.regiao) - (b.uf === UIpainel.regiao)).map((uf) => {
-    const d = dados.find((x) => x.regiao === uf.uf);
-    const pend = d && metrica(d);
-    const dica = `<strong>${esc(UFS[uf.uf])}</strong><span>${d ? `${fmtNum(pend)} ${novas ? "técnicos fora da meta" : "peças para cobrar"}` : "Sem planilha importada"}</span>`;
-    const label = `${UFS[uf.uf]}, ${d ? `${fmtNum(pend)} ${novas ? "técnicos fora da meta" : "peças para cobrar"}` : "sem planilha importada"}`;
-    return `<g data-dica="${esc(dica)}" style="--intensidade:${d ? 30 + pend / maximo * 65 : 0}%" class="mapa-estado ${d ? pend ? "com-pendencia" : "em-dia" : "sem-dados"} ${UIpainel.regiao === uf.uf ? "selecionado" : ""}" ${d ? `role="button" tabindex="0" data-acao="painel-regiao" data-regiao="${uf.uf}" aria-pressed="${UIpainel.regiao === uf.uf}"` : 'role="img"'} aria-label="${esc(label)}"><title>${esc(label)}</title><path d="${uf.d}"/>${d ? `<text x="${uf.centro[0]}" y="${uf.centro[1]}">${uf.uf}</text>` : ""}${UIpainel.regiao === uf.uf ? `<circle class="mapa-sinal" cx="${uf.centro[0]}" cy="${uf.centro[1]}" r="13"/>` : ""}</g>`;
+    const risco = riscos.get(uf.uf), selecionado = UIpainel.regiao === uf.uf;
+    const texto = risco ? `${fmtNum1(risco.percentual)}% ${novas ? "dos técnicos fora da meta" : "das peças acima do prazo"}` : "sem planilha importada";
+    const dica = `<strong>${esc(UFS[uf.uf])}</strong><span>${texto}</span>`;
+    return `<g data-dica="${esc(dica)}" class="mapa-estado ${risco ? `risco-${risco.nivel}` : "sem-dados"} ${selecionado ? "selecionado" : ""}" ${risco ? `role="button" tabindex="0" data-acao="painel-regiao" data-regiao="${uf.uf}" aria-pressed="${selecionado}"` : 'role="img"'} aria-label="${esc(UFS[uf.uf] + ', ' + texto)}"><title>${esc(UFS[uf.uf] + ': ' + texto)}</title><path d="${uf.d}"/>${risco ? `<text x="${uf.centro[0]}" y="${uf.centro[1]}">${uf.uf}</text>` : ""}${selecionado ? `<circle class="mapa-sinal" cx="${uf.centro[0]}" cy="${uf.centro[1]}" r="13"/>` : ""}</g>`;
   }).join("");
   const seletor = `<div class="filtros-segmentados">${[["usadas", "Usadas"], ["novas", "Novas"]].map(([id, nome]) => `<button type="button" data-acao="painel-mapa-modo" data-modo="${id}" aria-pressed="${UIpainel.mapaModo === id}" class="${UIpainel.mapaModo === id ? "ativo" : ""}">${nome}</button>`).join("")}</div>`;
   const frescor = r && D.frescor.find((f) => f.regiao === r.regiao && f.tipo === UIpainel.mapaModo);
+  const risco = r && riscos.get(r.regiao);
   const detalhe = r ? `<span class="mapa-uf">${r.regiao}</span><h3>${esc(UFS[r.regiao] || r.regiao)}</h3><div class="mapa-numero">${fmtNum(metrica(r))}<span>${novas ? `${palavra(metrica(r), "técnico", "técnicos")} fora da meta` : `${palavra(metrica(r), "peça", "peças")} para cobrar`}</span></div>
-    <dl><div><dt>${novas ? "Peças com técnicos" : "Usadas pendentes"}</dt><dd>${fmtNum(novas ? r.novas : r.total)}</dd></div><div><dt>${novas ? "Abaixo da meta" : "Vencem em breve"}</dt><dd>${fmtNum(novas ? r.abaixo : r.vencendo)}</dd></div><div><dt>${novas ? "Na meta" : "Atrasadas com previsão"}</dt><dd>${fmtNum(novas ? r.ideal : r.aguardando)}</dd></div></dl>
-    <button class="btn pequeno" data-acao="painel-regiao-abrir">${novas ? "Ver estoque" : "Ver peças"}${icone("seta")}</button><small class="mapa-atualizacao">Relatório ${frescor?.em ? fmtQuando(frescor.em) : "não importado"}</small>` : `<div class="vazio">${icone("arquivo")}<h3>Sem relatório de ${novas ? "novas" : "usadas"}</h3><p>Importe uma planilha para acompanhar os estados.</p></div>`;
-  return cartao("Mapa da operação", `<div class="mapa-layout"><div class="mapa-figura"><div class="mapa-cab"><span>BRASIL · VISÃO POR ESTADO</span><strong>${dados.length} UF${dados.length === 1 ? "" : "s"}</strong></div><svg class="mapa-brasil" viewBox="0 0 525 525" role="group" aria-label="Estados brasileiros. Selecione um estado com dados para ver seus indicadores."><g class="mapa-grade" aria-hidden="true">${[75,150,225,300,375,450].map((v) => `<path d="M${v},0V525M0,${v}H525"/>`).join("")}</g><g class="mapa-cena" style="transform:${transformacaoMapa()}">${caminho}</g></svg><div class="mapa-controles" aria-label="Zoom do mapa"><button type="button" data-acao="painel-zoom" data-passo="-1" aria-label="Diminuir zoom" ${UIpainel.zoom <= 1 ? "disabled" : ""}>−</button><button type="button" data-acao="painel-zoom" data-passo="1" aria-label="Aproximar estado selecionado" ${UIpainel.zoom >= 2.5 ? "disabled" : ""}>+</button><button type="button" data-acao="painel-zoom" data-passo="0" aria-label="Restaurar visão de todo o Brasil">Brasil</button></div></div><div class="mapa-detalhe">${detalhe}</div></div>
-    <div class="mapa-legenda"><span><i class="pendente"></i>${novas ? "Fora da meta" : "A cobrar"}</span><span><i class="em-dia"></i>${novas ? "Na faixa" : "Sem cobrança"}</span><span><i></i>Sem dados</span></div><div class="mapa-regioes" aria-label="Selecionar estado">${dados.map((x) => `<button class="chip ${x.regiao === UIpainel.regiao ? "ativo" : ""}" data-acao="painel-regiao" data-regiao="${x.regiao}" aria-pressed="${x.regiao === UIpainel.regiao}">${x.regiao} <span>${fmtNum(metrica(x))}</span></button>`).join("")}</div><p class="mapa-nota">A intensidade indica o volume relativo. Dados das planilhas, sem localização individual.</p>`, { sub: "Explore o território. Selecione um estado para ver os detalhes.", acoes: seletor, classe: "cartao-mapa" });
+    <div class="mapa-risco risco-${risco.nivel}"><i></i>${fmtNum1(risco.percentual)}% ${novas ? "fora da meta" : "em atraso"}</div>
+    <dl><div><dt>${novas ? "Peças novas" : "Usadas pendentes"}</dt><dd>${fmtNum(novas ? r.novas : r.total)}</dd></div><div><dt>${novas ? "Abaixo da meta" : "Vencem em breve"}</dt><dd>${fmtNum(novas ? r.abaixo : r.vencendo)}</dd></div><div><dt>${novas ? "Na meta" : "Com previsão"}</dt><dd>${fmtNum(novas ? r.ideal : r.aguardando)}</dd></div></dl>
+    <button class="btn pequeno" data-acao="painel-regiao-abrir">${novas ? "Ver estoque" : "Ver peças"}${icone("seta")}</button><small class="mapa-atualizacao">${frescor?.em ? fmtQuando(frescor.em) : "Relatório não importado"}</small>` : vazio("arquivo", "Sem relatório", `Importe as peças ${novas ? "novas" : "usadas"} para acompanhar os estados.`);
+  const ranking = [...dados].sort((a, b) => riscos.get(b.regiao).percentual - riscos.get(a.regiao).percentual);
+  return cartao("Risco por estado", `<div class="mapa-layout"><div class="mapa-figura"><div class="mapa-cab"><span>BRASIL / ${novas ? "ESTOQUE" : "DEVOLUÇÕES"}</span><strong>${dados.length} UF${dados.length === 1 ? "" : "s"}</strong></div><svg class="mapa-brasil" viewBox="0 0 525 525" role="group" aria-label="Risco por estado. Selecione um estado com dados."><defs><pattern id="mapa-sem-dados" width="5" height="5" patternUnits="userSpaceOnUse"><rect width="5" height="5" fill="var(--mapa-base)"/><path d="M0 5L5 0" stroke="var(--mapa-trama)" stroke-width=".5"/></pattern></defs><g class="mapa-cena" style="transform:${transformacaoMapa()}">${caminho}</g></svg><div class="mapa-controles" aria-label="Zoom do mapa"><button type="button" data-acao="painel-zoom" data-passo="-1" aria-label="Diminuir zoom" ${UIpainel.zoom <= 1 ? "disabled" : ""}>−</button><button type="button" data-acao="painel-zoom" data-passo="1" aria-label="Aproximar estado selecionado" ${UIpainel.zoom >= 2.5 ? "disabled" : ""}>+</button><button type="button" data-acao="painel-zoom" data-passo="0" aria-label="Restaurar visão de todo o Brasil">Brasil</button></div></div><div class="mapa-detalhe">${detalhe}</div></div>
+    <div class="mapa-escala" aria-label="Legenda de risco"><span>Taxa ${novas ? "fora da meta" : "de atraso"}</span>${[["baixo", "0–10%"], ["moderado", ">10–25%"], ["alto", ">25–50%"], ["critico", ">50%"]].map(([c,t]) => `<span class="risco-${c}"><i></i>${t}</span>`).join("")}<span class="escala-sem"><i></i>Sem dados</span></div>
+    <div class="mapa-regioes" aria-label="Comparar e selecionar estado">${ranking.map((x) => { const v = riscos.get(x.regiao); return `<button class="regiao-comparativo risco-${v.nivel} ${x.regiao === UIpainel.regiao ? "ativo" : ""}" data-acao="painel-regiao" data-regiao="${x.regiao}" aria-pressed="${x.regiao === UIpainel.regiao}"><strong>${x.regiao}</strong><span class="regiao-barra"><i style="width:${v.percentual}%"></i></span><span>${fmtNum1(v.percentual)}%</span></button>`; }).join("")}</div><p class="mapa-nota">${novas ? "Técnicos fora da faixa ÷ técnicos com estoque acompanhado." : `Peças acima de ${D.cfg.prazo} dias ÷ peças pendentes em cada estado.`} Sem localização individual.</p>`, { sub: novas ? "Proporção de técnicos fora da faixa de estoque." : "Proporção de peças que excederam o prazo de devolução.", acoes: seletor, classe: "cartao-mapa" });
 }
 
 function saudePrazos(D) {

@@ -77,27 +77,27 @@ const UIpainel = { tabelas: new Set(), fila: "cobrar", dia: "", mapaModo: "usada
 
 function renderPainel() {
   const D = derivar();
-  if (!E.usadas.length && !E.novas.length) return cabecalhoOperacao(D, true) + boasVindas();
+  if (!E.usadas.length && !E.novas.length) return leituraOperacional(D) + boasVindas();
   const k = D.kpi, cfg = D.cfg;
   const ant = historicoAnterior(), at = ant && ant.tot;
   const previstas = somar(k.previsoesHoje, (i) => i.qtd);
   const estoque = estoqueConhecidoPainel(D);
-  const mediaNovas = estoque.tecnicos.length ? estoque.total / estoque.tecnicos.length : 0;
   const indicadores = [
-    kpi({ rotulo: "Peças usadas pendentes", valor: fmtNum(k.usadas), sub: `${fmtNum(k.atrasadas)} acima de ${cfg.prazo} dias ${at ? delta(k.usadas, at.usadas, true, ant.data) : ""}`, acao: 'data-acao="ir" data-pagina="usadas"', ic: "retorno" }),
-    kpi({ rotulo: "Técnicos para cobrar", valor: fmtNum(k.cobrarTecnicos), classe: k.cobrarTecnicos ? "crit" : "", sub: `${plural(k.cobrarPecas, "peça", "peças")} precisam de atenção`, acao: 'data-acao="painel-cobrancas" data-aba="cobrar"', ic: "sino" }),
-    kpi({ rotulo: "Devoluções previstas hoje", valor: fmtNum(previstas), classe: "destaque", sub: `${plural(new Set(k.previsoesHoje.map((i) => i.tid)).size, "técnico com compromisso", "técnicos com compromisso")}`, acao: 'data-acao="painel-cobrancas" data-aba="previsoes"', ic: "calendario" }),
-    kpi({ rotulo: "Peças novas com técnicos", valor: estoque.temRelatorio ? fmtNum(estoque.total) : "—", sub: estoque.temRelatorio ? `${fmtNum(estoque.abaixo.length)} técnicos abaixo da meta · média ${fmtNum1(mediaNovas)}` : "Importe a planilha de peças novas", acao: 'data-acao="ir" data-pagina="estoque"', ic: "caixa" }),
+    kpiOperacional({ tipo: "usadas", rotulo: "Peças usadas pendentes", valor: fmtNum(k.usadas), sub: `${fmtNum(k.atrasadas)} acima de ${cfg.prazo} dias`, rodape: at ? delta(k.usadas, at.usadas, true, ant.data) : "Consultar peças e chamados", acao: 'data-acao="painel-usadas" data-status="todas"', icone: "retorno" }),
+    kpiOperacional({ tipo: "cobrancas", rotulo: "Técnicos para cobrar", valor: fmtNum(k.cobrarTecnicos), sub: `${plural(k.cobrarPecas, "peça exige", "peças exigem")} acompanhamento`, rodape: `${plural(k.prevVencida, "peça com previsão vencida", "peças com previsão vencida")}`, acao: 'data-acao="painel-cobrancas" data-aba="cobrar"', icone: "sino" }),
+    kpiOperacional({ tipo: "devolucoes", rotulo: "Devoluções previstas hoje", valor: fmtNum(previstas), sub: `${plural(new Set(k.previsoesHoje.map((i) => i.tid)).size, "técnico com compromisso", "técnicos com compromisso")}`, rodape: "Conferir compromissos de hoje", acao: 'data-acao="painel-cobrancas" data-aba="previsoes"', icone: "calendario" }),
+    kpiOperacional({ tipo: "estoque", rotulo: "Peças novas com técnicos", valor: estoque.temRelatorio ? fmtNum(estoque.total) : "—", sub: estoque.temRelatorio ? `${plural(estoque.abaixo.length, "técnico abaixo", "técnicos abaixo")} da meta` : "Importe a planilha de peças novas", rodape: "Consultar distribuição de estoque", acao: 'data-acao="painel-estoque"', icone: "caixa" }),
   ];
   const botaoTabela = (id) => `<button class="btn fantasma pequeno" data-acao="alternar-tabela" data-grafico="${id}">${icone(UIpainel.tabelas.has(id) ? "grafico" : "tabela")}${UIpainel.tabelas.has(id) ? "Gráfico" : "Tabela"}</button>`;
   const tab = (id, corpo, tabela) => UIpainel.tabelas.has(id) ? tabela : corpo;
   const periodo = `<div class="filtros-segmentados">${[7, 30].map((dias) => `<button type="button" class="${UIpainel.periodo === dias ? "ativo" : ""}" data-acao="painel-periodo" data-periodo="${dias}" aria-pressed="${UIpainel.periodo === dias}">${dias} dias</button>`).join("")}</div>`;
   const hist = historicoDoPainel();
-  const evolucao = hist.length > 1 ? `<div class="grafico" data-grafico="evolucao"></div>` : `<div class="historico-inicial">${icone("grafico")}<strong>${hist.length ? "Sua primeira fotografia está registrada" : "Ainda sem importações neste período"}</strong><p>Com importações em dias diferentes, você verá se as pendências estão diminuindo.</p>${hist.length ? `<span>${fmtData(hist[0].data)} · ${plural(hist[0].tot.usadas, "peça pendente", "peças pendentes")}</span>` : ""}</div>`;
+  const evolucao = hist.length > 1 ? `<div class="grafico" data-grafico="evolucao"></div>` : `<div class="historico-inicial">${icone("grafico")}<strong>${hist.length ? "Histórico iniciado" : "Ainda sem importações neste período"}</strong><p>A evolução será exibida após a importação de relatórios em dias diferentes.</p>${hist.length ? `<span>${fmtData(hist[0].data)} · ${plural(hist[0].tot.usadas, "peça pendente", "peças pendentes")}</span>` : ""}</div>`;
   return `<div class="painel-operacao">
-    ${cabecalhoOperacao(D)}${avisoAtualizacao(D)}
+    ${leituraOperacional(D)}
     <div class="kpis kpis-4 indicadores-operacao">${indicadores.join("")}</div>
-    <div class="grade-operacao">${mapaOperacao(D)}${filaHoje(D)}</div>
+    ${faixaGestao(D)}${barraPrioridade(D)}${avisoAtualizacao(D)}
+    <div class="grade-operacao">${filaHoje(D)}${mapaOperacao(D)}</div>
     ${agendaDevolucoes(D)}
     <div class="grade-analise">${saudePrazos(D)}${cartao("Evolução das pendências", tab("evolucao", evolucao, tabelaEvolucao()), { sub: "Peças pendentes e atrasadas nas importações do período.", acoes: periodo + botaoTabela("evolucao"), classe: "cartao-evolucao" })}</div>
     <div class="grade-2">${cartao("Onde o atraso se concentra", tab("idade", `<div class="grafico" data-grafico="idade"></div>`, tabelaFaixas(D)), { sub: "Clique em uma faixa para abrir as peças correspondentes.", acoes: botaoTabela("idade") })}${reposicaoPainel(D)}</div>
@@ -121,7 +121,7 @@ function desenharPainel() {
   const el = (id) => document.querySelector(`.grafico[data-grafico="${id}"]`);
   if (el("idade")) graficoColunas(el("idade"), {
     faixas: D.faixas, titulo: "Idade das peças usadas",
-    aoClicar: (f) => { Object.assign(UI.us, { status: "todas", faixa: { min: f.min, max: f.max, rotulo: f.rotulo }, pagina: 1, aba: "pendentes" }); irPara("usadas"); },
+    aoClicar: (f) => { Object.assign(UI.us, { regiao: "", tid: "", busca: "", status: "todas", faixa: { min: f.min, max: f.max, rotulo: f.rotulo }, pagina: 1, aba: "pendentes" }); irPara("usadas"); },
   });
   if (el("evolucao")) {
     const h = historicoDoPainel();
@@ -129,7 +129,7 @@ function desenharPainel() {
       datas: h.map((x) => x.data),
       series: [
         { nome: "Pendentes", cor: "var(--series-1)", valores: h.map((x) => x.tot.usadas) },
-        { nome: "Atrasadas", cor: "var(--crit)", valores: h.map((x) => x.tot.atrasadas) },
+        { nome: "Atrasadas", cor: "var(--crit)", tracejado: true, valores: h.map((x) => x.tot.atrasadas) },
       ],
       vazio: "O gráfico ganha forma a cada dia importado.",
     });

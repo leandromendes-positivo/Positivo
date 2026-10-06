@@ -6,7 +6,7 @@ Painel web para acompanhar, todo dia, as **peças usadas** que cada técnico ain
 - **Dados:** Firebase (Firestore), na conta Google escolhida por você. Nada de planilha ou dado de técnico fica neste repositório.
 - **Aviso diário:** e-mail de segunda a sexta às 7h55 com quem cobrar (GitHub Actions).
 - **Atualização do site:** qualquer alteração em `src/` enviada para o branch `main` publica o site de novo sozinha.
-- **Aparência:** o botão de tema no topo do painel e na tela de login alterna entre claro (logo preta) e escuro (logo branca e turquesa). A escolha fica salva neste navegador; no primeiro acesso, acompanha o tema do sistema.
+- **Aparência:** o botão no topo e na tela de login alterna entre claro (base branca e texto preto) e escuro (base preta e texto branco), com a logo correspondente. As ações usam turquesa; azul, coral, âmbar e verde distinguem categorias e situações. A escolha fica salva neste navegador; no primeiro acesso, acompanha o tema do sistema.
 
 Detalhes do funcionamento (regras, formato das planilhas, banco, arquitetura): [CONTEXTO-PARA-CHATGPT.md](CONTEXTO-PARA-CHATGPT.md).
 
@@ -71,13 +71,15 @@ Abra o site → **Entrar com Google** → arraste as planilhas do dia (Novas e U
 
 ### Visão geral da operação
 
-- **Sua fila de hoje:** técnicos a cobrar, previsões vencidas e devoluções previstas hoje. As promessas vencidas aparecem primeiro, seguidas das peças mais antigas. O botão **Cobrar** abre o registro de contato e previsão.
+- **Indicadores no topo:** peças pendentes, técnicos a cobrar, compromissos de hoje e estoque conhecido. Cartões com fotografias de tecnologia abrem as consultas correspondentes e limpam filtros antigos.
+- **Prioridades de cobrança:** técnicos a cobrar, previsões vencidas e devoluções previstas hoje. As promessas vencidas aparecem primeiro, seguidas das peças mais antigas. O botão **Cobrar** abre o registro de contato e previsão.
 - **Agenda de devoluções:** compromissos dos próximos 7 dias, com quantidade de peças e técnicos por data. Registrar uma previsão não confirma a devolução.
-- **Mapa do Brasil:** selecione um estado para conferir pendências ou estoque e abrir a lista correspondente. Estados sem planilha aparecem como **sem dados**; o mapa não usa localização individual dos técnicos.
-- **Indicadores e gráficos:** cumprimento do prazo, idade das peças, evolução das importações em 7 ou 30 dias e técnicos que precisam de reposição. O histórico começa com suas importações, sem números simulados.
+- **Mapa do Brasil:** selecione um estado para conferir pendências ou estoque. A escala de verde a coral representa quatro faixas da taxa de atraso: 0–10%, >10–25%, >25–50% e >50%. No modo Novas, representa a proporção de técnicos fora da faixa de estoque. Estados sem planilha usam hachuras; uma planilha vazia importada conta como dado conhecido. O mapa não usa localização individual dos técnicos.
+- **Indicadores e gráficos:** cumprimento do prazo, idade média ponderada pela quantidade de peças, atraso crítico (mais de duas vezes o prazo) e devoluções confirmadas em 7 dias. A evolução usa azul para pendências e coral tracejado para atrasos. O histórico começa com suas importações, sem números simulados.
+- **Demais telas:** cobranças, peças, estoque, técnicos, importação e configurações têm resumos operacionais, tabelas e filtros com a mesma organização visual. Relatórios de novas ausentes não contam como estoque zerado nem como necessidade de reposição.
 - **Celular e acessibilidade:** layout adaptável, filtros por teclado, versões em tabela dos gráficos e animações reduzidas conforme a preferência do dispositivo.
 
-O mapa permite aproximar o estado selecionado, voltar à visão do Brasil e consultar os valores com o mouse ou teclado. A evolução tem leitura por dia com as setas ← →, Home e End. As entradas de cartões, barras, linhas e medidores são animadas ao aparecerem na tela; trocar filtros do mapa, da fila ou da agenda atualiza somente aquele componente. A imagem de abertura mantém a proporção original no computador e no celular.
+O mapa permite aproximar o estado selecionado, voltar à visão do Brasil e consultar os valores com o mouse ou teclado. A evolução tem leitura por dia com as setas ← →, Home e End. Cartões, barras, linhas e medidores têm animações de entrada; os indicadores reagem ao cursor com uma inclinação suave e realce da imagem. Trocar filtros do mapa, da fila ou da agenda atualiza somente aquele componente. As animações respeitam a preferência de movimento reduzido.
 
 ## Regras (ajustáveis em Configurações)
 
@@ -97,11 +99,13 @@ Códigos numéricos no lugar do nome do técnico (ex.: `110301019`) são tratado
 ```
 src/pagina.html, src/estilos.css   moldura e visual
 src/operacao.css                   visual da central de operações
+src/gestao.css                     temas, paleta funcional e composição das telas
 src/tema.js, src/botao-tema.html   escolha de tema e preferência local
 src/assets/                      logos, favicon, ilustração e mapa (atribuição em MAPA-LICENCA.txt)
 src/js/00…80                       lógica e telas (JavaScript puro, sem framework)
 src/js/25-firebase.js              banco Firebase + login Google
 src/js/55-movimento.js             animações progressivas e preferência de movimento reduzido
+src/js/62-indicadores.js           cálculos de gestão e resumos das seções
 src/js/65-operacao.js              fila de cobranças, mapa e agenda
 build.py                           monta dist/site/index.html (o site)
 aviso/enviar-aviso.mjs             e-mail diário (roda no GitHub Actions)
@@ -128,6 +132,7 @@ python3 build.py
 python3 -m http.server 8000 --directory dist
 # Em outro terminal, com Playwright e Chromium instalados:
 node testes/operacao-e2e.mjs
+node testes/gestao-e2e.mjs
 ```
 
-O teste abre `pagina-completa.html` e exige armazenamento em memória antes de importar dados. Verifica cobranças, previsões vencidas, agenda, devolução na importação seguinte, mapa, gráficos, temas e telas de 320/390 pixels. Use `PW_PATH` e `CHROMIUM` para indicar instalações específicas; `URL_PAINEL_TESTE` permite mudar a URL local.
+Os testes abrem `pagina-completa.html` e exigem armazenamento em memória antes de importar dados. Verificam cobranças, previsões vencidas, agenda, devolução na importação seguinte, mapa, gráficos, cálculos dos indicadores, contraste dos dois temas e as sete telas em desktop e celular. Use `PW_PATH` e `CHROMIUM` para indicar instalações específicas; `URL_PAINEL_TESTE` permite mudar a URL local.

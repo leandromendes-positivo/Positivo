@@ -466,9 +466,9 @@ function montarMensagem(t, itens, modelo) {
   const max = 15;
   const ordenados = [...itens].sort((a, b) => b.dias - a.dias);
   let lista = ordenados.slice(0, max).map((i) =>
-    `• ${i.desc || "Material"} (cód. ${i.mat})${i.chamado ? ` — chamado ${i.chamado}` : ""} — ${i.dias} ${i.dias === 1 ? "dia" : "dias"}`
-  ).join("\n");
-  if (ordenados.length > max) lista += `\n• ... e mais ${ordenados.length - max} peça(s)`;
+    `• ${i.desc || "Material"}\n  Código: ${i.mat} | Quantidade: ${fmtNum(i.qtd)}\n  ${i.chamado ? `Chamado: ${i.chamado} | ` : ''}${plural(i.dias, 'dia', 'dias')} com o técnico`
+  ).join("\n\n");
+  if (ordenados.length > max) lista += `\n\n+ ${plural(somar(ordenados.slice(max), i => i.qtd), 'peça', 'peças')} em ${plural(ordenados.length - max, 'registro adicional', 'registros adicionais')}.`;
   const valores = {
     saudacao: saudacao(), nome: primeiroNome(t.nome), nome_completo: t.nome,
     qtd: somar(itens, (i) => i.qtd), lista, prazo: prazoDoTecnico(t.tid), regiao: t.regiao,

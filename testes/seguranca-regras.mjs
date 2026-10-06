@@ -25,6 +25,15 @@ try {
   await assertFails(db.doc('usuarios/rui@outlook.com').set(usuario('rui@outlook.com','administrador')));
  }
  await assertSucceeds(operador.doc('dados/indice').get());
+ // E-mail/telefone do técnico são contatos operacionais, sem vínculo com usuários.
+ await assertSucceeds(dono.doc('cadastro/tecnicos').set({t:{tecnico1:{nome:'Técnico fictício',email:'tecnico@empresa.com',telefone:'41999999999'}}}));
+ for(const provedor of ['google.com','microsoft.com']) {
+  const tecnico=conta('tecnico','tecnico@empresa.com',provedor);
+  assert.equal((await assertSucceeds(tecnico.doc('usuarios/tecnico@empresa.com').get())).exists,false,'contato não cria usuário');
+  await assertFails(tecnico.doc('dados/indice').get());
+  await assertFails(tecnico.doc('cadastro/tecnicos').get());
+  await assertFails(tecnico.doc('usuarios/tecnico@empresa.com').set(usuario('tecnico@empresa.com','administrador')));
+ }
  await assertSucceeds(operador.doc('usuarios/ana.silva@empresa.com').get());
  await assertFails(operador.collection('usuarios').get());
  await assertFails(operador.doc('usuarios/dono@empresa.com').get());
@@ -57,5 +66,5 @@ try {
  await assertSucceeds(dono.doc('usuarios/ana.silva@empresa.com').update({ativo:false,atualizadoEm:stamp(),atualizadoPor:por}));
  await assertFails(operador.doc('dados/indice').get({source:'server'}));
  await assertFails(gravar(operador,agenda('bloqueada')));
- console.log('PASSOU: Google/Microsoft, verificação de e-mail, acesso individual, perfis, antiescalação, revogação, autor e horário autenticados, auditoria imutável, concorrência e lotes.');
+ console.log('PASSOU: contatos de técnicos não autorizam acesso nem criam usuários, Google/Microsoft, verificação de e-mail, acesso individual, perfis, antiescalação, revogação, autor e horário autenticados, auditoria imutável, concorrência e lotes.');
 } finally {await env.cleanup();}

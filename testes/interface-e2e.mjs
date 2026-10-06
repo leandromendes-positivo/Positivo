@@ -110,7 +110,7 @@ try {
     await page.locator('[data-acao="lote-cobranca"]').click();
     assert.match(await page.locator('.modal-sub').innerText(), /^3 peças/);
     assert.match(await page.locator('#cob-form small').innerText(), /3 peças/);
-    for (const el of await page.locator('.modal .btn').all()) await estados(el, `${tema}/cobrança/${await el.innerText()}`);
+    for (const el of await page.locator('.modal .btn:visible').all()) await estados(el, `${tema}/cobrança/${await el.innerText()}`);
     await page.locator('.modal [data-acao="editar-tecnico"]').click();
     assert.equal(await page.locator('.modal').count(), 2);
     assert.equal(await page.locator('.modal').evaluateAll((es) => new Set(es.map((e) => e.getAttribute('aria-labelledby'))).size), 2, 'cada janela tem título próprio');

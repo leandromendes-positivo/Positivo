@@ -64,8 +64,15 @@ function abrirModal({ titulo, subtitulo = "", corpo = "", rodape = "", largura =
   fundo.querySelectorAll("[data-fechar]").forEach((b) => b.addEventListener("click", fechar));
   document.body.appendChild(fundo);
   Camadas.atualizar();
-  const foco = fundo.querySelector('[autofocus]') || fundo.querySelector(".modal-corpo input, .modal-corpo textarea, .modal-corpo select, .modal-rodape .prim") || fundo.querySelector("[data-fechar]");
-  setTimeout(() => { if (fundo.isConnected && janelaAtual() === fundo) foco.focus(); }, 30);
+  setTimeout(() => {
+    // A aba inicial pode ocultar campos. Não roube o foco de quem já começou a editar.
+    if (!fundo.isConnected || janelaAtual() !== fundo || fundo.contains(document.activeElement)) return;
+    const visivel = el => !el.disabled && el.getClientRects().length && getComputedStyle(el).visibility !== 'hidden';
+    const foco = [...fundo.querySelectorAll('[autofocus]')].find(visivel)
+      || [...fundo.querySelectorAll('.modal-corpo input, .modal-corpo textarea, .modal-corpo select, .modal-rodape .prim')].find(visivel)
+      || fundo.querySelector('[data-fechar]');
+    foco.focus();
+  }, 30);
   return { el: fundo, fechar };
 }
 

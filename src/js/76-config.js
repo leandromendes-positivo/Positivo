@@ -26,6 +26,8 @@ function renderConfig() {
     </form>`)}
 
     ${cartao("Mensagens de cobrança", `<form class="form" data-form="mensagens">
+      ${D.tecnicos.some(t => t.tipo === 'tecnico' && t.usadas.length) ? `<div class="config-email"><div>${icone('email')}<strong>Cobrança por Outlook</strong></div><p>Prepare um e-mail com destinatário, assunto e peças preenchidos. O envio é confirmado por você no Outlook.</p><label class="campo"><span>Técnico destinatário</span><select data-email-tecnico>${D.tecnicos.filter(t => t.tipo === 'tecnico' && t.usadas.length).map(t => `<option value="${esc(t.tid)}">${esc(t.nome)}</option>`).join('')}</select></label><button type="button" class="btn prim" data-acao="preparar-email">${icone('email')}Preparar e-mail</button></div>` : ''}
+      <p class="nota">Os modelos abaixo são usados no WhatsApp. O e-mail tem assunto, resumo e relação completa de peças; você pode revisar o texto antes de abrir o Outlook.</p>
       <label class="campo"><span>Cobrança (peças atrasadas)</span><textarea name="msgCobranca" rows="8">${esc(c.msgCobranca)}</textarea></label>
       <label class="campo"><span>Lembrete (peças que vencem em breve)</span><textarea name="msgLembrete" rows="5">${esc(c.msgLembrete)}</textarea></label>
       <p class="nota">Campos que o sistema preenche: <span class="mono">{saudacao}</span> <span class="mono">{nome}</span> <span class="mono">{nome_completo}</span> <span class="mono">{qtd}</span> <span class="mono">{lista}</span> <span class="mono">{prazo}</span> <span class="mono">{regiao}</span></p>

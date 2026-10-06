@@ -23,65 +23,121 @@ function ligarAtalhos(el) {
   }));
 }
 
-/** Cobrar: mensagem pronta (copiar / abrir WhatsApp) + registro da cobrança. */
-function modalCobrar(tid, aba = "cobrar", itensEscolhidos = null) {
-  const D = derivar();
-  const t = D.mapa.get(tid);
+/** Mensagens por WhatsApp ou Outlook; o registro só acontece após confirmação. */
+function modalCobrar(tid, aba = "cobrar", itensEscolhidos = null, canalInicial = 'whatsapp') {
+  const D = derivar(), t = D.mapa.get(tid);
   if (!t) return;
   let itens = itensEscolhidos || itensDaAba(t, aba, D.hoje);
   if (!itens.length) itens = t.itensCobrar.length ? t.itensCobrar : t.usadas;
-  const lembrete = aba === "vencendo";
-  const texto = montarMensagem(t, itens, lembrete ? E.config.msgLembrete : E.config.msgCobranca);
-  const qtd = somar(itens, (i) => i.qtd);
+  const lembrete = aba === "vencendo", qtd = somar(itens, i => i.qtd);
+  const email = montarEmailCobranca(t, itens, lembrete);
+  let telefone = t.telefone, emailCadastrado = email.destinatario;
   const m = abrirModal({
     titulo: `${lembrete ? "Lembrar" : "Cobrar"} ${t.nome}`,
-    subtitulo: `${plural(qtd, "peça", "peças")} · mais antiga com ${Math.max(...itens.map((i) => i.dias))} dias${t.telefone ? ` · WhatsApp ${fmtTelefone(t.telefone)}` : ""}`,
-    largura: "larga",
-    corpo: `<div class="cobrar-grade">
-      <div class="cobrar-msg">
-        <label class="campo"><span>Mensagem</span><textarea id="cob-texto" rows="12"></textarea></label>
-        <div class="linha-botoes">
-          <button class="btn" type="button" data-copiar>${icone("copiar")}Copiar mensagem</button>
-          <a class="btn whats-btn" id="cob-link" href="#" target="_blank" rel="noopener noreferrer">${icone("mensagem")}Abrir no WhatsApp${icone("externo", "ic-pequeno")}</a>
+    subtitulo: `${plural(qtd, "peça", "peças")} · mais antiga com ${Math.max(...itens.map(i => i.dias))} dias`,
+    largura: 'larga', aoFechar: () => aoMudar.delete(atualizarContato),
+    corpo: `<div class="cobrar-resumo"><div><span>Peças nesta cobrança</span><strong>${fmtNum(qtd)}</strong></div><div><span>Prazo do técnico</span><strong>${prazoDoTecnico(tid)} <small>dias</small></strong></div><div class="cobrar-contato"><span>Contato do técnico</span><small data-contato-resumo></small>${podeAdministrar() ? `<button class="link" type="button" data-acao="editar-tecnico" data-tid="${esc(tid)}">Editar contato</button>` : ''}</div></div>
+    <div class="cobrar-grade">
+      <section class="cobrar-msg" aria-label="Preparar mensagem">
+        <div class="cobrar-etapa"><span>01</span><div><h3>Preparar mensagem</h3><p>Confira o conteúdo e escolha o canal.</p></div></div>
+        <div class="cobrar-canais" role="group" aria-label="Canal da mensagem"><button type="button" class="btn" data-cob-canal="whatsapp" aria-pressed="true" aria-controls="cob-painel-whatsapp">${icone('mensagem')}WhatsApp</button><button type="button" class="btn" data-cob-canal="email" aria-pressed="false" aria-controls="cob-painel-email">${icone('email')}E-mail / Outlook</button></div>
+        <div id="cob-painel-whatsapp">
+          <label class="campo"><span>Mensagem para o WhatsApp</span><textarea id="cob-texto" rows="12"></textarea></label>
+          <div class="linha-botoes"><a class="btn whats-btn" id="cob-link" href="#" target="_blank" rel="noopener noreferrer">${icone('mensagem')}Abrir no WhatsApp${icone('externo', 'ic-pequeno')}</a><button class="btn" type="button" data-copiar>${icone('copiar')}Copiar mensagem</button></div>
+          <p class="nota" data-nota-whatsapp></p>
         </div>
-        ${t.telefone ? "" : `<p class="nota">${icone("info")}Sem WhatsApp cadastrado: o WhatsApp vai pedir para escolher o contato. <button class="link" type="button" data-acao="editar-tecnico" data-tid="${esc(t.tid)}">Cadastrar número</button></p>`}
-        <p class="nota">Se o link não abrir neste aparelho, copie a mensagem e cole na conversa.</p>
-      </div>
+        <form id="cob-painel-email" class="form" hidden>
+          <label class="campo"><span>Para · contato do técnico</span><input type="email" id="cob-email-para" required maxlength="254" autocomplete="off" placeholder="tecnico@empresa.com.br"><small>Contato para esta cobrança. Não cria usuário nem concede acesso ao painel.</small></label>
+          <label class="campo"><span>Assunto</span><input type="text" id="cob-email-assunto" required maxlength="180"></label>
+          <label class="campo"><span>Mensagem do e-mail</span><textarea id="cob-email-corpo" rows="14" required></textarea></label>
+          <label class="campo"><span>Onde abrir</span><select id="cob-email-editor">${Object.entries(EDITORES_EMAIL).map(([v,n]) => `<option value="${v}">${n}</option>`).join('')}</select></label>
+          <p class="nota" data-email-orientacao></p>
+          <p class="cobrar-email-aviso" data-email-aviso role="status" hidden></p>
+          <div class="linha-botoes"><a class="btn prim" id="cob-email-link" target="_blank" rel="noopener noreferrer">${icone('email')}Abrir no Outlook${icone('externo', 'ic-pequeno')}</a><button class="btn" type="button" data-copiar-email>${icone('copiar')}Copiar corpo</button></div>
+          <details class="cobrar-formatado"><summary>Rascunho formatado para Outlook no computador</summary><p class="nota">Baixe o arquivo e abra no Outlook compatível com rascunhos .eml. Inclui a mensagem completa, com cabeçalho e formatação, mesmo quando ela é longa demais para abrir por link.</p><div class="cobrar-email-previa" data-email-previa></div><button type="button" class="btn" data-baixar-email>${icone('baixar')}Baixar rascunho (.eml)</button></details>
+        </form>
+      </section>
       <form class="cobrar-registro form" id="cob-form">
-        <h3>Registrar a cobrança</h3>
-        <p class="nota">Registre depois de enviar. Fica no histórico do técnico e o painel mostra quando foi a última.</p>
-        <label class="campo"><span>Como você cobrou</span><select name="canal">${Object.entries(CANAIS).map(([v, r]) => `<option value="${v}">${r}</option>`).join("")}</select></label>
-        <label class="campo"><span>Previsão de devolução que o técnico informou</span><input type="date" name="previsao" id="cob-prev" min="${somaDias(D.hoje, -30)}"></label>
-        ${atalhosData("#cob-prev")}
+        <div class="cobrar-etapa"><span>02</span><div><h3>Registrar a cobrança</h3><p>Depois de enviar, registre o contato.</p></div></div>
+        <p class="nota">Abrir a mensagem não confirma o envio. O histórico só muda ao clicar em Registrar cobrança.</p>
+        <label class="campo"><span>Como você cobrou</span><select name="canal">${Object.entries(CANAIS).map(([v,r]) => `<option value="${v}">${r}</option>`).join('')}</select></label>
+        <label class="campo"><span>Previsão informada pelo técnico</span><input type="date" name="previsao" id="cob-prev" min="${somaDias(D.hoje, -30)}"></label>
+        ${atalhosData('#cob-prev')}
         <label class="campo"><span>Observação</span><input type="text" name="obs" maxlength="300" placeholder="Ex.: vai deixar na base na sexta"></label>
-        <small class="nota">A previsão vale para ${plural(qtd, "peça", "peças")} desta cobrança. Até a data, elas saem da lista de cobrança.</small>
+        <small class="nota">A previsão vale para ${plural(qtd, 'peça', 'peças')} desta cobrança. Até a data, elas saem da lista de cobrança.</small>
       </form>
     </div>`,
-    rodape: `<button class="btn" data-fechar>Fechar</button><button class="btn prim" data-registrar>${icone("ok")}Registrar cobrança</button>`,
+    rodape: `<button class="btn" data-fechar>Fechar</button><button class="btn prim" data-registrar>${icone('ok')}Registrar cobrança</button>`,
   });
-  const ta = m.el.querySelector("#cob-texto");
-  const link = m.el.querySelector("#cob-link");
-  ta.value = texto;
-  const atualizarLink = () => { link.href = linkWhatsApp(t.telefone, ta.value); };
-  atualizarLink();
-  ta.addEventListener("input", atualizarLink);
-  m.el.querySelector("[data-copiar]").addEventListener("click", () => copiarTexto(ta.value));
-  ligarAtalhos(m.el);
-  const registrar = async () => {
-    const f = new FormData(m.el.querySelector("#cob-form"));
-    const btn = m.el.querySelector("[data-registrar]");
-    btn.disabled = true;
+  const el = m.el, ta = el.querySelector('#cob-texto'), link = el.querySelector('#cob-link');
+  ta.value = montarMensagem(t, itens, lembrete ? E.config.msgLembrete : E.config.msgCobranca);
+  const fEmail = el.querySelector('#cob-painel-email'), para = el.querySelector('#cob-email-para'), assunto = el.querySelector('#cob-email-assunto'), corpo = el.querySelector('#cob-email-corpo'), editor = el.querySelector('#cob-email-editor'), linkEmail = el.querySelector('#cob-email-link');
+  para.value = email.destinatario; assunto.value = email.assunto; corpo.value = email.corpo;
+  try { const preferido = localStorage.getItem('cp-outlook-editor'); if (Object.hasOwn(EDITORES_EMAIL, preferido)) editor.value = preferido; } catch (_) { /* preferência só nesta janela */ }
+  const rascunho = () => ({ destinatario: para.value.trim(), assunto: assunto.value.trim(), corpo: corpo.value });
+  function atualizarLinks() {
+    link.href = linkWhatsApp(telefone, ta.value);
+    const aviso = el.querySelector('[data-email-aviso]');
+    let url = '', erro = '';
     try {
-      await registrarCobranca(tid, { canal: f.get("canal"), previsao: f.get("previsao") || "", obs: limpar(f.get("obs")), itens });
-      m.fechar();
-      toast(`Cobrança de ${t.nome} registrada${f.get("previsao") ? `, previsão ${fmtPrevisao(f.get("previsao"))}` : ""}.`);
-    } catch (e) {
-      btn.disabled = false;
-      toast(erroAmigavel(e).message, "erro");
-    }
+      url = linkEmailCobranca(rascunho(), editor.value);
+      if (url.length > (editor.value === 'aplicativo' ? 1800 : 7500)) erro = 'Esta mensagem é longa demais para abrir por link. Use o rascunho .eml abaixo ou copie o corpo completo para o Outlook. Nenhuma peça foi removida da mensagem.';
+    } catch (e) { erro = e.message; }
+    if (erro) linkEmail.removeAttribute('href'); else linkEmail.href = url;
+    linkEmail.setAttribute('aria-disabled', String(!!erro));
+    aviso.textContent = erro; aviso.hidden = !erro;
+    el.querySelector('[data-email-orientacao]').textContent = editor.value === 'aplicativo' ? 'O Outlook precisa estar configurado como aplicativo padrão de e-mail neste dispositivo. Revise o rascunho e clique em Enviar no Outlook.' : 'Abre um novo e-mail na sua conta do Microsoft 365. Revise o destinatário e clique em Enviar no Outlook.';
+    const previa = el.querySelector('[data-email-previa]');
+    if (previa.closest('details').open) previa.innerHTML = htmlEmailCobranca(rascunho());
+  }
+  function atualizarContato() {
+    if (!el.isConnected) { aoMudar.delete(atualizarContato); return; }
+    const atual = derivar().mapa.get(tid) || t;
+    telefone = atual.telefone;
+    if (para.value.trim() === emailCadastrado) para.value = String(atual.email || '').trim();
+    emailCadastrado = String(atual.email || '').trim();
+    el.querySelector('[data-contato-resumo]').textContent = [atual.email, telefone && fmtTelefone(telefone)].filter(Boolean).join(' · ') || 'E-mail e WhatsApp não cadastrados';
+    el.querySelector('[data-nota-whatsapp]').textContent = telefone ? 'Confira a mensagem no WhatsApp antes de enviar.' : 'Sem número cadastrado: o WhatsApp pedirá para escolher o contato. Você também pode copiar a mensagem.';
+    atualizarLinks();
+  }
+  function canal(valor) {
+    el.querySelectorAll('[data-cob-canal]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.cobCanal === valor)));
+    el.querySelector('#cob-painel-whatsapp').hidden = valor !== 'whatsapp'; fEmail.hidden = valor !== 'email';
+    el.querySelector('#cob-form [name="canal"]').value = valor;
+  }
+  el.querySelectorAll('[data-cob-canal]').forEach(b => b.addEventListener('click', () => canal(b.dataset.cobCanal)));
+  ta.addEventListener('input', atualizarLinks); fEmail.addEventListener('input', atualizarLinks);
+  editor.addEventListener('change', () => { atualizarLinks(); try { localStorage.setItem('cp-outlook-editor', editor.value); } catch (_) { /* opcional */ } });
+  fEmail.addEventListener('submit', e => { e.preventDefault(); linkEmail.click(); });
+  linkEmail.addEventListener('click', e => {
+    atualizarLinks();
+    if (!fEmail.reportValidity() || !linkEmail.hasAttribute('href')) { e.preventDefault(); return; }
+    el.querySelector('#cob-form [name="canal"]').value = 'email';
+  });
+  link.addEventListener('click', () => { el.querySelector('#cob-form [name="canal"]').value = 'whatsapp'; });
+  el.querySelector('[data-copiar]').addEventListener('click', () => copiarTexto(ta.value));
+  el.querySelector('[data-copiar-email]').addEventListener('click', () => copiarTexto(corpo.value));
+  el.querySelector('.cobrar-formatado').addEventListener('toggle', atualizarLinks);
+  el.querySelector('[data-baixar-email]').addEventListener('click', () => {
+    if (!fEmail.reportValidity()) return;
+    try {
+      const url = URL.createObjectURL(new Blob([rascunhoEmailCobranca(rascunho())], { type: 'message/rfc822' }));
+      const a = document.createElement('a'); a.href = url; a.download = `cobranca-positivo-${hojeISO()}.eml`; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (e) { toast(e.message, 'erro'); }
+  });
+  aoMudar.add(atualizarContato); atualizarContato(); canal(canalInicial); ligarAtalhos(el);
+  const registrar = async () => {
+    const form = el.querySelector('#cob-form'), btn = el.querySelector('[data-registrar]');
+    if (btn.disabled || !form.reportValidity()) return;
+    const f = new FormData(form); btn.disabled = true;
+    try {
+      await registrarCobranca(tid, { canal: f.get('canal'), previsao: f.get('previsao') || '', obs: limpar(f.get('obs')), itens });
+      m.fechar(); toast(`Cobrança de ${t.nome} registrada${f.get('previsao') ? `, previsão ${fmtPrevisao(f.get('previsao'))}` : ''}.`);
+    } catch (e) { btn.disabled = false; toast(erroAmigavel(e).message, 'erro'); }
   };
-  m.el.querySelector("[data-registrar]").addEventListener("click", registrar);
-  m.el.querySelector("#cob-form").addEventListener("submit", (e) => { e.preventDefault(); registrar(); });
+  el.querySelector('[data-registrar]').addEventListener('click', registrar);
+  el.querySelector('#cob-form').addEventListener('submit', e => { e.preventDefault(); registrar(); });
 }
 
 /** Previsão de devolução para um conjunto de peças. */
@@ -134,7 +190,7 @@ function modalTecnico(tid, focarPrazos = false) {
         <label class="campo"><span>Limite próprio de peças novas</span><input type="number" name="meta" min="0" max="10000" placeholder="Padrão: ${esc(E.config.meta)}"><small>Em branco = limite padrão. 0 = sem limite. Estoque menor não exige reposição.</small></label>
         <label class="campo"><span>Localidade do técnico</span><select name="localidade">${Object.entries(LOCALIDADES).map(([v,n])=>`<option value="${v}" ${(c.localidade||'')===v?'selected':''}>${n}</option>`).join('')}</select><small>Informe se atende na capital ou no interior.</small></label>
         <label class="campo"><span>WhatsApp</span><input type="tel" name="telefone" maxlength="20" placeholder="(41) 99999-9999"></label>
-        <label class="campo"><span>E-mail</span><input type="email" name="email" maxlength="120" placeholder="nome@empresa.com.br"></label>
+        <label class="campo"><span>E-mail de contato</span><input type="email" name="email" maxlength="120" placeholder="nome@empresa.com.br"><small>Usado apenas para contato e cobranças. Não cria conta nem autoriza acesso ao painel.</small></label>
       </div>
       <fieldset class="prazos-personalizados"><legend>${icone('relogio')}Prazos de devolução deste técnico</legend>
         <p>Defina prazos em dias para as peças em aberto e futuras. Deixe em branco para acompanhar a regra geral.</p>

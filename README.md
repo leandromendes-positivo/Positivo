@@ -76,8 +76,20 @@ A ativação inicial exige configuração no Firebase e, para Microsoft, no Entr
 
 1. Exporte do sistema os relatórios de peças **Novas** e **Usadas** de cada região (`PR Usadas.csv`, `PR Novas.csv`…).
 2. Abra o painel e **arraste as planilhas** (todas de uma vez).
-3. **Cobranças → Cobrar hoje**: o botão **Cobrar** monta a mensagem para o WhatsApp; registre a cobrança e a **previsão de devolução** que o técnico informar.
+3. **Cobranças → Cobrar hoje**: o botão **Cobrar** monta a mensagem para WhatsApp ou **E-mail / Outlook**; depois de enviar, registre a cobrança e a **previsão de devolução** que o técnico informar.
 4. Peça **usada** que sai do relatório (inclusive redução parcial da quantidade) conta como **devolvida**. Para novas, confira **Consulta avançada → Saídas de novas** e classifique a baixa como devolução, uso em atendimento ou transferência/ajuste.
+
+### Mensagens de cobrança pelo Outlook
+
+Em **Cobrar → E-mail / Outlook**, confira o destinatário, assunto e mensagem já preenchidos. Há também o atalho **Configurações → Mensagens de cobrança → Preparar e-mail**. O conteúdo reúne resumo, prazo próprio do técnico, quantidades, códigos, descrições, chamados e previsões, com todas as peças selecionadas e assinatura pelo primeiro nome do operador.
+
+- **Outlook na Web (Microsoft 365):** abre o compositor na conta corporativa conectada. Revise e clique em **Enviar** no Outlook.
+- **Outlook instalado:** abre pelo aplicativo padrão de e-mail do dispositivo, que precisa estar configurado como Outlook.
+- **Rascunho formatado (.eml):** inclui cabeçalho Positivo e mensagem completa para edições do Outlook que aceitam rascunhos nesse formato. Links abrem texto organizado; a formatação visual fica no arquivo. Quando a mensagem ultrapassa o limite do link, o painel orienta baixar o rascunho ou copiar o corpo completo, sem retirar peças.
+
+O destinatário vem do **cadastro do técnico**. Alterá-lo na mensagem vale só para aquele rascunho. Administradores podem salvar o contato em **Editar contato**. E-mails e telefones de técnicos **não criam usuários, não concedem acesso e não são vinculados automaticamente às contas do painel**; as permissões continuam exclusivas do **Cadastro de usuários**, protegido pelas regras do banco.
+
+Preparar, abrir ou baixar um rascunho não envia e-mail nem registra envio no histórico. Após enviar pelo Outlook, clique em **Registrar cobrança**; o responsável registrado é o operador autenticado, nunca o destinatário.
 
 ### Visão geral da operação
 
@@ -195,6 +207,7 @@ python3 -m http.server 8000 --directory dist
 node testes/operacao-e2e.mjs
 node testes/gestao-e2e.mjs
 node testes/interface-e2e.mjs
+node testes/email-cobranca-e2e.mjs
 node testes/analises-e2e.mjs
 node testes/prazos-e2e.mjs
 node testes/inventario-e2e.mjs
@@ -205,6 +218,8 @@ node testes/responsividade-e2e.mjs
 ```
 
 Os testes abrem `pagina-completa.html` e exigem armazenamento em memória antes de importar dados. Verificam cobranças, previsões, agenda, devoluções, mapa, gráficos, cálculos, filtros combinados, agrupamento, períodos civis, uso sem duplicação, saídas classificadas, devoluções parciais, persistência e desfazer. A regressão de interface cobre contraste dos botões em repouso, com cursor e foco, seleção parcial, quantidades em lote, avisos e navegação por teclado nas janelas dos dois temas. Use `PW_PATH` e `CHROMIUM` para indicar instalações específicas; `URL_PAINEL_TESTE` permite mudar a URL local. O teste de prazos verifica herança, limites, alertas, mensagens, histórico, rankings e falhas de gravação. O teste com emuladores Firebase também verifica prazos personalizados e classificação em dois dispositivos, recarregamento e reversão das saídas de novas.
+
+O teste de e-mail intercepta os links sem abrir provedores ou enviar mensagens reais. Verifica preenchimento, quantidades, prazo próprio, acentos, proteção dos cabeçalhos e da prévia, rascunho completo `.eml`, separação de contatos e usuários, autoria e responsividade nos dois temas. `testes/seguranca-regras.mjs` confirma nos emuladores que ter e-mail apenas no cadastro de técnico não autoriza acesso nem criação da própria permissão.
 
 ### Limite de peças novas
 

@@ -310,6 +310,7 @@ const ACOES = {
     renderizar(true);
   },
   "exportar-tudo": () => exportarTudo(),
+  "preparar-email": el => modalCobrar(el.closest('form').querySelector('[data-email-tecnico]').value, 'cobrar', null, 'email'),
   "alternar-tabela": (el) => { const s = UIpainel.tabelas; s.has(el.dataset.grafico) ? s.delete(el.dataset.grafico) : s.add(el.dataset.grafico); renderizar(true); },
   menu: () => MenuLateral.alternarMovel(),
 };

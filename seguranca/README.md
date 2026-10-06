@@ -24,10 +24,22 @@ Em **Firebase → Authentication → Sign-in method → Google**, habilite o pro
    `https://controle-pecas-positivo.firebaseapp.com/__/auth/handler`
 3. Copie o **Application (client) ID** e crie um **client secret**. Guarde o **Value** do segredo, não seu identificador. Configure um lembrete de expiração para renová-lo no Firebase antes de vencer.
 4. No **Firebase → Authentication → Sign-in method → Microsoft**, habilite o provedor e informe o client ID e o secret. O segredo fica no Firebase, nunca no JavaScript ou no GitHub.
-5. O painel usa `tenant: common` e pede apenas a autenticação padrão do provedor; não solicita acesso às caixas de e-mail. Uma organização Microsoft 365 pode exigir consentimento do administrador de TI para permitir a aplicação. Autorizar um usuário no painel não contorna as políticas da empresa.
+5. O login no painel usa `tenant: common` e pede apenas a autenticação padrão do provedor. O acesso à caixa de e-mail é opcional e solicitado separadamente, somente ao conectar o Outlook na preparação de uma cobrança. Uma organização Microsoft 365 pode exigir consentimento do administrador de TI para permitir a aplicação. Autorizar um usuário no painel não contorna as políticas da empresa.
 6. Teste o botão **Entrar com Microsoft** com uma conta previamente cadastrada. Os emuladores testam os fluxos internos e as regras; não substituem esse teste de autenticação real.
 
 O endereço retornado pelo provedor deve ser exatamente o cadastrado. Aliases diferentes são acessos diferentes; use o endereço principal apresentado na conta. Se o mesmo e-mail já tiver sido registrado por outro provedor, entre pela opção original. O painel não vincula identidades automaticamente pelo endereço.
+
+## Rascunhos formatados no Outlook
+
+O botão **Conectar minha conta Outlook**, em uma sessão autorizada do painel, solicita as permissões **delegadas** Microsoft Graph `User.Read` (identificar a caixa conectada) e `Mail.ReadWrite` (criar rascunhos). Esta última é a permissão mínima exigida pela [API de criação de mensagens](https://learn.microsoft.com/en-us/graph/api/user-post-messages?view=graph-rest-1.0); ela permite ler e gravar e-mails, embora o painel somente consulte `/me` e crie rascunhos em `/me/messages`. Não são solicitadas permissões de aplicação nem `Mail.Send` e não há chamadas a `/send` ou `/sendMail`.
+
+Use a mesma aplicação Entra configurada no provedor Microsoft do Firebase. Em **API permissions → Add a permission → Microsoft Graph → Delegated permissions**, confira `User.Read` e `Mail.ReadWrite`. Quando a política da organização exigir, o administrador de TI deve conceder consentimento a essas permissões. O usuário escolhe a própria conta na janela Microsoft; o cadastro de um técnico não participa desse fluxo. Se o provedor estiver desativado, a caixa não existir ou o consentimento for recusado, o painel informa o problema e oferece cópia formatada e `.eml`; não afirma ter criado um rascunho.
+
+A autenticação auxiliar usa uma instância Firebase independente com persistência `NONE`, encerrada imediatamente depois de obter o token Microsoft. Não troca a sessão principal nem vincula contas Google/Microsoft. A autenticação federada pode registrar a identidade do operador no **Firebase Authentication**, mas não cadastra um usuário autorizado no **Firestore**: as regras continuam exigindo cadastro ativo e e-mail verificado para acesso aos dados. Os e-mails dos técnicos nunca são autenticados automaticamente nem escritos na coleção `usuarios`.
+
+O token da caixa fica apenas na memória da página por no máximo 45 minutos, sem localStorage, Firestore ou logs. É descartado ao desconectar, sair, revogar o acesso ou trocar de usuário. Nenhuma senha/segredo Entra fica no site. As requisições vão exclusivamente ao Graph por HTTPS e sem redirecionamentos; links de abertura são aceitos apenas de hosts Outlook conhecidos. O destinatário e o assunto são validados, e todo texto do corpo é escapado antes de virar HTML.
+
+**Validação real:** após configurar o provedor e o consentimento, conecte uma conta Microsoft com caixa ativa, crie um rascunho de teste autorizado e confira a mensagem na pasta Rascunhos sem enviá-la. Os testes automatizados interceptam Graph e OAuth, validam o HTML, as permissões, os erros e a separação das contas; não comprovam o consentimento do tenant nem a renderização de cada versão do Outlook. Rascunhos externos podem não receber a assinatura automática do cliente.
 
 ## Proteções implementadas
 

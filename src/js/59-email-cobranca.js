@@ -1,7 +1,8 @@
 /* Rascunhos de cobrança. Contatos vêm do técnico, nunca do cadastro de usuários. */
 const EDITORES_EMAIL = {
-  outlook: 'Outlook na Web (Microsoft 365)',
-  aplicativo: 'Outlook instalado (aplicativo padrão)',
+  formatado: 'Outlook · rascunho com formatação',
+  outlook: 'Outlook na Web · somente texto',
+  aplicativo: 'Outlook instalado · somente texto',
 };
 function montarEmailCobranca(t, itens, lembrete = false) {
   const prazo = prazoDoTecnico(t.tid), qtd = somar(itens, i => i.qtd);
@@ -13,17 +14,16 @@ function montarEmailCobranca(t, itens, lembrete = false) {
     `Chamado: ${i.chamado || 'Não informado'}`,
     i.previsao ? `Previsão informada: ${fmtData(i.previsao)}` : '',
   ].filter(Boolean).join('\n')).join('\n\n');
-  const operador = Acesso.usuario?.email ? primeiroNomeEmail(Acesso.usuario.email) : '';
   return {
     destinatario: String(t.email || '').trim(),
-    assunto: `Positivo | ${lembrete ? 'Programação de devolução' : 'Devolução de peças usadas'} | ${t.nome}`,
+    assunto: 'Devolução de peças',
     corpo: [
       `${saudacao()}, ${primeiroNome(t.nome)}!`,
       lembrete ? 'Vamos programar a devolução das peças usadas abaixo para manter seu inventário em dia?' : 'Identificamos peças usadas pendentes de devolução sob sua responsabilidade. Segue a relação para conferência.',
       `RESUMO DA SOLICITAÇÃO\nTécnico: ${t.nome}${t.regiao ? `\nRegião: ${t.regiao}` : ''}\nData da consulta: ${fmtData(hojeISO())}\nTotal: ${plural(qtd, 'peça', 'peças')}\nAcima do prazo: ${plural(atrasadas, 'peça', 'peças')}\nPrazo de devolução: ${plural(prazo, 'dia', 'dias')}`,
       `PEÇAS PARA DEVOLUÇÃO\n\n${lista}`,
-      'PRÓXIMO PASSO\nPor favor, responda este e-mail com a data prevista para devolução. Se alguma peça já foi devolvida, informe o código e o chamado para conferirmos a baixa.',
-      `Obrigado pela colaboração!\n\n${operador ? operador + '\n' : ''}Controle de Peças\nPositivo Tecnologia`,
+      'PRÓXIMO PASSO\nPor favor, responda este e-mail com a data prevista para devolução.',
+      'Obrigado pela colaboração!',
     ].join('\n\n'),
   };
 }
@@ -35,6 +35,7 @@ function validarEmailCobranca(d) {
 function linkEmailCobranca(d, editor = 'outlook') {
   validarEmailCobranca(d);
   if (!Object.hasOwn(EDITORES_EMAIL, editor)) throw new Error('Escolha onde abrir o e-mail.');
+  if (editor === 'formatado') throw new Error('Conecte sua conta Outlook para criar o rascunho formatado.');
   if (editor === 'aplicativo') return `mailto:${encodeURIComponent(d.destinatario).replace(/%40/g, '@')}?subject=${encodeURIComponent(d.assunto)}&body=${encodeURIComponent(d.corpo.replace(/\r?\n/g, '\r\n'))}`;
   // O compositor do Outlook decodifica %20, mas pode exibir o + de URLSearchParams.
   // Codificar cada valor também preserva os sinais + reais em endereços e materiais.
@@ -42,7 +43,7 @@ function linkEmailCobranca(d, editor = 'outlook') {
   return 'https://outlook.office.com/mail/deeplink/compose?' + Object.entries(params).map(([k,v]) => `${k}=${encodeURIComponent(v)}`).join('&');
 }
 function htmlEmailCobranca(d) {
-  // HTML com estilos inline e tabelas de apresentação para colar no Outlook e usar no .eml.
+  // O mesmo HTML na prévia, no rascunho do Outlook, na cópia e no .eml.
   // O texto editado é sempre a fonte: nada é descartado nem convertido em HTML executável.
   const fonte = "font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:22px;font-weight:400;color:#262626;word-wrap:break-word;overflow-wrap:anywhere;";
   const forte = texto => `<strong style="font-weight:700;color:#171717">${esc(texto)}</strong>`;
@@ -65,7 +66,6 @@ function htmlEmailCobranca(d) {
     if (primeira === 'PEÇAS PARA DEVOLUÇÃO') return titulo('Peças para devolução') + (resto ? `<p style="${fonte}margin:0 0 16px">${linhas(resto)}</p>` : '');
     if (primeira === 'PRÓXIMO PASSO') return `<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="table-layout:fixed;border-collapse:collapse;margin:24px 0;background:#f0f7f6;border-left:3px solid #167d72"><tbody><tr><td style="${fonte}padding:16px">${forte('Confirme a previsão de devolução')}<br>${linhas(resto)}</td></tr></tbody></table>`;
     if (/^\d+\.\s/.test(primeira)) return `<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="table-layout:fixed;border-collapse:collapse;margin:0 0 12px;border:1px solid #e1e4e8;background:#fff"><tbody><tr><td style="${fonte}padding:12px 14px;border-bottom:1px solid #e1e4e8;background:#f8f9fa">${forte(primeira)}</td></tr><tr><td style="${fonte}font-size:13px;line-height:22px;padding:12px 14px">${campos(resto)}</td></tr></tbody></table>`;
-    if (p.includes('Controle de Peças\nPositivo Tecnologia')) return `<p style="${fonte}margin:20px 0 0;padding-top:16px;border-top:1px solid #e5e7eb">${forte(primeira)}${resto ? '<br>' + linhas(resto) : ''}</p>`;
     return `<p style="${fonte}margin:0 0 18px">${n === 0 ? forte(p).replace(/\n/g, '<br>') : linhas(p)}</p>`;
   }).join('');
   return `<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="${fonte}max-width:640px;margin:0 auto;border-collapse:collapse;table-layout:fixed;background:#fff;border:1px solid #dedede"><tbody><tr><td style="${fonte}padding:22px 24px;background:#111;color:#fff;border-bottom:3px solid #167d72"><strong style="font-size:22px;line-height:26px;font-weight:700;color:#fff">POSITIVO</strong><br><span style="font-size:10px;letter-spacing:2px;color:#fff">TECNOLOGIA</span></td></tr><tr><td style="${fonte}padding:24px"><p style="${fonte}font-size:11px;letter-spacing:1px;color:#616161;margin:0 0 8px">CONTROLE DE PEÇAS</p><h1 style="${fonte}font-size:20px;line-height:28px;font-weight:700;margin:0 0 24px;color:#171717">${esc(d.assunto)}</h1>${blocos}</td></tr></tbody></table>`;

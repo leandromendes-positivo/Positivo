@@ -267,6 +267,7 @@ function textoSemBanco() {
 }
 
 async function sairDoFirebase() {
+  OutlookCobranca.desconectar();
   if (Acesso.auth) await Acesso.auth.signOut();
   location.reload();
 }

@@ -409,6 +409,9 @@ body:has(.principal > .rolagem-horizontal:not([hidden])) #toasts { bottom: calc(
 .cobrar-email-ajuda strong { color: var(--ink); }
 .cobrar-email-copia { padding: 12px; margin: 0; font-size: 12px; line-height: 1.6; border-radius: 6px; background: var(--surface-2); color: var(--ink); }
 .cobrar-email-copia[data-estado="erro"] { background: var(--warn-soft); color: var(--warn-ink); }
+.cobrar-outlook { border: 1px solid var(--line-2); border-radius: 8px; background: var(--surface-2); padding: 16px; display: grid; gap: 12px; min-width: 0; }
+.cobrar-outlook > .nota { margin: 0; overflow-wrap: anywhere; }
+.cobrar-outlook > .btn { white-space: normal; min-width: 0; }
 .config-email { padding: 18px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-2); }
 .config-email > div { display: flex; align-items: center; gap: 8px; }
 .config-email .ic { color: var(--accent); }

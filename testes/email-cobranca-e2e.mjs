@@ -33,6 +33,8 @@ try {
   assert.equal(await page.locator('#cob-painel-email').isVisible(), true);
   await page.waitForFunction(() => document.activeElement.id === 'cob-email-para');
   assert.equal(await page.locator('#cob-email-para').inputValue(), '');
+  assert.equal(await page.locator('#cob-email-editor').inputValue(), 'formatado');
+  await page.locator('#cob-email-editor').selectOption('outlook');
   assert.equal(await page.locator('#cob-email-link').getAttribute('href'), null, 'sem contato não abre rascunho sem destinatário');
   await page.locator('#cob-email-para').fill('invalido');
   await page.locator('#cob-email-link').click();
@@ -55,7 +57,9 @@ try {
   assert.equal(await page.evaluate(async () => (await Armazem.consultar('usuarios')).length), 0);
   const corpo = await page.locator('#cob-email-corpo').inputValue();
   assert.match(corpo, /Total: 3 peças/); assert.match(corpo, /Quantidade: 2/);
-  assert.match(corpo, /Prazo de devolução: 7 dias/); assert.match(corpo, /Maria\nControle de Peças/);
+  assert.match(corpo, /Prazo de devolução: 7 dias/);
+  assert.doesNotMatch(corpo, /Maria|Controle de Peças|Positivo Tecnologia|Se alguma peça já foi devolvida/);
+  assert.equal(await page.locator('#cob-email-assunto').inputValue(), 'Devolução de peças');
   assert.match(corpo, /RESUMO DA SOLICITAÇÃO/); assert.match(corpo, /PEÇAS PARA DEVOLUÇÃO/);
   const original = { assunto: await page.locator('#cob-email-assunto').inputValue(), corpo };
   // O Outlook usa decodeURIComponent: URLSearchParams esconderia a regressão de espaços como +.
@@ -83,7 +87,8 @@ try {
   await colagem.setContent('<meta name="viewport" content="width=device-width, initial-scale=1"><body style="margin:0;background:#fff"><div id="destino" contenteditable="true" aria-label="Editor de teste"></div></body>');
   await colagem.locator('#destino').focus(); await colagem.keyboard.press('Control+V');
   await colagem.waitForFunction(() => document.querySelector('#destino table'));
-  assert.match(await colagem.locator('#destino').innerText(), /Maria/);
+  assert.match(await colagem.locator('#destino').innerText(), /Obrigado pela colaboração!/);
+  assert.doesNotMatch(await colagem.locator('#destino').innerText(), /Maria|Se alguma peça já foi devolvida/);
   assert.equal(await colagem.getByText('POSITIVO', {exact:true}).evaluate(el => getComputedStyle(el).fontWeight), '700');
   await colagem.locator('#destino').evaluate(el => { el.contentEditable = 'false'; el.blur(); });
   for (const width of [640,320]) {
@@ -175,8 +180,8 @@ try {
   assert.equal(await page.evaluate(() => E.contatos.at(-1).email), 'maria.silva@example.test', 'autoria é do operador, não do destinatário');
   assert.equal(await page.evaluate(() => E.usuarios.length), 0);
   await page.evaluate(tid => { modalCobrar(tid, 'vencendo', derivar().mapa.get(tid).usadas, 'email'); }, tid);
-  assert.match(await page.locator('#cob-email-assunto').inputValue(), /Programação de devolução/);
-  assert.deepEqual(await page.locator('#cob-email-editor option').allTextContents(), ['Outlook na Web (Microsoft 365)','Outlook instalado (aplicativo padrão)']);
+  assert.equal(await page.locator('#cob-email-assunto').inputValue(), 'Devolução de peças');
+  assert.deepEqual(await page.locator('#cob-email-editor option').allTextContents(), ['Outlook · rascunho com formatação','Outlook na Web · somente texto','Outlook instalado · somente texto']);
   await page.keyboard.press('Escape');
   // A abertura tardia do foco não pode redirecionar a digitação para o apelido.
   assert.equal(await page.evaluate(async tid => {

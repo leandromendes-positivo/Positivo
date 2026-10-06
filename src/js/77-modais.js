@@ -53,8 +53,17 @@ function modalCobrar(tid, aba = "cobrar", itensEscolhidos = null, canalInicial =
           <label class="campo"><span>Onde abrir</span><select id="cob-email-editor">${Object.entries(EDITORES_EMAIL).map(([v,n]) => `<option value="${v}">${n}</option>`).join('')}</select></label>
           <p class="nota" data-email-orientacao></p>
           <p class="cobrar-email-aviso" data-email-aviso role="status" hidden></p>
-          <div class="linha-botoes"><a class="btn prim" id="cob-email-link" target="_blank" rel="noopener noreferrer">${icone('email')}Abrir no Outlook${icone('externo', 'ic-pequeno')}</a><button class="btn" type="button" data-copiar-email>${icone('copiar')}Copiar com formatação</button></div>
-          <p class="nota cobrar-email-ajuda"><strong>Para enviar com o visual abaixo:</strong> clique em Copiar com formatação. No corpo da mensagem do Outlook, selecione o texto preenchido e cole com Ctrl+V (⌘V no Mac). Se solicitado, escolha Manter formatação original. O botão Abrir no Outlook preenche o texto, mas não define fonte ou negrito.</p>
+          <div class="cobrar-outlook" data-outlook-painel>
+            <strong>Sua caixa do Outlook</strong><p class="nota" data-outlook-conta></p>
+            <div class="linha-botoes"><button class="btn" type="button" data-outlook-conectar>${icone('email')}Conectar minha conta Outlook</button><button class="btn" type="button" data-outlook-desconectar hidden>Desconectar</button></div>
+            <p class="nota">Na primeira conexão, a Microsoft solicita leitura e gravação de e-mails. O painel usa essa autorização para criar rascunhos; não solicita permissão de envio. A conta do painel continua a mesma.</p>
+            <button class="btn prim" type="button" data-outlook-abrir disabled>${icone('email')}Criar e abrir rascunho formatado${icone('externo', 'ic-pequeno')}</button>
+            <p class="cobrar-email-copia" data-outlook-status role="status" hidden></p>
+            <a class="link" data-outlook-reabrir target="_blank" rel="noopener noreferrer" hidden>Abrir rascunho criado no Outlook</a>
+            <p class="nota">A mensagem será criada com o visual da prévia, sem assinatura do painel. Confira sua assinatura no Outlook: rascunhos externos podem não receber a assinatura automática.</p>
+          </div>
+          <div class="linha-botoes"><a class="btn" id="cob-email-link" target="_blank" rel="noopener noreferrer" hidden>${icone('email')}Abrir no Outlook · texto${icone('externo', 'ic-pequeno')}</a><button class="btn" type="button" data-copiar-email>${icone('copiar')}Copiar com formatação</button></div>
+          <p class="nota cobrar-email-ajuda" data-email-texto-ajuda hidden>Este modo abre somente texto. Para manter o visual automaticamente, escolha <strong>Outlook · rascunho com formatação</strong> acima.</p>
           <p class="cobrar-email-copia" data-email-copia role="status" hidden></p>
           <details class="cobrar-formatado" open><summary>Prévia do e-mail formatado</summary><div class="cobrar-email-previa" data-email-previa></div><div class="linha-botoes"><button type="button" class="btn" data-baixar-email>${icone('baixar')}Baixar rascunho (.eml)</button><button type="button" class="btn" data-copiar-email-texto>${icone('copiar')}Copiar só texto</button></div><p class="nota">O arquivo mantém a mensagem completa e a formatação. Abra no Outlook para computador compatível com rascunhos .eml.</p></details>
         </form>
@@ -75,20 +84,43 @@ function modalCobrar(tid, aba = "cobrar", itensEscolhidos = null, canalInicial =
   ta.value = montarMensagem(t, itens, lembrete ? E.config.msgLembrete : E.config.msgCobranca);
   const fEmail = el.querySelector('#cob-painel-email'), para = el.querySelector('#cob-email-para'), assunto = el.querySelector('#cob-email-assunto'), corpo = el.querySelector('#cob-email-corpo'), editor = el.querySelector('#cob-email-editor'), linkEmail = el.querySelector('#cob-email-link');
   para.value = email.destinatario; assunto.value = email.assunto; corpo.value = email.corpo;
-  try { const preferido = localStorage.getItem('cp-outlook-editor'); if (Object.hasOwn(EDITORES_EMAIL, preferido)) editor.value = preferido; } catch (_) { /* preferência só nesta janela */ }
+  try { const preferido = localStorage.getItem('cp-outlook-editor-v2'); if (Object.hasOwn(EDITORES_EMAIL, preferido)) editor.value = preferido; } catch (_) { /* preferência só nesta janela */ }
   const rascunho = () => ({ destinatario: para.value.trim(), assunto: assunto.value.trim(), corpo: corpo.value });
+  let ocupadoOutlook = false, ultimoRascunho = null;
+  const conectarOutlook = el.querySelector('[data-outlook-conectar]'), abrirOutlook = el.querySelector('[data-outlook-abrir]'), desconectarOutlook = el.querySelector('[data-outlook-desconectar]');
+  function atualizarOutlook() {
+    const conta = OutlookCobranca.conta(), repetir = ultimoRascunho?.conta === conta && ultimoRascunho.dados === JSON.stringify(rascunho());
+    el.querySelector('[data-outlook-conta]').textContent = conta ? `Conectado: ${conta}` : 'Conecte a conta que você usa para enviar as cobranças. O contato do técnico será apenas o destinatário.';
+    conectarOutlook.textContent = conta ? 'Trocar conta Outlook' : 'Conectar minha conta Outlook';
+    conectarOutlook.disabled = desconectarOutlook.disabled = ocupadoOutlook;
+    desconectarOutlook.hidden = !conta;
+    abrirOutlook.disabled = ocupadoOutlook || !conta;
+    abrirOutlook.textContent = ocupadoOutlook ? 'Aguarde…' : repetir ? 'Reabrir rascunho no Outlook' : 'Criar e abrir rascunho formatado';
+    const reabrir = el.querySelector('[data-outlook-reabrir]');
+    reabrir.hidden = !repetir;
+    if (repetir) reabrir.href = ultimoRascunho.url; else reabrir.removeAttribute('href');
+    for (const campo of [para, assunto, corpo]) campo.readOnly = ocupadoOutlook;
+    editor.disabled = ocupadoOutlook;
+  }
   function atualizarLinks() {
     link.href = linkWhatsApp(telefone, ta.value);
     const aviso = el.querySelector('[data-email-aviso]');
     let url = '', erro = '';
     try {
-      url = linkEmailCobranca(rascunho(), editor.value);
-      if (url.length > (editor.value === 'aplicativo' ? 1800 : 7500)) erro = 'Esta mensagem é longa demais para abrir por link. Use o rascunho .eml abaixo ou copie o corpo completo para o Outlook. Nenhuma peça foi removida da mensagem.';
+      validarEmailCobranca(rascunho());
+      if (editor.value !== 'formatado') {
+        url = linkEmailCobranca(rascunho(), editor.value);
+        if (url.length > (editor.value === 'aplicativo' ? 1800 : 7500)) erro = 'Esta mensagem é longa demais para abrir por link. Escolha o rascunho com formatação ou baixe o arquivo .eml. Nenhuma peça foi removida da mensagem.';
+      }
     } catch (e) { erro = e.message; }
-    if (erro) linkEmail.removeAttribute('href'); else linkEmail.href = url;
+    if (erro || !url) linkEmail.removeAttribute('href'); else linkEmail.href = url;
     linkEmail.setAttribute('aria-disabled', String(!!erro));
+    linkEmail.hidden = editor.value === 'formatado';
+    el.querySelector('[data-outlook-painel]').hidden = editor.value !== 'formatado';
+    el.querySelector('[data-email-texto-ajuda]').hidden = editor.value === 'formatado';
     aviso.textContent = erro; aviso.hidden = !erro;
-    el.querySelector('[data-email-orientacao]').textContent = editor.value === 'aplicativo' ? 'O Outlook precisa estar configurado como aplicativo padrão de e-mail neste dispositivo. Revise o rascunho e clique em Enviar no Outlook.' : 'Abre um novo e-mail na sua conta do Microsoft 365. Revise o destinatário e clique em Enviar no Outlook.';
+    el.querySelector('[data-email-orientacao]').textContent = editor.value === 'formatado' ? 'Cria um rascunho na sua caixa, com destinatário, assunto, tabelas, fonte e destaques da prévia. Revise e clique em Enviar no Outlook.' : editor.value === 'aplicativo' ? 'O Outlook precisa estar configurado como aplicativo padrão de e-mail neste dispositivo.' : 'Abre o compositor do Microsoft 365 com texto simples.';
+    atualizarOutlook();
     const previa = el.querySelector('[data-email-previa]');
     if (previa.closest('details').open) previa.innerHTML = htmlEmailCobranca(rascunho());
   }
@@ -108,9 +140,45 @@ function modalCobrar(tid, aba = "cobrar", itensEscolhidos = null, canalInicial =
     el.querySelector('#cob-form [name="canal"]').value = valor;
   }
   el.querySelectorAll('[data-cob-canal]').forEach(b => b.addEventListener('click', () => canal(b.dataset.cobCanal)));
-  ta.addEventListener('input', atualizarLinks); fEmail.addEventListener('input', () => { el.querySelector('[data-email-copia]').hidden = true; atualizarLinks(); });
-  editor.addEventListener('change', () => { atualizarLinks(); try { localStorage.setItem('cp-outlook-editor', editor.value); } catch (_) { /* opcional */ } });
-  fEmail.addEventListener('submit', e => { e.preventDefault(); linkEmail.click(); });
+  ta.addEventListener('input', atualizarLinks); fEmail.addEventListener('input', () => { el.querySelector('[data-email-copia]').hidden = true; el.querySelector('[data-outlook-status]').hidden = true; atualizarLinks(); });
+  editor.addEventListener('change', () => { atualizarLinks(); try { localStorage.setItem('cp-outlook-editor-v2', editor.value); } catch (_) { /* opcional */ } });
+  fEmail.addEventListener('submit', e => { e.preventDefault(); (editor.value === 'formatado' ? abrirOutlook : linkEmail).click(); });
+  function statusOutlook(texto, erro = false) {
+    const aviso = el.querySelector('[data-outlook-status]');
+    aviso.textContent = texto; aviso.dataset.estado = erro ? 'erro' : 'ok'; aviso.hidden = false;
+  }
+  conectarOutlook.addEventListener('click', async () => {
+    if (ocupadoOutlook) return;
+    ocupadoOutlook = true; atualizarOutlook();
+    try { await OutlookCobranca.conectar(); statusOutlook('Conta conectada. Agora clique em Criar e abrir rascunho formatado.'); }
+    catch (e) { statusOutlook(e.message, true); }
+    finally { ocupadoOutlook = false; atualizarOutlook(); }
+  });
+  desconectarOutlook.addEventListener('click', () => {
+    OutlookCobranca.desconectar(); ultimoRascunho = null; atualizarOutlook();
+    statusOutlook('Outlook desconectado deste painel. Os rascunhos já criados permanecem na sua caixa.');
+  });
+  abrirOutlook.addEventListener('click', async () => {
+    if (ocupadoOutlook || !fEmail.reportValidity()) return;
+    try { validarEmailCobranca(rascunho()); } catch (e) { statusOutlook(e.message, true); return; }
+    const d = rascunho(), dados = JSON.stringify(d), conta = OutlookCobranca.conta();
+    if (!conta) { atualizarOutlook(); statusOutlook('Conecte sua conta Outlook novamente.', true); return; }
+    // Abrir durante o clique evita bloqueios depois do POST assíncrono.
+    const janela = window.open('about:blank', '_blank');
+    if (janela) { janela.opener = null; janela.document.title = 'Preparando rascunho no Outlook'; janela.document.body.textContent = 'Preparando seu rascunho formatado…'; }
+    ocupadoOutlook = true; atualizarOutlook();
+    statusOutlook('Criando rascunho no Outlook…');
+    try {
+      if (ultimoRascunho?.dados !== dados || ultimoRascunho?.conta !== conta) {
+        ultimoRascunho = { ...await OutlookCobranca.criar(d), dados };
+      }
+      if (!el.isConnected) { janela?.close(); return; }
+      if (janela && !janela.closed) janela.location.replace(ultimoRascunho.url);
+      statusOutlook(janela && !janela.closed ? 'Rascunho aberto no Outlook com a formatação da prévia. Nenhum e-mail foi enviado.' : 'Rascunho criado. O navegador bloqueou a nova aba; clique em Abrir rascunho criado no Outlook abaixo.');
+      el.querySelector('#cob-form [name="canal"]').value = 'email';
+    } catch (e) { janela?.close(); statusOutlook(e.message, true); }
+    finally { ocupadoOutlook = false; atualizarOutlook(); }
+  });
   linkEmail.addEventListener('click', e => {
     atualizarLinks();
     if (!fEmail.reportValidity() || !linkEmail.hasAttribute('href')) { e.preventDefault(); return; }

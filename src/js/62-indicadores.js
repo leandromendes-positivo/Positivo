@@ -15,12 +15,18 @@ function indicadoresOperacionais(D) {
   };
 }
 
-function kpiOperacional({ tipo, rotulo, valor, sub, rodape, acao, icone: ic }) {
+function kpiOperacional({ tipo, rotulo, valor, unidade, sub, rodape, acao, icone: ic, legenda, partes = [] }) {
+  const total = somar(partes, (p) => p.valor);
   return `<button type="button" class="kpi kpi-operacional kpi-${tipo}" ${acao}>
-    <span class="kpi-arte" aria-hidden="true"></span><span class="kpi-reflexo" aria-hidden="true"></span>
-    <span class="kpi-rotulo"><span class="kpi-icone">${icone(ic)}</span>${esc(rotulo)}</span>
-    <span class="kpi-valor">${valor}</span><span class="kpi-sub">${sub}</span>
-    <span class="kpi-rodape">${rodape}<span class="kpi-abrir" aria-hidden="true">${icone("seta")}</span></span>
+    <span class="kpi-reflexo" aria-hidden="true"></span>
+    <span class="kpi-cabecalho"><span class="kpi-icone">${icone(ic)}</span><span class="kpi-rotulo">${esc(rotulo)}</span></span>
+    <span class="kpi-leitura"><span><span class="kpi-valor">${valor}</span><span class="kpi-unidade">${esc(unidade)}</span></span><span class="kpi-imagem" aria-hidden="true"><span class="kpi-arte"></span></span></span>
+    <span class="kpi-sub">${sub}</span>
+    <span class="kpi-composicao"><span class="kpi-legenda">${esc(legenda)}</span>
+      <span class="kpi-trilho ${total ? "" : "sem-valor"}" aria-hidden="true">${partes.map((p) => `<i style="--parte:${total ? p.valor / total * 100 : 0}%;--cor:var(--${p.cor})"></i>`).join("")}</span>
+      <span class="kpi-partes">${partes.map((p) => `<span><strong>${p.valor == null ? "—" : fmtNum(p.valor)}</strong><span><i style="background:var(--${p.cor})" aria-hidden="true"></i>${esc(p.nome)}</span></span>`).join("")}</span>
+    </span>
+    <span class="kpi-rodape"><span>${esc(rodape)}</span><span class="kpi-abrir" aria-hidden="true">${icone("seta")}</span></span>
   </button>`;
 }
 

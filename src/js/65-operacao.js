@@ -69,7 +69,7 @@ function mapaOperacao(D) {
     const risco = riscos.get(uf.uf), selecionado = UIpainel.regiao === uf.uf;
     const texto = risco ? `${fmtNum1(risco.percentual)}% ${novas ? "dos técnicos fora da meta" : "das peças acima do prazo"}` : "sem planilha importada";
     const dica = `<strong>${esc(UFS[uf.uf])}</strong><span>${texto}</span>`;
-    return `<g data-dica="${esc(dica)}" class="mapa-estado ${risco ? `risco-${risco.nivel}` : "sem-dados"} ${selecionado ? "selecionado" : ""}" ${risco ? `role="button" tabindex="0" data-acao="painel-regiao" data-regiao="${uf.uf}" aria-pressed="${selecionado}"` : 'role="img"'} aria-label="${esc(UFS[uf.uf] + ', ' + texto)}"><title>${esc(UFS[uf.uf] + ': ' + texto)}</title><path d="${uf.d}"/>${risco ? `<text x="${uf.centro[0]}" y="${uf.centro[1]}">${uf.uf}</text>` : ""}${selecionado ? `<circle class="mapa-sinal" cx="${uf.centro[0]}" cy="${uf.centro[1]}" r="13"/>` : ""}</g>`;
+    return `<g data-uf="${uf.uf}" data-dica="${esc(dica)}" class="mapa-estado ${risco ? `risco-${risco.nivel}` : "sem-dados"} ${selecionado ? "selecionado" : ""}" ${risco ? `role="button" tabindex="0" data-acao="painel-regiao" data-regiao="${uf.uf}" aria-pressed="${selecionado}"` : 'role="img"'} aria-label="${esc(UFS[uf.uf] + ', ' + texto)}"><title>${esc(UFS[uf.uf] + ': ' + texto)}</title><path d="${uf.d}"/>${risco ? `<text x="${uf.centro[0]}" y="${uf.centro[1]}">${uf.uf}</text>` : ""}${selecionado ? `<circle class="mapa-sinal" cx="${uf.centro[0]}" cy="${uf.centro[1]}" r="13"/>` : ""}</g>`;
   }).join("");
   const seletor = `<div class="filtros-segmentados">${[["usadas", "Usadas"], ["novas", "Novas"]].map(([id, nome]) => `<button type="button" data-acao="painel-mapa-modo" data-modo="${id}" aria-pressed="${UIpainel.mapaModo === id}" class="${UIpainel.mapaModo === id ? "ativo" : ""}">${nome}</button>`).join("")}</div>`;
   const frescor = r && D.frescor.find((f) => f.regiao === r.regiao && f.tipo === UIpainel.mapaModo);
@@ -81,7 +81,7 @@ function mapaOperacao(D) {
   const ranking = [...dados].sort((a, b) => riscos.get(b.regiao).percentual - riscos.get(a.regiao).percentual);
   return cartao("Risco por estado", `<div class="mapa-layout"><div class="mapa-figura"><div class="mapa-cab"><span>BRASIL / ${novas ? "ESTOQUE" : "DEVOLUÇÕES"}</span><strong>${dados.length} UF${dados.length === 1 ? "" : "s"}</strong></div><svg class="mapa-brasil" viewBox="0 0 525 525" role="group" aria-label="Risco por estado. Selecione um estado com dados."><defs><pattern id="mapa-sem-dados" width="5" height="5" patternUnits="userSpaceOnUse"><rect width="5" height="5" fill="var(--mapa-base)"/><path d="M0 5L5 0" stroke="var(--mapa-trama)" stroke-width=".5"/></pattern></defs><g class="mapa-cena" style="transform:${transformacaoMapa()}">${caminho}</g></svg><div class="mapa-controles" aria-label="Zoom do mapa"><button type="button" data-acao="painel-zoom" data-passo="-1" aria-label="Diminuir zoom" ${UIpainel.zoom <= 1 ? "disabled" : ""}>−</button><button type="button" data-acao="painel-zoom" data-passo="1" aria-label="Aproximar estado selecionado" ${UIpainel.zoom >= 2.5 ? "disabled" : ""}>+</button><button type="button" data-acao="painel-zoom" data-passo="0" aria-label="Restaurar visão de todo o Brasil">Brasil</button></div></div><div class="mapa-detalhe">${detalhe}</div></div>
     <div class="mapa-escala" aria-label="Legenda de risco"><span>Taxa ${novas ? "fora da meta" : "de atraso"}</span>${[["baixo", "0–10%"], ["moderado", ">10–25%"], ["alto", ">25–50%"], ["critico", ">50%"]].map(([c,t]) => `<span class="risco-${c}"><i></i>${t}</span>`).join("")}<span class="escala-sem"><i></i>Sem dados</span></div>
-    <div class="mapa-regioes" aria-label="Comparar e selecionar estado">${ranking.map((x) => { const v = riscos.get(x.regiao); return `<button class="regiao-comparativo risco-${v.nivel} ${x.regiao === UIpainel.regiao ? "ativo" : ""}" data-acao="painel-regiao" data-regiao="${x.regiao}" aria-pressed="${x.regiao === UIpainel.regiao}"><strong>${x.regiao}</strong><span class="regiao-barra"><i style="width:${v.percentual}%"></i></span><span>${fmtNum1(v.percentual)}%</span></button>`; }).join("")}</div><p class="mapa-nota">${novas ? "Técnicos fora da faixa ÷ técnicos com estoque acompanhado." : `Peças acima de ${D.cfg.prazo} dias ÷ peças pendentes em cada estado.`} Sem localização individual.</p>`, { sub: novas ? "Proporção de técnicos fora da faixa de estoque." : "Proporção de peças que excederam o prazo de devolução.", acoes: seletor, classe: "cartao-mapa" });
+    <div class="mapa-regioes" aria-label="Comparar e selecionar estado">${ranking.map((x) => { const v = riscos.get(x.regiao); return `<button class="regiao-comparativo risco-${v.nivel} ${x.regiao === UIpainel.regiao ? "ativo" : ""}" data-acao="painel-regiao" data-regiao="${x.regiao}" aria-pressed="${x.regiao === UIpainel.regiao}"><strong>${x.regiao}</strong><span class="regiao-barra"><i style="width:${v.percentual}%"></i></span><span>${fmtNum1(v.percentual)}%</span></button>`; }).join("")}</div><p class="mapa-instrucao">${icone("info")}<span>Mesma cor, mesma faixa de risco. <span class="mapa-ajuda-mouse">Passe o cursor para ampliar; clique para selecionar.</span><span class="mapa-ajuda-toque">Toque em um estado com dados para selecionar.</span></span></p><p class="mapa-nota">${novas ? "Técnicos fora da faixa ÷ técnicos com estoque acompanhado." : `Peças acima de ${D.cfg.prazo} dias ÷ peças pendentes em cada estado.`} Sem localização individual.</p>`, { sub: novas ? "Proporção de técnicos fora da faixa de estoque." : "Proporção de peças que excederam o prazo de devolução.", acoes: seletor, classe: "cartao-mapa" });
 }
 
 function saudePrazos(D) {
@@ -119,6 +119,7 @@ function transformacaoMapa() {
 }
 
 function ajustarZoomMapa(passo) {
+  document.querySelector(".mapa-brasil")?.dispatchEvent(new Event("mapa-reset"));
   UIpainel.zoom = passo === 0 ? 1 : Math.max(1, Math.min(2.5, UIpainel.zoom + passo * .5));
   const cena = document.querySelector(".mapa-cena");
   if (cena) cena.style.transform = transformacaoMapa();
@@ -158,8 +159,45 @@ function ligarMapaPainel() {
   if (!mapa || mapa.dataset.ligado) return;
   mapa.dataset.ligado = "1";
   ligarDicas(mapa);
+  // A cópia ampliada não recebe eventos: a área de seleção original fica estável.
+  let destaque = null, origem = null;
+  function recolher(imediato = false) {
+    const anterior = destaque;
+    destaque = null; origem = null;
+    if (!anterior) return;
+    const inicio = getComputedStyle(anterior).transform;
+    anterior.style.transform = "scale(1)"; anterior.style.opacity = "0";
+    const animacao = !imediato && Movimento.animar(anterior, [{ transform: inicio, opacity: 1 }, { transform: "scale(1)", opacity: 0 }], 180);
+    if (animacao) animacao.finished.then(() => anterior.remove(), () => anterior.remove());
+    else anterior.remove();
+  }
+  function ampliar(el) {
+    if (Movimento.reduzido.matches || origem === el) return;
+    recolher(true);
+    mapa.querySelectorAll(".mapa-destaque").forEach((e) => e.remove());
+    const caixa = el.querySelector("path").getBBox();
+    const fator = 1 + Math.min(.55, 38 / Math.max(caixa.width, caixa.height));
+    destaque = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    destaque.setAttribute("class", "mapa-destaque " + [...el.classList].filter((c) => c.startsWith("risco-") || c === "sem-dados").join(" "));
+    destaque.setAttribute("aria-hidden", "true");
+    destaque.dataset.uf = el.dataset.uf;
+    el.querySelectorAll(":scope > path, :scope > text").forEach((parte) => destaque.append(parte.cloneNode(true)));
+    destaque.style.transformOrigin = `${caixa.x + caixa.width / 2}px ${caixa.y + caixa.height / 2}px`;
+    destaque.style.transform = `scale(${fator})`;
+    mapa.querySelector(".mapa-cena").append(destaque);
+    origem = el;
+    Movimento.animar(destaque, [{ transform: "scale(1)", opacity: .65 }, { transform: `scale(${fator})`, opacity: 1 }], 320);
+  }
+  mapa.addEventListener("mapa-reset", () => recolher(true));
+  mapa.querySelectorAll(".mapa-estado").forEach((el) => {
+    el.addEventListener("pointerenter", (ev) => { if (ev.pointerType !== "touch" && ponteiroPreciso.matches) ampliar(el); });
+    el.addEventListener("pointerleave", () => { if (origem === el && !el.matches(":focus-visible")) recolher(); });
+    el.addEventListener("focus", () => { if (el.matches(":focus-visible")) ampliar(el); });
+    el.addEventListener("blur", () => { if (origem === el) recolher(); });
+  });
   mapa.querySelectorAll('.mapa-estado[role="button"]').forEach((el) => {
     el.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") { recolher(); Dica.esconder(); }
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); el.dispatchEvent(new MouseEvent("click", { bubbles: true })); }
     });
   });

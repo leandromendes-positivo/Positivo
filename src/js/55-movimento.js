@@ -37,6 +37,8 @@ const Movimento = {
 };
 Movimento.reduzido.addEventListener("change", () => {
   if (Movimento.reduzido.matches) {
+    cancelAnimationFrame(quadroIndicador);
+    document.querySelector(".mapa-brasil")?.dispatchEvent(new Event("mapa-reset"));
     Movimento.observador?.disconnect();
     document.getAnimations().forEach((a) => a.cancel());
     document.querySelectorAll(".kpi-operacional").forEach((el) => {

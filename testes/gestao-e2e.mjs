@@ -27,6 +27,34 @@ try {
     return p.bottom < fila.top;
   });
   assert.equal(ordem, true);
+  assert.deepEqual(await page.locator('.kpi-usadas .kpi-partes strong').allTextContents(), ['5', '5']);
+  assert.deepEqual(await page.locator('.kpi-cobrancas .kpi-partes strong').allTextContents(), ['3', '0']);
+  assert.deepEqual(await page.locator('.kpi-estoque .kpi-partes strong').allTextContents(), ['1', '2', '1']);
+
+  // O estado amplia sem alterar a cor de risco, o estado selecionado ou o alvo do clique.
+  const estado = page.locator('.mapa-estado[data-uf="PR"]');
+  await estado.scrollIntoViewIfNeeded();
+  const antes = await estado.evaluate((el) => ({ caixa: el.getBoundingClientRect().toJSON(), cor: getComputedStyle(el.querySelector('path')).fill, selecionado: UIpainel.regiao }));
+  await estado.locator('path').hover();
+  await page.waitForFunction(() => document.querySelector('.mapa-destaque[data-uf="PR"]') && new DOMMatrix(getComputedStyle(document.querySelector('.mapa-destaque')).transform).a > 1.1);
+  const depois = await estado.evaluate((el) => {
+    const destaque = document.querySelector('.mapa-destaque');
+    return { largura: el.getBoundingClientRect().width, ampliada: destaque.getBoundingClientRect().width, cor: getComputedStyle(destaque.querySelector('path')).fill, eventos: getComputedStyle(destaque).pointerEvents, selecionado: UIpainel.regiao };
+  });
+  assert.equal(depois.largura, antes.caixa.width);
+  assert.ok(depois.ampliada > depois.largura);
+  assert.equal(depois.cor, antes.cor);
+  assert.equal(depois.eventos, 'none');
+  assert.equal(depois.selecionado, antes.selecionado);
+  await page.locator('.cartao-mapa').screenshot({ path: `${saida}/mapa-ampliado.png`, animations: 'disabled' });
+  await page.mouse.move(10, 10);
+  await page.waitForFunction(() => !document.querySelector('.mapa-destaque'));
+  await page.keyboard.press('Tab');
+  await estado.focus();
+  await page.waitForFunction(() => !!document.querySelector('.mapa-destaque'));
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(() => !document.querySelector('.mapa-destaque'));
+  await estado.evaluate((el) => el.blur());
 
   const metricas = await page.evaluate(() => {
     const D = { hoje: '2026-10-05', cfg: { prazo: 7 }, kpi: { usadas: 5, atrasadas: 2 },
@@ -80,6 +108,8 @@ try {
       const cor = (v) => { probe.style.color = `var(--${v})`; return getComputedStyle(probe).color; };
       const razoes = ['ink', 'muted', 'good-ink', 'warn-ink', 'crit-ink', 'info-ink'].map((v) => [v, contraste(cor(v), cor('surface'))]);
       razoes.push(['ação principal', contraste(cor('accent-ink'), cor('accent'))]);
+      const botao = getComputedStyle(document.querySelector('.acoes-topo .btn.prim'));
+      razoes.push(['botão renderizado', contraste(botao.color, botao.backgroundColor)]);
       const categorias = [...document.querySelectorAll('.kpi-icone')].map((e) => getComputedStyle(e).color);
       const el = document.createElement('div');
       el.className = 'mapa-brasil';
@@ -122,7 +152,22 @@ try {
     await page.setViewportSize({ width: 1440, height: 1050 });
   }
   await page.locator('[data-nav="painel"]').click();
+  // Valores usuais de produção continuam legíveis em larguras intermediárias.
+  for (const width of [320, 390, 768, 1024, 1280, 1440]) {
+    await page.setViewportSize({ width, height: 1000 });
+    const leituraCabe = await page.locator('.kpi-usadas .kpi-leitura').evaluate((el) => {
+      const valor = el.querySelector('.kpi-valor'), foto = el.querySelector('.kpi-imagem');
+      const antes = valor.textContent; valor.textContent = '2.005';
+      const range = document.createRange(); range.selectNodeContents(valor);
+      const r = range.getBoundingClientRect(), imagem = foto.getBoundingClientRect(), leitura = el.getBoundingClientRect();
+      const cabe = r.right <= (imagem.width ? imagem.left - 2 : leitura.right) && r.left >= leitura.left;
+      valor.textContent = antes; return cabe;
+    });
+    assert.equal(leituraCabe, true, `valor e imagem separados em ${width}px`);
+  }
   await page.emulateMedia({ reducedMotion: 'reduce' });
+  await estado.locator('path').hover();
+  assert.equal(await page.locator('.mapa-destaque').count(), 0, 'ampliação respeita movimento reduzido');
   await card.hover({ position: { x: 20, y: 20 } });
   assert.equal(await card.evaluate((e) => e.style.getPropertyValue('--inclina-x')), '');
   assert.equal(await card.evaluate((e) => getComputedStyle(e).transform), 'none');

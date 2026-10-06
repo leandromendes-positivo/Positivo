@@ -6,7 +6,7 @@ Painel web para acompanhar, todo dia, as **peças usadas** que cada técnico ain
 - **Dados:** Firebase (Firestore), na conta Google escolhida por você. Nada de planilha ou dado de técnico fica neste repositório.
 - **Aviso diário:** e-mail de segunda a sexta às 7h55 com quem cobrar (GitHub Actions).
 - **Atualização do site:** qualquer alteração em `src/` enviada para o branch `main` publica o site de novo sozinha.
-- **Aparência:** o botão no topo e na tela de login alterna entre claro (base branca e texto preto) e escuro (base preta e texto branco), com a logo correspondente. As ações usam turquesa; azul, coral, âmbar e verde distinguem categorias e situações. A escolha fica salva neste navegador; no primeiro acesso, acompanha o tema do sistema.
+- **Aparência:** o botão no topo e na tela de login alterna entre claro (base branca e texto preto) e escuro (base preta e texto branco), com a logo correspondente. Botões principais usam grafite no claro e turquesa no escuro; azul, coral, âmbar e verde distinguem categorias e situações. A escolha fica salva neste navegador; no primeiro acesso, acompanha o tema do sistema.
 
 Detalhes do funcionamento (regras, formato das planilhas, banco, arquitetura): [CONTEXTO-PARA-CHATGPT.md](CONTEXTO-PARA-CHATGPT.md).
 
@@ -71,7 +71,7 @@ Abra o site → **Entrar com Google** → arraste as planilhas do dia (Novas e U
 
 ### Visão geral da operação
 
-- **Indicadores no topo:** peças pendentes, técnicos a cobrar, compromissos de hoje e estoque conhecido. Cartões com fotografias de tecnologia abrem as consultas correspondentes e limpam filtros antigos.
+- **Indicadores no topo:** peças pendentes, técnicos a cobrar, compromissos de hoje e estoque conhecido. Cada cartão separa número, imagem, composição dos dados e ação. As barras representam peças dentro/fora do prazo, contatos da fila atual, compromissos dos próximos 7 dias e técnicos por faixa de estoque. Os cartões abrem as consultas correspondentes e limpam filtros antigos.
 - **Prioridades de cobrança:** técnicos a cobrar, previsões vencidas e devoluções previstas hoje. As promessas vencidas aparecem primeiro, seguidas das peças mais antigas. O botão **Cobrar** abre o registro de contato e previsão.
 - **Agenda de devoluções:** compromissos dos próximos 7 dias, com quantidade de peças e técnicos por data. Registrar uma previsão não confirma a devolução.
 - **Mapa do Brasil:** selecione um estado para conferir pendências ou estoque. A escala de verde a coral representa quatro faixas da taxa de atraso: 0–10%, >10–25%, >25–50% e >50%. No modo Novas, representa a proporção de técnicos fora da faixa de estoque. Estados sem planilha usam hachuras; uma planilha vazia importada conta como dado conhecido. O mapa não usa localização individual dos técnicos.
@@ -79,7 +79,7 @@ Abra o site → **Entrar com Google** → arraste as planilhas do dia (Novas e U
 - **Demais telas:** cobranças, peças, estoque, técnicos, importação e configurações têm resumos operacionais, tabelas e filtros com a mesma organização visual. Relatórios de novas ausentes não contam como estoque zerado nem como necessidade de reposição.
 - **Celular e acessibilidade:** layout adaptável, filtros por teclado, versões em tabela dos gráficos e animações reduzidas conforme a preferência do dispositivo.
 
-O mapa permite aproximar o estado selecionado, voltar à visão do Brasil e consultar os valores com o mouse ou teclado. A evolução tem leitura por dia com as setas ← →, Home e End. Cartões, barras, linhas e medidores têm animações de entrada; os indicadores reagem ao cursor com uma inclinação suave e realce da imagem. Trocar filtros do mapa, da fila ou da agenda atualiza somente aquele componente. As animações respeitam a preferência de movimento reduzido.
+O mapa amplia o estado ao passar o cursor ou receber foco por teclado; sair do estado ou pressionar Escape recolhe o destaque. A ampliação mantém a cor de risco e não muda a seleção. Estados na mesma faixa têm a mesma cor. Os controles também permitem aproximar o mapa inteiro e voltar à visão do Brasil. A evolução tem leitura por dia com as setas ← →, Home e End. Cartões, barras, linhas e medidores têm animações de entrada; os indicadores reagem ao cursor com uma inclinação suave e realce da imagem. Trocar filtros do mapa, da fila ou da agenda atualiza somente aquele componente. As animações respeitam a preferência de movimento reduzido.
 
 ## Regras (ajustáveis em Configurações)
 

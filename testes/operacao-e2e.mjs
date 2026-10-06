@@ -30,6 +30,7 @@ try {
   await parcial.waitForFunction(() => !!UI.im.resultado);
   await parcial.locator('[data-nav="painel"]').click();
   assert.equal(await parcial.locator(".indicadores-operacao .kpi").last().locator(".kpi-valor").innerText(), "—", "sem relatório de novas não significa estoque zero");
+  assert.deepEqual(await parcial.locator('.kpi-estoque .kpi-partes strong').allTextContents(), ['—', '—', '—']);
   assert.match(await parcial.locator(".cartao-reposicao").innerText(), /Falta a planilha/);
   await parcial.locator('[data-acao="painel-mapa-modo"][data-modo="novas"]').click();
   assert.equal(await parcial.locator('.mapa-estado[role="button"]').count(), 0);

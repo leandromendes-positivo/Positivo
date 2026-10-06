@@ -80,7 +80,7 @@ function tabelaItensCurta(itens, D) {
 }
 
 function campoPrevisao(i) {
-  return `<input type="date" class="campo-data" value="${esc(i.previsao)}" data-mudar="previsao-item" data-tid="${esc(i.tid)}" data-k="${esc(i.k)}" aria-label="Previsão de devolução">`;
+  return `<input type="date" class="campo-data" value="${esc(i.previsao)}" data-mudar="previsao-item" data-tid="${esc(i.tid)}" data-k="${esc(i.k)}" aria-label="Previsão de devolução">${i.previsao ? `<small class="sub-celula autoria-previsao" title="${esc(i.agendadoPor?.email || '')}">${esc(autorPrevisao(i))}</small>` : ''}`;
 }
 
 function renderCobrancas() {

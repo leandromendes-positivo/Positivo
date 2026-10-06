@@ -3,6 +3,7 @@
    ========================================================================== */
 
 async function receberArquivos(lista) {
+  exigirAdministrador();
   const arquivos = [...lista].filter((f) => f && f.name);
   if (!arquivos.length) return;
   if (UI.im.processando) { toast("Aguarde a importação em andamento terminar.", "info"); return; }

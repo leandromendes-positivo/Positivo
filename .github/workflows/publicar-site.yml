@@ -6,6 +6,11 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      administrador_inicial:
+        description: "E-mail do primeiro administrador (somente na ativação inicial)"
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -27,6 +32,18 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+      - name: Instalar ferramentas de segurança
+        working-directory: seguranca
+        run: npm ci --no-audit --no-fund
+      - name: Publicar e validar as regras de acesso
+        working-directory: seguranca
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          INITIAL_ADMIN_EMAIL: ${{ inputs.administrador_inicial || vars.INITIAL_ADMIN_EMAIL }}
+        run: node publicar.mjs
       - name: Montar o painel
         run: python3 build.py
       - uses: actions/configure-pages@v6

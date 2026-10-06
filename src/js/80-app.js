@@ -9,7 +9,7 @@ const UI = {
   cob: { aba: "cobrar", regiao: "", busca: "", ordem: "dias", abertos: new Set() },
   us: { aba: "pendentes", status: "todas", regiao: "", tid: "", busca: "", faixa: null, ordem: { campo: "dias", dir: "desc" }, pagina: 1, paginaDev: 1, sel: new Set() },
   es: { regiao: "", status: "", busca: "", bases: false, ordem: { campo: "novasQtd", dir: "desc" }, abertos: new Set() },
-  tc: { tipo: "tecnico", regiao: "", busca: "", mostrarSemDados: false, ordem: { campo: "nome", dir: "asc" } },
+  tc: { tipo: "tecnico", localidade: "", regiao: "", busca: "", mostrarSemDados: false, ordem: { campo: "nome", dir: "asc" } },
   ficha: { tid: null, aba: "usadas", pagina: 1 },
   im: { fila: [], processando: false, progresso: "", resultado: null, erro: null },
 };
@@ -19,10 +19,13 @@ const PAGINAS = {
   cobrancas: { titulo: "Cobranças", icone: "sino", render: renderCobrancas },
   usadas: { titulo: "Peças usadas", icone: "retorno", render: renderUsadas },
   consulta: { titulo: "Consulta de peças", nav: "Consulta avançada", icone: "busca", render: renderConsulta },
+  inventario: { titulo: "Histórico de inventário", icone: "caixa", render: renderInventario },
   estoque: { titulo: "Estoque de novas", icone: "caixa", render: renderEstoque },
   tecnicos: { titulo: "Técnicos", icone: "pessoas", render: renderTecnicos },
-  importar: { titulo: "Importar planilhas", icone: "upload", render: renderImportar },
-  config: { titulo: "Configurações", icone: "ajustes", render: renderConfig, depois: posRenderConfig },
+  importar: { admin: true, titulo: "Importar planilhas", icone: "upload", render: renderImportar },
+  config: { admin: true, titulo: "Configurações", icone: "ajustes", render: renderConfig, depois: posRenderConfig },
+  usuarios: { admin: true, titulo: "Usuários e permissões", nav: "Cadastro de usuários", icone: "pessoas", render: renderUsuarios },
+  conta: { titulo: "Minha conta", icone: "pessoa", render: renderConta },
 };
 
 function irPara(pagina, { tid = null } = {}) {
@@ -60,13 +63,18 @@ function renderizar(forcar = false) {
     const outraConta = E.erroCodigo === "sem_permissao" && Acesso.modo === "firebase";
     conteudo.innerHTML = vazio("alerta", outraConta ? "Conta sem acesso" : "Não consegui carregar os dados",
       esc(E.erro || "") + (outraConta && Acesso.usuario ? `<br><span class="mono">${esc(Acesso.usuario.email)}</span>` : ""),
-      outraConta ? `<button class="btn prim" data-acao="sair">Entrar com outra conta</button>` : `<button class="btn prim" data-acao="recarregar">Tentar de novo</button>`);
+      outraConta ? `<button class="btn prim" data-acao="sair">Entrar com outra conta</button>${Acesso.usuario && !Acesso.usuario.verificado ? '<button class="btn" data-acao="verificar-email">Enviar confirmação de e-mail</button><button class="btn" data-acao="recarregar">Já confirmei meu e-mail</button>' : ''}` : `<button class="btn prim" data-acao="recarregar">Tentar de novo</button>`);
     return;
   }
+  if (PAGINAS[UI.pagina]?.admin && !podeAdministrar()) UI.pagina = 'painel';
   const p = PAGINAS[UI.pagina];
   UI.posRender = null;
   conteudo.dataset.pagina = UI.pagina;
   conteudo.innerHTML = cabecalhoSecao(UI.pagina, derivar()) + p.render();
+  if (!podeAdministrar()) {
+    document.querySelectorAll('[data-acao="editar-tecnico"], [data-acao="editar-prazos"], [data-acao="consulta-classificar"], [data-acao="desfazer-importacao"]').forEach(el=>el.disabled=true);
+    document.querySelectorAll('[data-mudar="tipo-tecnico"]').forEach(el=>el.disabled=true);
+  }
   if (p.depois) p.depois();
   if (UI.posRender) UI.posRender();
   Movimento.preparar();
@@ -78,6 +86,7 @@ function renderizar(forcar = false) {
 
 function atualizarMoldura() {
   const D = E.status === "pronto" ? derivar() : null;
+  document.getElementById("entrada-topo").closest("label").hidden = !podeAdministrar();
   const p = PAGINAS[UI.pagina];
   const titulo = document.getElementById("titulo");
   const tituloTexto = UI.tid && D && D.mapa.get(UI.tid) ? "Ficha do técnico" : p.titulo;
@@ -121,10 +130,8 @@ function atualizarMoldura() {
   const conta = document.getElementById("rail-conta");
   if (conta) {
     conta.hidden = !(Acesso.modo === "firebase" && Acesso.usuario);
-    if (!conta.hidden && !conta.dataset.pronto) {
-      conta.dataset.pronto = "1";
-      conta.innerHTML = `<span class="rail-rotulo">Conectado</span><span class="rail-email"></span><button class="link-rail" data-acao="sair">Sair</button>`;
-      conta.querySelector(".rail-email").textContent = Acesso.usuario.email;
+    if (!conta.hidden) {
+      conta.innerHTML = `<button class="conta-menu" data-acao="ir" data-pagina="conta" aria-label="Abrir minha conta">${avatar(Acesso.usuario.nome,'tecnico')}<span><strong>${esc(Acesso.usuario.nome)}</strong><small>${esc(Acesso.usuario.email)}</small><em>${esc(PERFIS[Acesso.perfil?.perfil] || 'Sem acesso')}</em></span>${icone('direita')}</button>`;
     }
   }
 }
@@ -173,8 +180,9 @@ const ACOES = {
   },
   tema: () => Tema.alternar(),
   ir: (el) => irPara(el.dataset.pagina),
-  recarregar: () => carregarTudo(),
+  recarregar: () => E.status === "erro" ? location.reload() : carregarTudo(),
   sair: () => sairDoFirebase(),
+  "verificar-email": async el => { el.disabled=true; try { await Acesso.auth.currentUser.sendEmailVerification();toast('Confira a caixa de entrada e confirme seu e-mail.'); } catch(e) {toast('Não foi possível enviar agora. Aguarde e tente novamente.','erro');el.disabled=false;} },
   "salvar-config-firebase": () => {
     const campo = document.getElementById("config-firebase");
     const cfg = lerTextoConfig(campo && campo.value);
@@ -186,6 +194,12 @@ const ACOES = {
   tecnico: (el) => { irPara("tecnicos", { tid: el.dataset.tid }); },
   "voltar-tecnicos": () => irPara("tecnicos"),
   cobrar: (el) => modalCobrar(el.dataset.tid, el.dataset.aba || "cobrar"),
+  "inventario-tecnico": el => { UIinventario.tid=el.dataset.tid;UIinventario.tipo='';UIinventario.estado='';UIinventario.busca='';UIinventario.pagina=1;irPara('inventario'); },
+  "inventario-atualizar": () => carregarInventario(),
+  "inventario-exportar": () => exportarInventario(),
+  "novo-usuario": () => modalUsuario(),
+  "editar-usuario": el => modalUsuario(el.dataset.email),
+  "historico-agenda": el => modalHistoricoAgenda(el.dataset.tid),
   "editar-tecnico": (el) => modalTecnico(el.dataset.tid),
   "editar-prazos": (el) => modalTecnico(el.dataset.tid, true),
   "previsao-tecnico": (el) => {
@@ -220,6 +234,7 @@ const ACOES = {
     else if (alvo === "dev") UI.us.paginaDev = p;
     else if (alvo === "ficha") UI.ficha.pagina = p;
     else if (alvo === "consulta") UIconsulta.pagina = p;
+    else if (alvo === "inventario") UIinventario.pagina = p;
     renderizar(true);
   },
   ordenar: (el) => {
@@ -297,6 +312,8 @@ const MUDANCAS = {
     renderizar(true);
   },
   "regiao-es": (el) => { UI.es.regiao = el.value; renderizar(true); },
+  "inventario-filtro": el => { UIinventario[el.dataset.campo]=el.value;UIinventario.pagina=1;renderizar(true); },
+  "localidade-tc": (el) => { UI.tc.localidade = el.value; renderizar(true); },
   "regiao-tc": (el) => { UI.tc.regiao = el.value; renderizar(true); },
   "sem-dados-tc": (el) => { UI.tc.mostrarSemDados = el.checked; renderizar(true); },
   "tipo-tecnico": async (el) => {
@@ -310,6 +327,7 @@ const DIGITACAO = {
   "busca-cob": (v) => { UI.cob.busca = v; },
   "busca-us": (v) => { UI.us.busca = v; UI.us.pagina = 1; },
   "busca-es": (v) => { UI.es.busca = v; },
+  "inventario-busca": v => { UIinventario.busca=v;UIinventario.pagina=1; },
   "busca-tc": (v) => { UI.tc.busca = v; },
 };
 const aplicarBusca = debounce((campo) => {
@@ -325,13 +343,13 @@ function ligarEventos() {
     const alvo = ev.target.closest("[data-acao]");
     if (!alvo || alvo.disabled) return;
     const f = ACOES[alvo.dataset.acao];
-    if (f) { ev.preventDefault(); f(alvo, ev); }
+    if (f) { ev.preventDefault(); Promise.resolve().then(()=>f(alvo, ev)).catch(e=>toast(e.code ? erroAmigavel(e).message : e.message,"erro")); }
   });
   document.addEventListener("change", (ev) => {
     const el = ev.target;
-    if (el.matches("[data-entrada-arquivos]")) { receberArquivos(el.files); el.value = ""; return; }
+    if (el.matches("[data-entrada-arquivos]")) { receberArquivos(el.files).catch(e=>toast(erroAmigavel(e).message,"erro")); el.value = ""; return; }
     const f = el.dataset && MUDANCAS[el.dataset.mudar];
-    if (f) f(el, ev);
+    if (f) Promise.resolve().then(()=>f(el, ev)).catch(e=>toast(e.code ? erroAmigavel(e).message : e.message,"erro"));
   });
   document.addEventListener("input", (ev) => {
     const el = ev.target;
@@ -371,7 +389,7 @@ function ligarEventos() {
     ev.preventDefault();
     profundidade = 0;
     camada.hidden = true;
-    receberArquivos(ev.dataTransfer.files);
+    receberArquivos(ev.dataTransfer.files).catch(e=>toast(erroAmigavel(e).message,"erro"));
   });
 
   // gráficos acompanham a largura do cartão
@@ -392,7 +410,7 @@ function ligarEventos() {
 }
 
 function montarMoldura() {
-  document.getElementById("nav").innerHTML = Object.entries(PAGINAS).map(([id, p]) =>
+  document.getElementById("nav").innerHTML = Object.entries(PAGINAS).filter(([,p])=>!p.admin || podeAdministrar()).map(([id, p]) =>
     `${id === "painel" ? '<span class="nav-grupo">Monitoramento</span>' : id === "estoque" ? '<span class="nav-grupo">Recursos</span>' : id === "importar" ? '<span class="nav-grupo">Administração</span>' : ""}<a href="#${id}" data-nav="${id}" data-acao="ir" data-pagina="${id}">${icone(p.icone)}<span>${esc(p.nav || p.titulo)}</span>${id === "cobrancas" ? `<b class="nav-contador" id="contador-cobrancas" hidden></b>` : ""}</a>`
   ).join("");
 }
@@ -404,7 +422,10 @@ async function iniciar() {
   const inicial = (location.hash || "").replace("#", "");
   if (PAGINAS[inicial]) UI.pagina = inicial;
   renderizar(true);
-  await Armazem.iniciar();
+  try { await Armazem.iniciar(); }
+  catch (e) { E.status = 'erro'; E.erro = 'Não foi possível conectar com segurança. Confira a conexão e tente novamente.'; mudou(); return; }
+  montarMoldura();
+  if (Acesso.modo === 'firebase' && !Acesso.perfil) { bloquearSessao(Acesso.negado); return; }
   if (Acesso.modo === "firebase" && Acesso.usuario) {
     E.usuario.id = Acesso.usuario.uid;
     E.usuario.email = Acesso.usuario.email;

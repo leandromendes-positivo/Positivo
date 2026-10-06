@@ -2,7 +2,7 @@
 
 Painel web para acompanhar, todo dia, as **peças usadas** que cada técnico ainda não devolveu (prazo de 7 dias) e o **estoque de peças novas** de cada um (meta de ~10).
 
-- **Site:** https://leandromendes-positivo.github.io/Positivo/ (abre no computador e no celular, com login Google)
+- **Site:** https://leandromendes-positivo.github.io/Positivo/ (abre no computador e no celular, com login Google ou Microsoft após configurar os provedores)
 - **Dados:** Firebase (Firestore), na conta Google escolhida por você. Nada de planilha ou dado de técnico fica neste repositório.
 - **Aviso diário:** e-mail de segunda a sexta às 7h55 com quem cobrar (GitHub Actions).
 - **Atualização do site:** qualquer alteração em `src/` enviada para o branch `main` publica o site de novo sozinha.
@@ -30,8 +30,8 @@ Faça tudo logado na **conta Google que vai ser dona do painel**. Use uma janela
 2. Menu **Criação → Firestore Database → Criar banco de dados**:
    - Local: **southamerica-east1 (São Paulo)**
    - Modo: **produção** → **Criar**.
-3. Ainda no Firestore, aba **Regras**: apague o que estiver lá, cole o conteúdo do arquivo [`firestore.rules`](firestore.rules) **trocando `seu.email@gmail.com` pelo e-mail da conta que vai usar o painel** e clique em **Publicar**.
-4. Menu **Criação → Authentication → Vamos começar → Google** → **Ativar** → escolha o e-mail de suporte → **Salvar**.
+3. Configure a credencial, o administrador principal e a publicação de regras conforme [Ativação de contas e permissões](seguranca/README.md). A lista fixa de e-mails foi substituída pelo cadastro protegido de usuários.
+4. Menu **Criação → Authentication → Vamos começar → Google** → **Ativar** → escolha o e-mail de suporte → **Salvar**. Para Outlook/Microsoft 365, siga a configuração do Microsoft Entra e do provedor Microsoft no [guia de contas](seguranca/README.md#microsoft-outlook-e-microsoft-365-corporativo).
 5. Em **Authentication → Configurações → Domínios autorizados → Adicionar domínio**: `leandromendes-positivo.github.io`
 6. Engrenagem (⚙) → **Configurações do projeto → Geral → Seus apps** → ícone **Web `</>`** → apelido `painel` → **Registrar app**. Copie o bloco `firebaseConfig` que aparece.
 7. Coloque esses valores no arquivo **`firebase-config.json`** deste repositório (veja o modelo em [`firebase-config.exemplo.json`](firebase-config.exemplo.json)) e envie para o `main`. O site é publicado de novo já ligado ao Firebase.
@@ -58,9 +58,19 @@ Senhas e chaves ficam **só** nos Secrets do GitHub. Nunca coloque esses valores
 
 ### 4. Primeiro uso
 
-Abra o site → **Entrar com Google** → arraste as planilhas do dia (Novas e Usadas de cada região). Pronto.
+Abra o site → **Entrar com Google** ou **Entrar com Microsoft** com o e-mail do administrador principal. Em **Cadastro de usuários**, autorize cada endereço e escolha **Usuário** ou **Administrador**. A conta comum consulta e agenda; a administração também importa e altera cadastros e regras.
 
 ---
+
+## Usuários, autoria e localidade
+
+- **Cadastro de usuários:** administradores autorizam endereços exatos de qualquer domínio, atribuem perfis e desativam acessos. E-mail verificado e permissão ativa são exigidos no banco, inclusive se alguém tentar ignorar os botões da interface.
+- **Minha conta:** mostra o primeiro nome extraído do início do e-mail, o endereço e o perfil. O mesmo nome aparece ao lado do e-mail no rodapé do menu.
+- **Agendamentos:** nome do responsável nas previsões e na agenda; **Ficha do técnico → Histórico de agendamentos** mostra e-mail, horário e alterações. Registros anteriores sem autoria conhecida não recebem nomes inventados. Horários do servidor são exibidos em Brasília.
+- **Capital/interior:** **Técnicos → Editar cadastro → Localidade do técnico**. O campo começa como não informado e pode ser filtrado na lista e na consulta avançada; também aparece nas exportações.
+- **Login:** vídeo de circuitos do banco Pexels, incorporado ao próprio painel, com reprodução automática, silenciosa, em loop e sem controle de pausa. Inclui versões WebM/MP4, imagem de abertura, botões Google/Microsoft e enquadramento para celular. [Origem e licença do vídeo](src/assets/VIDEO-LICENCA.md).
+
+A ativação inicial exige configuração no Firebase e, para Microsoft, no Entra. Veja o [guia de implantação e segurança](seguranca/README.md). O workflow não publica o novo site se não conseguir publicar as regras do banco.
 
 ## Rotina do dia
 
@@ -83,6 +93,16 @@ O mapa amplia o estado ao passar o cursor ou receber foco por teclado; sair do e
 
 ## Regras (ajustáveis em Configurações)
 
+### Histórico completo de inventário
+
+**Histórico de inventário**, no menu lateral, ou **Técnicos → nome → Histórico de peças**, reúne o saldo atual e todas as saídas preservadas no banco, sem o corte operacional de 120 dias. Filtre por técnico, novas/usadas, situação, código, descrição, chamado ou NF e exporte o resultado completo.
+
+Usadas que desaparecem da planilha ficam como devolvidas; reduções parciais encerram apenas a quantidade que saiu. Nas novas, uma saída sem destino informado aparece como **Devolução presumida**, separada de uso, transferência e devolução confirmada. O administrador pode confirmar/reclassificar o destino, inclusive em registros antigos. Novas presumidas não entram como devoluções confirmadas no ranking.
+
+Uma linha representa um saldo ou uma saída registrada. O mesmo material pode aparecer em várias movimentações; o relatório não identifica unidades físicas únicas. O sistema mantém primeira observação, saída, quantidade e referências disponíveis. Não é possível reconstruir movimentações anteriores ao início do acompanhamento que nunca foram gravadas. Desfazer a última importação retira somente os registros produzidos por ela e restaura o saldo anterior.
+
+No Firebase, as saídas de usadas e novas, o registro de importação e a troca do saldo oficial são confirmados na mesma transação. Assim, uma falha ao salvar o arquivo histórico não avança a foto do inventário.
+
 ### Consulta avançada e rankings
 
 **Consulta avançada**, no menu lateral, localiza materiais por nome ou código, inclusive códigos com zeros à esquerda. Combine palavras para refinar a descrição ou separe códigos por vírgula/ponto e vírgula. Os filtros incluem técnico, UF, novas/usadas, posição atual/histórico, família, situação, tipo de envio, chamado/NF/remessa, datas, dias e quantidade por registro. Campos ausentes no relatório não são inventados. A visão por responsável agrupa as quantidades; **Ver peças** abre seu detalhamento. **Exportar resultado** exporta todas as linhas filtradas, não apenas a página exibida.
@@ -95,7 +115,7 @@ Na **Visão geral**, os rankings têm filtros de **esta semana** (segunda-feira 
 
 **Novas: 7 dias por padrão, a partir da primeira observação do material no estoque.** O relatório não informa data de recebimento nem identifica individualmente cada unidade; a idade acompanha o saldo do material e não comprova a idade de cada unidade após uma reposição. Uma troca de tipo de envio não reinicia essa referência. Quedas de saldo entre importações geram saídas a classificar, sem presumir consumo. Somente saídas classificadas como devolução entram na pontualidade; transferências e ajustes não contam como uso. As datas de saída são as datas em que a diferença foi observada na importação, não uma confirmação do horário físico da movimentação.
 
-Se uma saída tiver destinos diferentes, informe a quantidade de cada parte ao classificá-la; o restante mantém o destino anterior. As saídas de novas começam a ser registradas com esta versão e também entram em **Baixar tudo em Excel**. O histórico disponível cobre os últimos 120 dias; lacunas entre importações e períodos anteriores ao acompanhamento não são reconstruídos. Os gráficos respeitam movimento reduzido e oferecem detalhes acessíveis por teclado.
+Se uma saída tiver destinos diferentes, informe a quantidade de cada parte ao classificá-la; o restante mantém o destino anterior. As saídas de novas começam a ser registradas com esta versão e também entram em **Baixar tudo em Excel**. As análises operacionais usam os últimos 120 dias; o menu **Histórico de peças** consulta todo o acervo preservado, sem esse corte. Lacunas entre importações e períodos anteriores ao acompanhamento não são reconstruídos. Os gráficos respeitam movimento reduzido e oferecem detalhes acessíveis por teclado.
 
 ### Parâmetros
 
@@ -124,10 +144,15 @@ src/pagina.html, src/estilos.css   moldura e visual
 src/operacao.css                   visual da central de operações
 src/gestao.css                     temas, paleta funcional e composição das telas
 src/analises.css                   consulta avançada e gráficos dos rankings
+src/acesso.css                     login, contas e histórico de inventário
 src/tema.js, src/botao-tema.html   escolha de tema e preferência local
 src/assets/                      logos, favicon, ilustração e mapa (atribuição em MAPA-LICENCA.txt)
 src/js/00…80                       lógica e telas (JavaScript puro, sem framework)
-src/js/25-firebase.js              banco Firebase + login Google
+src/js/25-firebase.js              banco Firebase + login Google/Microsoft
+src/js/26-identidade.js            autorização e autoria dos agendamentos
+src/js/32-inventario.js            acervo completo de responsabilidades
+src/js/79-usuarios.js              contas e cadastro de usuários
+src/js/79-inventario.js            histórico de peças por técnico
 src/js/31-analises.js              filtros, períodos, rankings e classificação de saídas
 src/js/55-movimento.js             animações progressivas e preferência de movimento reduzido
 src/js/62-indicadores.js           cálculos de gestão e resumos das seções
@@ -137,7 +162,8 @@ src/js/78-consulta.js              tela de consulta avançada e exportação fil
 build.py                           monta dist/site/index.html (o site)
 aviso/enviar-aviso.mjs             e-mail diário (roda no GitHub Actions)
 .github/workflows/                 publicar-site.yml e aviso-diario.yml
-firestore.rules                    quem pode acessar o banco
+firestore.rules                    perfis, autorização e integridade da auditoria
+seguranca/                         implantação protegida e guia Google/Microsoft
 firebase.json                      emuladores para teste local
 exemplos/                          planilhas fictícias no formato do sistema
 testes/                            testes no Chromium (Playwright)
@@ -148,8 +174,8 @@ Testar localmente:
 ```bash
 python3 build.py
 npx firebase-tools emulators:start --only auth,firestore --project demo-controle-pecas
-python3 -m http.server 8000 --directory dist/site
-node testes/firebase-e2e.mjs exemplos capturas   # o emulador precisa de uma cópia de firestore.rules liberando teste@exemplo.com
+python3 -m http.server 8000 --directory dist
+URL_SITE=http://127.0.0.1:8000/pagina-completa.html node testes/firebase-e2e.mjs exemplos capturas   # usa as regras reais e prepara somente o emulador local
 ```
 
 Para validar a visão geral com as planilhas fictícias, sem conectar ao Firebase:
@@ -163,6 +189,7 @@ node testes/gestao-e2e.mjs
 node testes/interface-e2e.mjs
 node testes/analises-e2e.mjs
 node testes/prazos-e2e.mjs
+node testes/inventario-e2e.mjs
 ```
 
 Os testes abrem `pagina-completa.html` e exigem armazenamento em memória antes de importar dados. Verificam cobranças, previsões, agenda, devoluções, mapa, gráficos, cálculos, filtros combinados, agrupamento, períodos civis, uso sem duplicação, saídas classificadas, devoluções parciais, persistência e desfazer. A regressão de interface cobre contraste dos botões em repouso, com cursor e foco, seleção parcial, quantidades em lote, avisos e navegação por teclado nas janelas dos dois temas. Use `PW_PATH` e `CHROMIUM` para indicar instalações específicas; `URL_PAINEL_TESTE` permite mudar a URL local. O teste de prazos verifica herança, limites, alertas, mensagens, histórico, rankings e falhas de gravação. O teste com emuladores Firebase também verifica prazos personalizados e classificação em dois dispositivos, recarregamento e reversão das saídas de novas.

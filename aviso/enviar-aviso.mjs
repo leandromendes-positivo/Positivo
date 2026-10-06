@@ -100,8 +100,8 @@ async function principal() {
   const { default: admin } = await import("firebase-admin");
   if (emulador) admin.initializeApp({ projectId: env.FIREBASE_PROJETO || "demo-controle-pecas" });
   else admin.initializeApp({ credential: admin.credential.cert(JSON.parse(env.FIREBASE_SERVICE_ACCOUNT)) });
-  const snap = await admin.firestore().doc("resumo/atual").get();
-  const resumo = snap.exists ? decodificar(snap.data()) : null;
+  const { recalcularResumo } = await import("./recalcular-resumo.mjs");
+  const resumo = await recalcularResumo(admin.firestore(), env.AVISO_DATA || hojeBrasilia());
   const aviso = montarAviso(resumo, env.AVISO_DATA || hojeBrasilia(), env.PAINEL_URL || "");
   if (simular) {
     console.log(`Assunto: ${aviso.assunto}\n\n${aviso.texto}`);

@@ -9,6 +9,7 @@ function renderTecnicos() {
   const busca = normBusca(s.busca);
   const contar = (tipo) => D.tecnicos.filter((t) => t.tipo === tipo && (tipo === "ignorar" || t.temDados)).length;
   let lista = D.tecnicos.filter((t) => t.tipo === s.tipo && (s.tipo === "ignorar" || t.temDados || s.mostrarSemDados));
+  if (s.localidade) lista = lista.filter(t => s.localidade === "nao-informado" ? !t.localidade : t.localidade === s.localidade);
   if (s.regiao) lista = lista.filter((t) => t.regiao === s.regiao);
   if (busca) lista = lista.filter((t) => normBusca(`${t.nome} ${t.nomeOriginal} ${t.telefone} ${t.email}`).includes(busca));
   lista = ordenarLista(lista, s.ordem, {
@@ -23,6 +24,7 @@ function renderTecnicos() {
     ${numericos && s.tipo !== "ignorar" ? `<div class="faixa info compacta">${icone("info")}<div><strong>${plural(numericos, "identificador numérico foi classificado", "identificadores numéricos foram classificados")} como base/depósito</strong><span>Nos relatórios, códigos como 110301019 costumam ser estoques, não pessoas. Se algum for um técnico, troque o tipo na lista "Bases e depósitos" e dê um nome a ele.</span></div></div>` : ""}
     ${semWhats && s.tipo === "tecnico" ? `<div class="faixa neutra compacta">${icone("telefone")}<div><strong>${plural(semWhats, "técnico está", "técnicos estão")} sem WhatsApp cadastrado</strong><span>Com o número salvo, o botão Cobrar abre a conversa já com a mensagem pronta.</span></div></div>` : ""}
     <div class="barra-filtros">
+      <select data-mudar="localidade-tc" aria-label="Localidade dos técnicos"><option value="">Capital e interior</option>${[['capital','Capital'],['interior','Interior'],['nao-informado','Não informado']].map(([v,n])=>`<option value="${v}" ${s.localidade===v?'selected':''}>${n}</option>`).join('')}</select>
       <div class="chips">
         <button class="chip${s.tipo === "tecnico" ? " ativo" : ""}" data-acao="tipo-tc" data-tipo="tecnico">Técnicos <span>${contar("tecnico")}</span></button>
         <button class="chip${s.tipo === "base" ? " ativo" : ""}" data-acao="tipo-tc" data-tipo="base">Bases e depósitos <span>${contar("base")}</span></button>
@@ -48,7 +50,7 @@ function renderTecnicos() {
       </tr></thead>
       <tbody>${lista.map((t) => `<tr>
         <td><span class="celula-tec">${avatar(t.nome, t.tipo)}<span><button class="link-forte" data-acao="tecnico" data-tid="${esc(t.tid)}">${esc(t.nome)}</button>${t.cad.apelido ? `<small class="sub-celula">${esc(t.nomeOriginal)}</small>` : ""}</span></span></td>
-        <td>${regiaoTag(t.regiao)}</td>
+        <td>${regiaoTag(t.regiao)}<small class="sub-celula">${LOCALIDADES[t.localidade] || LOCALIDADES[""]}</small></td>
         <td><select class="select-pequeno" data-mudar="tipo-tecnico" data-tid="${esc(t.tid)}" aria-label="Tipo">${Object.entries(TIPOS_TEC).map(([v, r]) => `<option value="${v}"${t.tipo === v ? " selected" : ""}>${r}</option>`).join("")}</select></td>
         <td>${t.telefone ? `<span class="mono nowrap">${esc(fmtTelefone(t.telefone))}</span>` : `<button class="link" data-acao="editar-tecnico" data-tid="${esc(t.tid)}">Cadastrar</button>`}</td>
         <td class="num">${fmtNum(t.nUsadas)}</td>
@@ -96,7 +98,7 @@ function renderFicha(tid) {
   else if (s.aba === "novas") corpo = `${t.tipo === "tecnico" ? `<div class="linha-medidor">${medidorEstoque(t)}${pillNovas(t)}<span class="nota">Meta ${t.meta}${t.metaPropria != null ? " (própria deste técnico)" : ""} · faixa aceitável ${t.metaMin} a ${t.metaMax}</span></div>` : ""}${tabelaLinhasNovas(t)}`;
   else if (s.aba === "cobrancas") corpo = cobrancas.length ? `<ol class="linha-tempo">${cobrancas.map((c) => `<li>
       <span class="lt-quando">${fmtDataHora(c.em)}</span>
-      <div><strong>${esc(CANAIS[c.canal] || c.canal)}</strong> · ${plural(c.pecas || 0, "peça", "peças")}${c.previsao ? ` · previsão para ${fmtData(c.previsao)}` : ""}${c.obs ? `<p></p>` : ""}</div>
+      <div><strong>${esc(CANAIS[c.canal] || c.canal)}</strong><small class="sub-celula">${esc(c.email ? primeiroNomeEmail(c.email) : "Sem autoria registrada")}</small> · ${plural(c.pecas || 0, "peça", "peças")}${c.previsao ? ` · previsão para ${fmtData(c.previsao)}` : ""}${c.obs ? `<p></p>` : ""}</div>
     </li>`).join("")}</ol>` : vazio("mensagem", "Nenhuma cobrança registrada", "Use o botão Cobrar para enviar a mensagem e registrar.");
   else corpo = devs.length ? `<div class="tabela-rolagem"><table class="tabela compacta"><thead><tr><th>Chamado</th><th>Material</th><th>Data FT</th><th>Saiu do relatório</th><th class="num">Dias</th><th>Prazo</th></tr></thead><tbody>
       ${devs.slice(0, 200).map((d) => `<tr><td class="mono">${esc(d.chamado || "—")}</td><td><span class="mat"><span class="mono">${esc(d.mat)}</span>${esc(E.catalogo[d.mat] || "")}</span></td><td class="mono">${fmtData(d.dataFT)}</td><td>${fmtDataHora(d.em)}</td><td class="num"><strong>${d.dias}</strong></td><td>${d.dias <= prazoDaDevolucao(d) ? pill("ok", "No prazo", "ok") : pill("grave", "Atrasada", "relogio")}</td></tr>`).join("")}
@@ -111,12 +113,12 @@ function renderFicha(tid) {
         <p>${regiaoTag(t.regiao)} <span>${esc(TIPOS_TEC[t.tipo])}</span>${t.cad.apelido ? ` · <span class="mono">${esc(t.nomeOriginal)}</span>` : ""}${t.telefone ? ` · <span class="mono">${esc(fmtTelefone(t.telefone))}</span>` : ""}${t.email ? ` · ${esc(t.email)}` : ""}</p>
         ${t.obs ? `<p class="ficha-obs"></p>` : ""}
       </div>
-      <div class="ficha-acoes">
+      <div class="ficha-acoes"><button class="btn" data-acao="inventario-tecnico" data-tid="${esc(t.tid)}">${icone("caixa")}Histórico de peças</button><button class="btn" data-acao="historico-agenda" data-tid="${esc(t.tid)}">${icone("calendario")}Histórico de agendamentos</button>
         ${t.usadas.length ? `<button class="btn prim" data-acao="cobrar" data-tid="${esc(t.tid)}" data-aba="${t.itensCobrar.length ? "cobrar" : "todos"}">${icone("mensagem")}Cobrar</button>` : ""}
         <button class="btn" data-acao="editar-tecnico" data-tid="${esc(t.tid)}">${icone("lapis")}Editar cadastro</button>
       </div>
     </section>
-    <section class="ficha-prazos" aria-label="Prazos de devolução do técnico">${icone('relogio')}<div><h3>Prazos de devolução</h3><p>A regra pessoal prevalece sobre a geral.</p></div><dl>${[['usadas','Usadas',t.prazo,t.cad.prazoUsadas],['novas','Novas',t.prazoNovas,t.cad.prazoNovas]].map(([tipo,nome,dias,proprio]) => `<div><dt>${nome}</dt><dd>${dias} dias <small>${prazoValido(proprio) !== null ? 'Personalizado' : 'Regra geral'}</small></dd></div>`).join('')}</dl><button class="btn pequeno" data-acao="editar-prazos" data-tid="${esc(t.tid)}">${icone('ajustes')}Alterar prazos</button></section>
+    <section class="ficha-prazos" aria-label="Prazos de devolução do técnico">${icone('relogio')}<div><h3>Prazos de devolução</h3><p>${LOCALIDADES[t.localidade] || LOCALIDADES[""]} · A regra pessoal prevalece sobre a geral.</p></div><dl>${[['usadas','Usadas',t.prazo,t.cad.prazoUsadas],['novas','Novas',t.prazoNovas,t.cad.prazoNovas]].map(([tipo,nome,dias,proprio]) => `<div><dt>${nome}</dt><dd>${dias} dias <small>${prazoValido(proprio) !== null ? 'Personalizado' : 'Regra geral'}</small></dd></div>`).join('')}</dl><button class="btn pequeno" data-acao="editar-prazos" data-tid="${esc(t.tid)}">${icone('ajustes')}Alterar prazos</button></section>
     ${kpis}
     <div class="abas" role="tablist">${abas.map(([id, rot, n]) => `<button role="tab" class="aba${s.aba === id ? " ativa" : ""}" data-acao="aba-ficha" data-aba="${id}">${rot}<span class="contador">${fmtNum(n)}</span></button>`).join("")}</div>
     <div class="ficha-corpo">${corpo}</div>`;
@@ -162,7 +164,7 @@ async function exportarTecnicos() {
     colunas: [{ titulo: "Nome", largura: 30 }, { titulo: "Nome no relatório", largura: 30 }, { titulo: "Tipo", largura: 14 }, { titulo: "UF", largura: 5 },
       { titulo: "WhatsApp", largura: 16 }, { titulo: "E-mail", largura: 26 }, { titulo: "Usadas pendentes", largura: 10, tipo: "numero" },
       { titulo: "Atrasadas", largura: 10, tipo: "numero" }, { titulo: "Dias da mais antiga", largura: 10, tipo: "numero" }, { titulo: "Peças novas", largura: 10, tipo: "numero" },
-      { titulo: "Meta", largura: 7, tipo: "numero" }, { titulo: "Situação do estoque", largura: 16 }, { titulo: "Devolução média (dias)", largura: 10, tipo: "numero" }, { titulo: "Observação", largura: 30 }, { titulo: "Prazo usadas (dias)", largura: 18, tipo: "numero" }, { titulo: "Regra usadas", largura: 16 }, { titulo: "Prazo novas (dias)", largura: 18, tipo: "numero" }, { titulo: "Regra novas", largura: 16 }],
-    linhas: D.tecnicos.filter((t) => t.temDados || t.tipo === "ignorar").map((t) => [t.nome, t.nomeOriginal, TIPOS_TEC[t.tipo], t.regiao, fmtTelefone(t.telefone), t.email, t.nUsadas, t.nAtrasadas, t.maxDias, t.novasQtd, t.tipo === "tecnico" ? t.meta : "", t.tipo === "tecnico" ? STATUS_NOVAS[t.statusNovas].rotulo : "", t.mediaDiasDev != null ? Math.round(t.mediaDiasDev * 10) / 10 : "", t.obs, t.prazo, prazoValido(t.cad.prazoUsadas) !== null ? "Personalizado" : "Geral", t.prazoNovas, prazoValido(t.cad.prazoNovas) !== null ? "Personalizado" : "Geral"]),
+      { titulo: "Meta", largura: 7, tipo: "numero" }, { titulo: "Situação do estoque", largura: 16 }, { titulo: "Devolução média (dias)", largura: 10, tipo: "numero" }, { titulo: "Observação", largura: 30 }, { titulo: "Prazo usadas (dias)", largura: 18, tipo: "numero" }, { titulo: "Regra usadas", largura: 16 }, { titulo: "Prazo novas (dias)", largura: 18, tipo: "numero" }, { titulo: "Regra novas", largura: 16 }, { titulo: "Capital / interior", largura: 18 }],
+    linhas: D.tecnicos.filter((t) => t.temDados || t.tipo === "ignorar").map((t) => [t.nome, t.nomeOriginal, TIPOS_TEC[t.tipo], t.regiao, fmtTelefone(t.telefone), t.email, t.nUsadas, t.nAtrasadas, t.maxDias, t.novasQtd, t.tipo === "tecnico" ? t.meta : "", t.tipo === "tecnico" ? STATUS_NOVAS[t.statusNovas].rotulo : "", t.mediaDiasDev != null ? Math.round(t.mediaDiasDev * 10) / 10 : "", t.obs, t.prazo, prazoValido(t.cad.prazoUsadas) !== null ? "Personalizado" : "Geral", t.prazoNovas, prazoValido(t.cad.prazoNovas) !== null ? "Personalizado" : "Geral", LOCALIDADES[t.localidade] || LOCALIDADES[""]]),
   }]);
 }

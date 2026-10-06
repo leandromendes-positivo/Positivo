@@ -115,7 +115,7 @@ try {
   // Exportação inclui a regra efetivamente usada por cada técnico.
   await page.evaluate(async()=>{exportarExcel=async(nome,abas)=>{window.__exportacao=abas[0];};await exportarTecnicos();});
   const exportado=await page.evaluate(tid=>{const a=window.__exportacao;return [a.colunas.length,a.linhas.find(l=>l[0]===nomeTecnico(tid))];},ids.Ana);
-  assert.equal(exportado[0],exportado[1].length);assert.deepEqual(exportado[1].slice(-4),[9,'Geral',11,'Geral']);
+  assert.equal(exportado[0],exportado[1].length);assert.deepEqual(exportado[1].slice(-5),[9,'Geral',11,'Geral','Não informado']);
   assert.deepEqual(erros,[]);
   console.log('PASSOU: prazos individuais por tipo, limites, herança, alertas, mensagens, resumo diário, histórico preservado, rankings, exportação, falha de gravação, persistência e dois temas no celular.');
 } finally {await browser.close();}

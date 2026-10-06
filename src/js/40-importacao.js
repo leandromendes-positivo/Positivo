@@ -3,7 +3,7 @@
 
    Cada planilha é a FOTO do momento de uma região: o que está nela continua
    com o técnico; o que sumiu desde a última importação saiu (peça usada
-   devolvida / peça nova consumida). A foto é gravada em partes com uma
+   devolvida / saída de peça nova a classificar). A foto é gravada em partes com uma
    "geração" nova e só vira a atual quando o índice aponta para ela, então
    uma falha no meio do caminho não deixa os dados pela metade.
    ========================================================================== */
@@ -24,10 +24,10 @@ function dividirEmPartes(linhas) {
 }
 
 /** Calcula a nova foto de uma planilha e o que mudou em relação à anterior. */
-function compararFoto(lido, hoje, agoraS, lote) {
+function compararFoto(lido, hoje, agoraS, lote, foto = E) {
   const R = lido.regiao;
   if (lido.tipo === "usadas") {
-    const anteriores = new Map(E.usadas.filter((u) => u.regiao === R).map((u) => [u.k, u]));
+    const anteriores = new Map(foto.usadas.filter((u) => u.regiao === R).map((u) => [u.k, u]));
     const ocorrencias = new Map();
     const novas = [];
     let entradas = 0, mantidos = 0;
@@ -58,7 +58,7 @@ function compararFoto(lido, hoje, agoraS, lote) {
     };
   }
   // novas: agrega por técnico + material + tipo de envio
-  const anteriores = new Map(E.novas.filter((n) => n.regiao === R).map((n) => [`${n.tid}|${n.mat}|${n.tipoEnvio}`, n]));
+  const anteriores = new Map(foto.novas.filter((n) => n.regiao === R).map((n) => [`${n.tid}|${n.mat}|${n.tipoEnvio}`, n]));
   const primeiraObservacao = new Map();
   for (const n of anteriores.values()) {
     const chave = `${n.tid}|${n.mat}`, anterior = primeiraObservacao.get(chave);
@@ -111,20 +111,33 @@ function compararFoto(lido, hoje, agoraS, lote) {
   };
 }
 
-/** Acrescenta as devoluções do dia (vários documentos se o dia for grande). */
-async function gravarDevolucoes(hoje, linhas) {
-  if (!linhas.length) return;
-  let sufixo = 1, doc = null, id = hoje;
-  for (;;) {
-    id = sufixo === 1 ? hoje : `${hoje}.${sufixo}`;
-    doc = await Armazem.ler(`devolucoes/${id}`);
-    if (!doc) break;
-    const tam = JSON.stringify(doc.itens || []).length;
-    if (tam + JSON.stringify(linhas).length < LIMITE_PARTE) break;
-    sufixo++;
+/** Saldo oficial e arquivo de saídas entram juntos no Firebase. */
+async function confirmarImportacaoNoBanco({ indice, registro, lote, devolvidas, movimentos, hoje }) {
+  const docs = [];
+  if (devolvidas.length) dividirEmPartes(devolvidas).forEach((itens,n)=>docs.push([`devolucoes/${lote}-${n}`,{data:hoje,lote,itens,atualizadoEm:agoraISO()}]));
+  if (movimentos.length) dividirEmPartes(movimentos).forEach((itens,n)=>docs.push([`movimentos/${lote}-${n}`,{data:hoje,lote,itens}]));
+  if (docs.length > 450 || JSON.stringify(docs).length > 8000000) throw new Error('Este lote é muito grande. Importe menos regiões por vez.');
+  if (Acesso.modo === 'firebase') {
+    const ref = Acesso.fs.doc('dados/indice');
+    await Acesso.fs.runTransaction(async tx => {
+      const atual = await tx.get(ref);
+      if ((atual.data()?.versao || 0) !== (indice.versao - 1)) throw Object.assign(new Error('Outra pessoa importou planilhas durante esta atualização. Recarregue e importe novamente.'), { amigavel: true });
+      for (const [c,d] of docs) tx.set(Acesso.fs.doc(c),codificarFS(d));
+      tx.set(Acesso.fs.doc(`importacoes/${lote}`),codificarFS(registro));
+      tx.set(ref,codificarFS(indice),{merge:true});
+    });
+  } else {
+    const gravados=[];
+    try {
+      for (const [c,d] of docs) { await Armazem.gravar(c,d);gravados.push(c); }
+      await Armazem.gravar(`importacoes/${lote}`,registro);gravados.push(`importacoes/${lote}`);
+      await Armazem.mesclar('dados/indice',indice,E.existe.indice);
+    } catch(e) { for(const c of gravados) await Armazem.apagar(c);throw e; }
   }
-  const itens = [...((doc && doc.itens) || []), ...linhas];
-  await Armazem.gravar(`devolucoes/${id}`, { data: hoje, itens, atualizadoEm: agoraISO() });
+  return {
+    devolucoes:docs.filter(([c])=>c.startsWith('devolucoes/')).flatMap(([c,d])=>d.itens.map(l=>decodificarDevolucao(l,c.split('/')[1]))),
+    movimentos:docs.filter(([c])=>c.startsWith('movimentos/')).flatMap(([c,d])=>d.itens.map(m=>({...m,doc:c.split('/')[1]}))),
+  };
 }
 
 /**
@@ -132,23 +145,22 @@ async function gravarDevolucoes(hoje, linhas) {
  * aoProgresso(texto) recebe mensagens para a tela.
  */
 async function importarLote(lidos, aoProgresso = () => {}) {
+  exigirAdministrador();
   const hoje = hojeISO();
   const agoraS = agoraISO();
   const lote = "L" + carimbo() + Math.random().toString(36).slice(2, 6);
-  const gen = "g" + carimbo();
+  const gen = "g" + carimbo() + crypto.randomUUID().replaceAll("-", "");
   const avisos = [];
 
-  // compara sempre com a foto mais recente (outro aparelho pode ter importado antes)
+  // Capture uma foto consistente, independente das atualizações do listener.
+  const indiceBase = structuredClone((Armazem.online ? await Armazem.ler('dados/indice') : E.indice) || { arquivos: {}, anterior: {} });
+  const fotoBase = { usadas: E.usadas, novas: E.novas };
   if (Armazem.online) {
-    const idx = await Armazem.ler("dados/indice");
-    if (idx && (idx.versao || 0) !== (E.indice.versao || 0)) {
-      aoProgresso("Atualizando com a importação feita em outro aparelho…");
-      E.indice = { arquivos: {}, anterior: {}, ...idx };
-      E.existe.indice = true;
-      const cat = await Armazem.ler("dados/catalogo");
-      if (cat) { E.catalogo = cat.m || {}; E.existe.catalogo = true; }
-      await carregarFotos();
-    }
+    aoProgresso('Conferindo o estoque anterior…');
+    const entradas = Object.entries(indiceBase.arquivos || {}).filter(([,ent]) => ent && ent.gen);
+    const listas = await Promise.all(entradas.map(([chave,ent]) => lerArquivoDoIndice(chave,ent)));
+    fotoBase.usadas = []; fotoBase.novas = [];
+    entradas.forEach(([chave],i) => fotoBase[chave.split(':')[0]].push(...listas[i]));
   }
 
   const grupos = new Map();
@@ -183,7 +195,7 @@ async function importarLote(lidos, aoProgresso = () => {}) {
   const movimentos = [];
   const fotos = new Map();
   for (const [chave, l] of grupos) {
-    const r = compararFoto(l, hoje, agoraS, lote);
+    const r = compararFoto(l, hoje, agoraS, lote, fotoBase);
     fotos.set(chave, r);
     devolvidas.push(...r.devolvidas);
     movimentos.push(...r.movimentos);
@@ -214,8 +226,8 @@ async function importarLote(lidos, aoProgresso = () => {}) {
     for (let i = 0; i < partes.length; i++) {
       await Armazem.gravar(caminhoParte(tipo, regiao, gen, i), { tipo, regiao, gen, parte: i, total: partes.length, itens: partes[i] });
     }
-    const atual = (E.indice.arquivos || {})[chave] || null;
-    const anterior = (E.indice.anterior || {})[chave] || null;
+    const atual = (indiceBase.arquivos || {})[chave] || null;
+    const anterior = (indiceBase.anterior || {})[chave] || null;
     entradasIndice[chave] = {
       gen, partes: partes.length, itens: codificadas.length, qtd: r.resumo.qtd, linhas: l.linhasLidas,
       em: agoraS, arquivo: l.nome, hash: l.hash, lote,
@@ -228,9 +240,9 @@ async function importarLote(lidos, aoProgresso = () => {}) {
   }
 
   aoProgresso("Atualizando o índice…");
-  const versao = (E.indice.versao || 0) + 1;
-  E.versoesProprias.add(versao);
-  await Armazem.mesclar("dados/indice", { arquivos: entradasIndice, anterior: anteriores, versao, atualizadoEm: agoraS }, E.existe.indice);
+  const versao = (indiceBase.versao || 0) + 1;
+  const registro = { em: agoraS, por: E.usuario.id || '', arquivos: resultados, avisos, chaves: [...fotos.keys()], devolvidas: somar(devolvidas,d=>d[5]), desfeito: false };
+  const arquivo = await confirmarImportacaoNoBanco({ indice: { arquivos: entradasIndice, anterior: anteriores, versao, atualizadoEm: agoraS, origemSessao: Acesso.sessao }, registro, lote, devolvidas, movimentos, hoje });
   E.existe.indice = true;
 
   // a partir daqui a nova foto é a oficial: atualiza a memória
@@ -248,26 +260,13 @@ async function importarLote(lidos, aoProgresso = () => {}) {
     if (tipo === "usadas") E.usadas = [...E.usadas.filter((u) => u.regiao !== regiao), ...r.linhas];
     else E.novas = [...E.novas.filter((x) => x.regiao !== regiao), ...r.linhas];
   }
-  for (const d of devolvidas) {
-    E.devolucoes.push(decodificarDevolucao(d, hoje));
-  }
-  const registro = {
-    em: agoraS, por: E.usuario.id || "", arquivos: resultados, avisos, chaves: [...fotos.keys()],
-    devolvidas: somar(devolvidas, (d) => d[5]), desfeito: false,
-  };
+  E.devolucoes.push(...arquivo.devolucoes);
+  E.movimentos.push(...arquivo.movimentos);
   E.importacoes = [{ id: lote, ...registro }, ...E.importacoes];
   mudou();
 
   aoProgresso("Registrando o histórico…");
   for (const c of apagar) { try { await Armazem.apagar(c); } catch (e) { console.warn("limpeza", c, e); } }
-  await gravarDevolucoes(hoje, devolvidas);
-  const partesMovimentos = movimentos.length ? dividirEmPartes(movimentos) : [];
-  for (let i = 0; i < partesMovimentos.length; i++) {
-    const id = `${lote}-${i}`;
-    await Armazem.gravar(`movimentos/${id}`, { data: hoje, lote, itens: partesMovimentos[i] });
-    E.movimentos = [...E.movimentos.filter((m) => m.doc !== id), ...partesMovimentos[i].map((m) => ({ ...m, doc: id }))];
-  }
-  await Armazem.gravar(`importacoes/${lote}`, registro);
   await gravarHistoricoDoDia();
   try { await Armazem.gravar("resumo/atual", montarResumo()); } catch (e) { console.warn("resumo", e); }
   mudou();
@@ -276,46 +275,45 @@ async function importarLote(lidos, aoProgresso = () => {}) {
 
 /** Volta a foto anterior das planilhas de uma importação (só a mais recente). */
 async function desfazerImportacao(imp) {
-  const chaves = imp.chaves || [];
+  exigirAdministrador();
+  const chaves = imp.chaves || [], versaoAnterior = E.indice.versao || 0;
   for (const chave of chaves) {
-    const atual = (E.indice.arquivos || {})[chave];
-    if (!atual || atual.lote !== imp.id) {
-      throw new Error("Só dá para desfazer a importação mais recente de cada planilha.");
-    }
+    if (E.indice.arquivos?.[chave]?.lote !== imp.id) throw new Error('Só dá para desfazer a importação mais recente de cada planilha.');
   }
   const arquivos = {}, anterior = {}, apagar = [];
   for (const chave of chaves) {
-    const [tipo, regiao] = chave.split(":");
-    const atual = E.indice.arquivos[chave];
-    arquivos[chave] = (E.indice.anterior || {})[chave] || null;
-    anterior[chave] = null;
-    for (let i = 0; i < (atual.partes || 0); i++) apagar.push(caminhoParte(tipo, regiao, atual.gen, i));
+    const [tipo,regiao] = chave.split(':'), atual = E.indice.arquivos[chave];
+    arquivos[chave] = E.indice.anterior?.[chave] || null; anterior[chave] = null;
+    for (let i=0;i<(atual.partes||0);i++) apagar.push(caminhoParte(tipo,regiao,atual.gen,i));
   }
-  const versao = (E.indice.versao || 0) + 1;
-  E.versoesProprias.add(versao);
-  await Armazem.mesclar("dados/indice", { arquivos, anterior, versao, atualizadoEm: agoraISO() }, true);
-  E.indice = {
-    ...E.indice, versao,
-    arquivos: { ...E.indice.arquivos, ...arquivos },
-    anterior: { ...E.indice.anterior, ...anterior },
-  };
-  for (const c of apagar) { try { await Armazem.apagar(c); } catch (e) { console.warn(e); } }
-
-  // tira as devoluções registradas por esta importação
-  const docs = [...new Set(E.devolucoes.filter((d) => d.lote === imp.id).map((d) => d.doc))];
-  for (const id of docs) {
-    const doc = await Armazem.ler(`devolucoes/${id}`);
-    if (!doc) continue;
-    const itens = (doc.itens || []).filter((l) => l[9] !== imp.id);
-    if (itens.length) await Armazem.gravar(`devolucoes/${id}`, { ...doc, itens });
-    else await Armazem.apagar(`devolucoes/${id}`);
+  let devs = await Armazem.consultar('devolucoes',{onde:[['lote','==',imp.id]]});
+  if (!devs.length && imp.devolvidas) devs = (await Armazem.consultar('devolucoes')).filter(d=>(d.itens||[]).some(l=>l[9]===imp.id));
+  const movs = await Armazem.consultar('movimentos',{onde:[['lote','==',imp.id]]});
+  const alteracoes = devs.map(d=>[`devolucoes/${d.id}`,{...d,itens:(d.itens||[]).filter(l=>l[9]!==imp.id)}]);
+  const indice = {arquivos,anterior,versao:versaoAnterior+1,atualizadoEm:agoraISO(),origemSessao:Acesso.sessao};
+  const registro = {desfeito:true,desfeitoEm:agoraISO(),desfeitoPor:identidadeAtual()};
+  if(Acesso.modo==='firebase') {
+    await Acesso.fs.runTransaction(async tx=>{
+      const ref = Acesso.fs.doc('dados/indice'), atual=await tx.get(ref);
+      if((atual.data()?.versao||0)!==versaoAnterior) throw new Error('As planilhas foram atualizadas em outra sessão. Recarregue antes de desfazer.');
+      for(const [c,d] of alteracoes) {
+        const {id,...doc}=d;
+        if(doc.itens.length)tx.set(Acesso.fs.doc(c),codificarFS(doc));else tx.delete(Acesso.fs.doc(c));
+      }
+      for(const m of movs)tx.delete(Acesso.fs.doc(`movimentos/${m.id}`));
+      tx.set(Acesso.fs.doc(`importacoes/${imp.id}`),codificarFS(registro),{merge:true});
+      tx.set(ref,codificarFS(indice),{merge:true});
+    });
+  } else {
+    for(const [c,d] of alteracoes) {const {id,...doc}=d;if(doc.itens.length)await Armazem.gravar(c,doc);else await Armazem.apagar(c);}
+    for(const m of movs)await Armazem.apagar(`movimentos/${m.id}`);
+    await Armazem.mesclar(`importacoes/${imp.id}`,registro,true);
+    await Armazem.mesclar('dados/indice',indice,true);
   }
-  await Armazem.mesclar(`importacoes/${imp.id}`, { desfeito: true, desfeitoEm: agoraISO() }, true);
-  const movs = await Armazem.consultar("movimentos", { onde: [["lote", "==", imp.id]] });
-  for (const doc of movs) await Armazem.apagar(`movimentos/${doc.id}`);
-  await Promise.all([carregarFotos(), carregarHistoricos()]);
-  mudou();
+  E.indice={...E.indice,...indice,arquivos:{...E.indice.arquivos,...arquivos},anterior:{...E.indice.anterior,...anterior}};
+  for(const c of apagar) {try {await Armazem.apagar(c);}catch(e){console.warn('limpeza',e);}}
+  await Promise.all([carregarFotos(),carregarHistoricos()]); mudou();
   await gravarHistoricoDoDia();
-  try { await Armazem.gravar("resumo/atual", montarResumo()); } catch (e) { console.warn(e); }
+  try {await Armazem.gravar('resumo/atual',montarResumo());}catch(e){console.warn('resumo',e);}
   mudou();
 }

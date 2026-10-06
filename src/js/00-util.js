@@ -75,6 +75,12 @@ function agora() {
   const fixo = typeof window !== "undefined" && window.__CP_AGORA;
   return fixo ? new Date(fixo) : new Date();
 }
+/** Horário de autoria vem do servidor e é exibido no fuso da operação. */
+function dataHoraBrasilia(data) {
+  const partes = new Intl.DateTimeFormat('sv-SE', {timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).formatToParts(data);
+  const p = Object.fromEntries(partes.map(x=>[x.type,x.value]));
+  return `${p.year}-${p.month}-${p.day} ${p.hour}:${p.minute}:${p.second}.${String(data.getMilliseconds()).padStart(3,'0')}`;
+}
 const isoDia = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 const isoDataHora = (d) => `${isoDia(d)} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
 const hojeISO = () => isoDia(agora());

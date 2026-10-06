@@ -1,5 +1,6 @@
 dist/
 capturas/
 aviso/node_modules/
+seguranca/node_modules/
 *.csv
 !exemplos/*.csv

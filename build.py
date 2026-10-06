@@ -54,13 +54,16 @@ def config_firebase() -> str:
 
 
 def main() -> int:
-    css = "\n".join((SRC / nome).read_text(encoding="utf-8") for nome in ("estilos.css", "operacao.css", "gestao.css", "analises.css"))
+    css = "\n".join((SRC / nome).read_text(encoding="utf-8") for nome in ("estilos.css", "operacao.css", "gestao.css", "analises.css", "acesso.css"))
     # Imagens embutidas preservam as três versões de HTML autocontidas.
     for nome, marcador in (("positivo-claro.png", "/*__LOGO_CLARA__*/"), ("positivo-escuro.png", "/*__LOGO_ESCURA__*/")):
         imagem = base64.b64encode((SRC / "assets" / nome).read_bytes()).decode("ascii")
         css = css.replace(marcador, "data:image/png;base64," + imagem)
     tema = (SRC / "tema.js").read_text(encoding="utf-8")
     js = "\n".join(p.read_text(encoding="utf-8") for p in sorted((SRC / "js").glob("*.js")))
+    for extensao, mime, marcador in (("webm", "video/webm", "WEBM"), ("mp4", "video/mp4", "MP4"), ("jpg", "image/jpeg", "POSTER")):
+        video = base64.b64encode((SRC / "assets" / f"login-circuitos.{extensao}").read_bytes()).decode("ascii")
+        js = js.replace(f"/*__LOGIN_{marcador}__*/", f"data:{mime};base64," + video)
     mapa = json.loads((SRC / "assets" / "mapa-brasil.json").read_text(encoding="utf-8"))
     js = js.replace("/*__MAPA_BRASIL__*/", json.dumps(mapa, ensure_ascii=False, separators=(",", ":")))
     if re.search(r"</script", js + tema, re.IGNORECASE):

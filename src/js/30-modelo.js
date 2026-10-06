@@ -57,13 +57,12 @@ const E = {
   cadastro: {},
   usadas: [],
   novas: [],
-  acomp: {},
+  acomp: {}, acompLegado: {}, agendamentos: [], contatos: [], anotacoes: [], usuarios: [],
   historico: [],
   devolucoes: [],
   movimentos: [],    // saídas de novas: destino informado pelo operador
   importacoes: [],
   usuario: { id: null, podeEscrever: null },
-  versoesProprias: new Set(), // versões do índice gravadas por esta tela
   rev: 0,
   ouvintes: [],
 };
@@ -87,6 +86,7 @@ async function lerArquivoDoIndice(chave, ent) {
   const partes = await Promise.all(
     Array.from({ length: ent.partes || 0 }, (_, i) => Armazem.ler(caminhoParte(tipo, regiao, ent.gen, i)))
   );
+  if (partes.some(p => !p || !Array.isArray(p.itens))) throw Object.assign(new Error('Uma parte do estoque não está disponível. Recarregue antes de importar novamente.'), { amigavel: true });
   const linhas = [];
   for (const p of partes) if (p && Array.isArray(p.itens)) for (const l of p.itens) linhas.push(l);
   return linhas.map((l) => (tipo === "usadas" ? decodificarUsada(l, regiao) : decodificarNova(l, regiao)));
@@ -139,8 +139,9 @@ async function carregarTudo() {
     E.indice = { arquivos: {}, anterior: {}, ...(indice || {}) };
     E.catalogo = (catalogo && catalogo.m) || {};
     E.cadastro = (cadastro && cadastro.t) || {};
-    E.acomp = {};
-    for (const a of acomp) E.acomp[a.id] = a;
+    E.acompLegado = {};
+    for (const a of acomp) E.acompLegado[a.id] = a;
+    await carregarAcompanhamento();
     await Promise.all([carregarFotos(), carregarHistoricos()]);
     E.status = "pronto";
   } catch (e) {
@@ -163,7 +164,7 @@ function assinarMudancas() {
   E.ouvintes.push(Armazem.ouvirDoc("dados/indice", async (d) => {
     if (!d || (d.versao || 0) === versaoIndice) return;
     versaoIndice = d.versao || 0;
-    if (E.versoesProprias.has(versaoIndice)) return; // a própria importação desta tela
+    if (d.origemSessao && d.origemSessao === Acesso.sessao) return; // somente esta aba
     E.indice = { arquivos: {}, anterior: {}, ...d };
     E.existe.indice = true;
     try {
@@ -189,9 +190,14 @@ function assinarMudancas() {
   E.ouvintes.push(Armazem.ouvirColecao("acompanhamento", (docs) => {
     const novo = {};
     for (const a of docs) novo[a.id] = a;
-    E.acomp = novo;
+    E.acompLegado = novo;
+    combinarAcompanhamento();
     mudou();
   }));
+  for (const colecao of ['agendamentos','contatos','anotacoes']) E.ouvintes.push(Armazem.ouvirColecao(colecao, docs => {
+    E[colecao] = docs; combinarAcompanhamento(); mudou();
+  }));
+  if (podeAdministrar() && Acesso.modo === 'firebase') E.ouvintes.push(Armazem.ouvirColecao('usuarios', docs => { E.usuarios = docs; mudou(); }));
   E.ouvintes.push(Armazem.ouvirColecao("movimentos", (docs) => {
     E.movimentos = docs.flatMap((d) => (d.itens || []).map((m) => ({ ...m, doc: d.id })));
     mudou();
@@ -263,7 +269,7 @@ function derivar() {
     t = {
       tid, cad: c, ...regrasDoTecnico(tid, cfg),
       nome: limpar(c.apelido) || nomeBonito(c.nome) || tid,
-      nomeOriginal: c.nome || tid,
+      nomeOriginal: c.nome || tid, localidade: c.localidade || "",
       regiao: c.regiao || regiao || "",
       tipo: c.tipo || "tecnico",
       telefone: c.telefone || "", email: c.email || "", obs: c.obs || "",
@@ -290,7 +296,7 @@ function derivar() {
     t.regioes.add(u.regiao);
     const item = {
       ...u, desc: E.catalogo[u.mat] || "", dias, previsao, obs: an.o || "",
-      nCobrancas: an.c || 0, ultimaCobranca: an.uc || "",
+      nCobrancas: an.c || 0, ultimaCobranca: an.uc || "", agendadoPor: an.agendadoPor || null, agendadoEm: an.agendadoEm || "",
       status, cobrar: status === "atrasada" || status === "previsao_vencida",
       prazo: t.prazo, alerta: t.alerta,
       atrasada: dias > t.prazo, atraso: Math.max(0, dias - t.prazo), venceEm: t.prazo - dias,
@@ -536,7 +542,7 @@ function montarResumo() {
 
 let gravandoResumo = null;
 const agendarResumo = debounce(async () => {
-  if (!Armazem.online || E.status !== "pronto") return;
+  if (!Armazem.online || E.status !== "pronto" || !podeAdministrar()) return;
   try {
     gravandoResumo = Armazem.gravar("resumo/atual", montarResumo());
     await gravandoResumo;
@@ -567,54 +573,25 @@ function docAcomp(tid) {
 
 /** Define (ou limpa, com "") a previsão de devolução de vários itens. */
 async function definirPrevisao(itens, previsao) {
-  const porTec = agrupar(itens, (i) => i.tid);
-  for (const [tid, lista] of porTec) {
-    const mud = {};
-    for (const i of lista) mud[i.k] = { p: previsao || "" };
-    const existe = !!E.acomp[tid];
-    const atual = docAcomp(tid);
-    const novo = { ...atual, itens: { ...(atual.itens || {}) } };
-    for (const [k, v] of Object.entries(mud)) novo.itens[k] = { ...(novo.itens[k] || {}), ...v };
-    E.acomp[tid] = novo;
-    mudou();
-    await Armazem.mesclar(`acompanhamento/${tid}`, existe ? { itens: mud, atualizadoEm: agoraISO() } : { itens: mud, cobrancas: [], atualizadoEm: agoraISO() }, existe);
-  }
-  agendarResumo();
+  await gravarAgendamentos(itens, previsao);
 }
 
 async function definirObs(item, texto) {
-  const tid = item.tid;
-  const existe = !!E.acomp[tid];
-  const atual = docAcomp(tid);
-  E.acomp[tid] = { ...atual, itens: { ...(atual.itens || {}), [item.k]: { ...((atual.itens || {})[item.k] || {}), o: texto } } };
-  mudou();
-  const mud = { itens: { [item.k]: { o: texto } }, atualizadoEm: agoraISO() };
-  if (!existe) mud.cobrancas = [];
-  await Armazem.mesclar(`acompanhamento/${tid}`, mud, existe);
+  const d = { tid: item.tid, peca: item.k, texto: String(texto || '').slice(0,1000), ...identidadeAtual(), em: carimboServidor() };
+  if (Acesso.modo === 'firebase') await Acesso.fs.doc(`anotacoes/${item.k}`).set(d);
+  else await Armazem.gravar(`anotacoes/${item.k}`, d);
+  await carregarAcompanhamento(); mudou();
 }
 
-/** Registra uma cobrança feita ao técnico (e, opcionalmente, a previsão informada). */
 async function registrarCobranca(tid, { canal, previsao, obs, itens }) {
-  const atual = docAcomp(tid);
-  const em = agoraISO();
-  const reg = { em, canal: canal || "whatsapp", previsao: previsao || "", obs: obs || "", pecas: somar(itens, (i) => i.qtd), por: E.usuario.id || "" };
-  const cobrancas = [...(atual.cobrancas || []), reg].slice(-80);
-  // mantém só anotações de itens ainda pendentes ou com observação
-  const ativos = new Set(E.usadas.filter((u) => u.tid === tid).map((u) => u.k));
-  const itensDoc = {};
-  for (const [k, v] of Object.entries(atual.itens || {})) if (ativos.has(k)) itensDoc[k] = v;
-  for (const i of itens) {
-    const ant = itensDoc[i.k] || {};
-    itensDoc[i.k] = { ...ant, c: (ant.c || 0) + 1, uc: em, ...(previsao ? { p: previsao } : {}) };
-  }
-  const novo = { itens: itensDoc, cobrancas, atualizadoEm: em };
-  E.acomp[tid] = { ...atual, ...novo };
-  mudou();
-  await Armazem.gravar(`acompanhamento/${tid}`, novo);
-  agendarResumo();
+  const contato = { tid, canal: canal || 'whatsapp', previsao: previsao || '', obs: String(obs || '').slice(0,300), pecas: somar(itens,i=>i.qtd), itens: itens.map(i=>i.k) };
+  if (contato.itens.length > 500) throw new Error('Registre até 500 peças por cobrança.');
+  await gravarAgendamentos(previsao ? itens : [], previsao || '', contato);
 }
 
 async function salvarTecnico(tid, campos) {
+  exigirAdministrador();
+  if ("localidade" in campos && !Object.hasOwn(LOCALIDADES, campos.localidade)) throw new Error("Selecione capital ou interior.");
   campos = { ...campos };
   for (const campo of ['prazoUsadas', 'prazoNovas']) if (campo in campos) {
     if (campos[campo] === null || campos[campo] === '') campos[campo] = null;
@@ -632,6 +609,7 @@ async function salvarTecnico(tid, campos) {
 }
 
 async function salvarConfig(campos) {
+  exigirAdministrador();
   E.config = { ...E.config, ...campos };
   mudou();
   await Armazem.mesclar("config/geral", { ...campos, atualizadoEm: agoraISO() }, E.existe.config);

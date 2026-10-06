@@ -1,13 +1,15 @@
 // Teste do painel com o banco no Firebase, usando os emuladores oficiais (Auth + Firestore).
 //
 //   1. firebase emulators:start --only auth,firestore --project demo-controle-pecas
-//      (com firestore.rules liberando teste@exemplo.com)
-//   2. python3 -m http.server 8000 --directory dist/site
+//      (com as regras reais; prepararEmulador cria somente as contas locais)
+//   2. python3 -m http.server 8000 --directory dist
 //   3. node testes/firebase-e2e.mjs exemplos capturas
 //
 // FIREBASE_SDK_DIR: pasta com cópias locais do SDK (firebase-*-compat.js), se o navegador de
 // teste não alcançar www.gstatic.com.
 import { createRequire } from "module";
+import { prepararEmulador } from "./emulador.mjs";
+await prepararEmulador();
 import fs from "fs";
 import path from "path";
 const require = createRequire(import.meta.url);
@@ -15,7 +17,7 @@ const { chromium } = require(process.env.PW_PATH || "/opt/node-tools/node_module
 
 const [pastaCSV = "exemplos", saida = "capturas"] = process.argv.slice(2);
 fs.mkdirSync(saida, { recursive: true });
-const URL_SITE = process.env.URL_SITE || "http://127.0.0.1:8000/index.html";
+const URL_SITE = process.env.URL_SITE || "http://127.0.0.1:8000/pagina-completa.html";
 const arquivos = fs.readdirSync(pastaCSV).filter((f) => /\.csv$/i.test(f)).map((f) => path.join(pastaCSV, f));
 const CONFIG = { apiKey: "chave-de-teste", authDomain: "demo-controle-pecas.firebaseapp.com", projectId: "demo-controle-pecas" };
 const falhas = [];
@@ -119,6 +121,47 @@ conferir(await page.evaluate(() => calcularDesempenho({ tipo: 'novas' }).uso[0]?
 await page.evaluate(async (lote) => desfazerImportacao(E.importacoes.find(i => i.id === lote)), loteNovas);
 await segundo.page.waitForFunction(() => E.movimentos.length === 0);
 conferir(true, 'desfazer remove a movimentação nos dois dispositivos');
+// Duas importações sobrepostas: o listener recebe a segunda enquanto a primeira envia partes.
+await page.evaluate(() => {
+  const itens = E.novas.filter(n=>n.regiao==='PR').map(n=>({...n,tecChave:E.cadastro[n.tid].chave,tecNome:E.cadastro[n.tid].nome,qtd:n.qtd===9?6:n.qtd}));
+  const gravar=Armazem.gravar;
+  Armazem.gravar=async function(c,d) {
+    const r=await gravar.call(this,c,d);
+    if(c.startsWith('dados/n-PR-')) { Armazem.gravar=gravar;window.__partePronta=true;await new Promise(resolve=>window.__continuarImportacao=resolve); }
+    return r;
+  };
+  window.__concorrencia=null;
+  importarLote([{tipo:'novas',regiao:'PR',nome:'PR Novas.csv',itens,linhasLidas:itens.length,avisos:[],hash:'concorrente-a'}])
+    .then(()=>window.__concorrencia='salvou indevidamente',e=>window.__concorrencia=e.message);
+});
+await page.waitForFunction(()=>window.__partePronta);
+const vencedor=await segundo.page.evaluate(async()=>{
+  const itens=E.novas.filter(n=>n.regiao==='PR').map(n=>({...n,tecChave:E.cadastro[n.tid].chave,tecNome:E.cadastro[n.tid].nome,qtd:n.qtd===9?8:n.qtd}));
+  const r=await importarLote([{tipo:'novas',regiao:'PR',nome:'PR Novas.csv',itens,linhasLidas:itens.length,avisos:[],hash:'concorrente-b'}]);
+  return {lote:r.lote,versao:E.indice.versao};
+});
+await page.waitForFunction(v=>E.indice.versao===v,vencedor.versao);
+await page.evaluate(()=>window.__continuarImportacao());
+await page.waitForFunction(()=>window.__concorrencia);
+conferir(await page.evaluate(()=>window.__concorrencia.includes('Outra pessoa importou')), 'importação com foto anterior é recusada mesmo após atualização do listener');
+await page.reload();await pronto(page);
+conferir(await page.evaluate(()=>E.movimentos.length===1&&E.movimentos[0].qtd===1), 'somente a saída vencedora fica no histórico, sem duplicação');
+// Falha de permissão no commit: saldo, histórico e registro de importação ficam intactos.
+const atomicidade=await page.evaluate(async()=>{
+  const antes=JSON.stringify(await Armazem.ler('dados/indice')),movs=JSON.stringify(await Armazem.consultar('movimentos'));
+  const transaction=Acesso.fs.runTransaction.bind(Acesso.fs);
+  Acesso.fs.runTransaction=fn=>transaction(async tx=>{await fn(tx);tx.set(Acesso.fs.doc('seguranca/falha-teste'),{teste:true});});
+  let negada=false;
+  try {
+    const itens=E.novas.filter(n=>n.regiao==='PR').map(n=>({...n,tecChave:E.cadastro[n.tid].chave,tecNome:E.cadastro[n.tid].nome,qtd:n.qtd===8?7:n.qtd}));
+    await importarLote([{tipo:'novas',regiao:'PR',nome:'PR Novas.csv',itens,linhasLidas:itens.length,avisos:[],hash:'falha-atomica'}]);
+  }catch(e){negada=e.code==='permission-denied';}finally{Acesso.fs.runTransaction=transaction;}
+  return negada&&antes===JSON.stringify(await Armazem.ler('dados/indice'))&&movs===JSON.stringify(await Armazem.consultar('movimentos'));
+});
+conferir(atomicidade, 'falha no commit não avança o estoque nem registra saída parcial');
+await page.evaluate(async lote=>desfazerImportacao(E.importacoes.find(i=>i.id===lote)),vencedor.lote);
+await segundo.page.waitForFunction(()=>E.movimentos.length===0);
+
 // Prazos próprios acompanham o cadastro entre dispositivos e podem voltar à regra geral.
 const tidPrazos = await page.evaluate(async () => {
   const tid = derivar().tecnicos.find(t => t.nome.startsWith('Ana')).tid;

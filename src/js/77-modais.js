@@ -119,6 +119,7 @@ function modalPrevisao(itens, titulo) {
 
 /** Cadastro do técnico: nome de exibição, tipo, meta própria, contato. */
 function modalTecnico(tid, focarPrazos = false) {
+  exigirAdministrador();
   const D = derivar();
   const t = D.mapa.get(tid);
   const c = E.cadastro[tid] || {};
@@ -131,6 +132,7 @@ function modalTecnico(tid, focarPrazos = false) {
       <div class="campos-2">
         <label class="campo"><span>Tipo</span><select name="tipo">${Object.entries(TIPOS_TEC).map(([v, r]) => `<option value="${v}"${(c.tipo || "tecnico") === v ? " selected" : ""}>${r}</option>`).join("")}</select></label>
         <label class="campo"><span>Meta própria de peças novas</span><input type="number" name="meta" min="0" max="10000" placeholder="Padrão: ${esc(E.config.meta)}"><small>Em branco = meta padrão. 0 = sem meta.</small></label>
+        <label class="campo"><span>Localidade do técnico</span><select name="localidade">${Object.entries(LOCALIDADES).map(([v,n])=>`<option value="${v}" ${(c.localidade||'')===v?'selected':''}>${n}</option>`).join('')}</select><small>Informe se atende na capital ou no interior.</small></label>
         <label class="campo"><span>WhatsApp</span><input type="tel" name="telefone" maxlength="20" placeholder="(41) 99999-9999"></label>
         <label class="campo"><span>E-mail</span><input type="email" name="email" maxlength="120" placeholder="nome@empresa.com.br"></label>
       </div>
@@ -163,7 +165,7 @@ function modalTecnico(tid, focarPrazos = false) {
     if (botaoSalvar.disabled || !f.reportValidity()) return;
     const metaTxt = String(f.meta.value).trim();
     const campos = {
-      apelido: limpar(f.apelido.value), tipo: f.tipo.value,
+      apelido: limpar(f.apelido.value), tipo: f.tipo.value, localidade: f.localidade.value,
       meta: metaTxt === "" ? null : Math.max(0, parseInt(metaTxt, 10) || 0),
       prazoUsadas: f.prazoUsadas.value === '' ? null : Number(f.prazoUsadas.value),
       prazoNovas: f.prazoNovas.value === '' ? null : Number(f.prazoNovas.value),

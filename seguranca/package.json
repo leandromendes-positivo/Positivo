@@ -1,0 +1,7 @@
+{
+  "name": "seguranca-controle-pecas",
+  "private": true,
+  "type": "module",
+  "scripts": { "deploy": "node publicar.mjs" },
+  "dependencies": { "firebase-admin": "13.6.0" }
+}

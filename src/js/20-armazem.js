@@ -140,13 +140,13 @@ function criarDbMemoria() {
 }
 
 const MSG_ERRO_DB = {
-  quota_exceeded: "O espaço do banco de dados acabou. Avise o Claude para limpar o histórico antigo.",
+  quota_exceeded: "O espaço do banco de dados acabou. Procure o administrador para ampliar a capacidade e preservar o histórico.",
   invalid_argument: "Você não tem permissão para alterar estes dados, ou o dado é inválido.",
   revoked: "O acesso ao banco de dados foi retirado desta página. Recarregue a página.",
   not_granted: "Esta visualização não tem acesso ao banco de dados.",
   resource_exhausted: "Muitas gravações seguidas. Aguarde alguns segundos e tente de novo.",
   unavailable: "O banco de dados não respondeu. Verifique a internet e tente de novo.",
-  sem_permissao: "Esta conta Google não tem acesso a este painel. Entre com a conta autorizada ou inclua este e-mail nas regras do Firebase.",
+  sem_permissao: "Esta conta não tem permissão para realizar a ação. Procure o administrador do painel.",
 };
 function erroAmigavel(e) {
   if (e && e.amigavel) return e;
@@ -180,6 +180,7 @@ const Armazem = {
       } catch (e) {
         console.error(e);
         Acesso.erroFirebase = (e && e.message) || String(e);
+        throw e; // produção nunca cai silenciosamente em armazenamento temporário
       }
     }
     Acesso.modo = "memoria";

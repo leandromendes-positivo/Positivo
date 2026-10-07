@@ -7,12 +7,12 @@ somente ao exportar. Não há envio de dados a um serviço de conversão.
 | --- | --- | --- | --- |
 | exceljs | 4.4.0 | dist/exceljs.min.js | 7e49da68588e250dbb8bba190d2caa8ab3787cc0284bda1d8b2f805c4df742c9 |
 | jspdf | 4.2.1 | dist/jspdf.umd.min.js | e6551fcdc32f09d6853b2c5126d18d01d9447e0da618a41a11ebeee0f6c20d54 |
-| jspdf-autotable | 5.0.8 | dist/jspdf.plugin.autotable.min.js | a65dff2c6a8296b16aff24e69f7683cd7dbaed4a4ec26b507d6840ee27d54649 |
-| fflate | 0.8.2 | umd/index.js | c3b34f2e9f5e74d4d7d64e01cac7a0c01954c6c406414d42185c7b53d6875ddf |
 
-As licenças originais acompanham os arquivos. ExcelJS escreve células, estilos e
-tabelas; fflate acrescenta os relacionamentos OOXML dos gráficos nativos. jsPDF e
-AutoTable produzem o PDF com paginação e texto selecionável.
+As licenças originais acompanham os arquivos. ExcelJS escreve células, estilos,
+tabelas e imagens dos gráficos, sem edição manual do pacote XML. As cores usam
+ARGB de oito dígitos. As imagens usam duas âncoras, compatíveis com o atributo
+`editAs` do padrão OOXML. jsPDF produz um resumo de duas páginas com indicadores,
+gráficos e prioridades, sem anexar milhares de linhas de inventário.
 
 Para atualizar, obtenha o pacote oficial com `npm pack pacote@versão`, confira a
 licença e o hash da distribuição, atualize os nomes em `68-exportar-relatorios.js`

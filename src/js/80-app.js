@@ -170,6 +170,7 @@ function itensSelecionados() {
 
 const ACOES = {
   "relatorios-exportar": el => exportarRelatorio(el.dataset.formato),
+  "relatorios-pecas": () => modalPecasRelatorio(),
   "relatorios-atualizar": () => { relatorioHistorico.chave = ''; renderizar(true); },
   "relatorios-limpar": () => { UIrelatorios.filtros = filtrosIniciaisRelatorio(); UIrelatorios.rascunho = null; UIrelatorios.pagina = 1; renderizar(true); },
   "relatorios-periodo": el => periodoRapidoRelatorio(el.dataset.periodo),

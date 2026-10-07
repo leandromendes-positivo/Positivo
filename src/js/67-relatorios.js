@@ -100,12 +100,9 @@ function calcularRelatorio(f = UIrelatorios.filtros, H = relatorioHistorico, D =
     .sort((a, b) => b.atrasadas - a.atrasadas || comparar(a.nome, b.nome));
   k.excesso = f.tipo === 'usadas' || !tecnicos.some(t => t.limite !== null) ? null : somar(tecnicos, t => t.excesso || 0);
   k.tecnicos = tecnicos.length; k.cobrar = tecnicos.filter(t => t.atrasadas > 0).length;
-  const porFamilia = [...agrupar(estoque, i => familiaPeca(i.desc))].map(([nome, itens]) => ({ nome, valor: qtd(itens) })).sort((a, b) => b.valor - a.valor || comparar(a.nome, b.nome));
-  const materiais = [...agrupar([...estoque.map(i => ({ ...i, atual: true })), ...saidas], i => i.tipo + '|' + i.mat)].map(([, itens]) => ({
-    mat: itens[0].mat, desc: itens[0].desc, tipo: itens[0].tipo, familia: familiaPeca(itens[0].desc),
-    estoque: qtd(itens.filter(i => i.atual)), devolvidas: qtd(itens.filter(i => !i.atual && i.destino === 'devolucao')),
-    uso: qtd(itens.filter(i => !i.atual && i.destino === 'uso')), classificar: qtd(itens.filter(i => !i.atual && i.destino === 'pendente')),
-  })).sort((a, b) => b.estoque - a.estoque || comparar(a.mat, b.mat));
+  // O código identifica a peça. Uma descrição igual não funde códigos diferentes.
+  const porPeca = [...agrupar(estoque, i => String(i.mat))].map(([codigo, itens]) => ({ codigo, descricao: itens[0].desc, valor: qtd(itens), usadas: qtd(itens.filter(i => i.tipo === 'usadas')), novas: qtd(itens.filter(i => i.tipo === 'novas')) }))
+    .sort((a, b) => b.valor - a.valor || comparar(a.codigo, b.codigo));
   const mensal = diffDias(intervalo.inicio, intervalo.fim) > 62, chaveData = d => d.slice(0, mensal ? 7 : 10);
   const fluxo = new Map();
   for (let dia = intervalo.inicio; dia <= intervalo.fim;) {
@@ -117,7 +114,7 @@ function calcularRelatorio(f = UIrelatorios.filtros, H = relatorioHistorico, D =
   const regioesTecnico = new Set([...estoque, ...saidas, ...(f.tid && D.mapa.has(f.tid) ? [D.mapa.get(f.tid)] : [])].map(i => i.regiao));
   const frescor = D.frescor.filter(i => (!f.regiao || i.regiao === f.regiao) && (!f.tipo || i.tipo === f.tipo) && (!f.tid || regioesTecnico.has(i.regiao)));
   const filtros = [f.tipo === 'usadas' ? 'Peças usadas' : f.tipo === 'novas' ? 'Peças novas' : 'Novas e usadas', f.regiao || 'Todas as UFs', f.tid ? nomeTecnico(f.tid) : 'Todos os técnicos', !f.localidade ? 'Todas as localidades' : f.localidade === 'nao_informada' ? 'Localidade não informada' : LOCALIDADES[f.localidade]];
-  return { filtros: { ...f }, filtrosTexto: filtros.join(' · '), ...intervalo, emitido: agoraISO(), hoje: D.hoje, k, estoque, saidas, tecnicos, materiais, fluxo: [...fluxo.values()], mensal, porFamilia, frescor, notas: [...NOTAS_RELATORIO] };
+  return { filtros: { ...f }, filtrosTexto: filtros.join(' · '), ...intervalo, emitido: agoraISO(), hoje: D.hoje, k, estoque, saidas, tecnicos, fluxo: [...fluxo.values()], mensal, porPeca, frescor, notas: [...NOTAS_RELATORIO] };
 }
 function indicadoresRelatorio(r) {
   const k = r.k;
@@ -133,17 +130,17 @@ function indicadoresRelatorio(r) {
 function valorIndicadorRelatorio(i) { return i.valor === null ? '—' : i.percentual ? fmtPct(i.valor) : fmtNum(i.valor); }
 function graficosRelatorio(r) {
   const top = r.tecnicos.filter(t => t.atrasadas).slice(0, 6);
-  const familias = r.porFamilia.slice(0, 5);
-  if (r.porFamilia.length > 5) familias.push({ nome: 'Demais famílias', valor: somar(r.porFamilia.slice(5), i => i.valor) });
+  const pecas = r.porPeca.slice(0, 5), qtdTop = somar(pecas, i => i.valor);
   return [
     { titulo: 'Situação do inventário', sub: 'Peças em aberto · prazo individual', tipo: 'doughnut', categorias: ['Dentro do prazo', 'Acima do prazo'], series: [{ nome: 'Peças', valores: [r.k.estoque - r.k.atrasadas, r.k.atrasadas], cor: CORES_RELATORIO[0] }], cores: CORES_RELATORIO.slice(0, 2) },
     { titulo: 'Atrasos por técnico', sub: '6 maiores saldos em atraso · posição atual', tipo: 'bar', categorias: top.map(t => t.nome), series: [{ nome: 'Peças em atraso', valores: top.map(t => t.atrasadas), cor: CORES_RELATORIO[1] }] },
     { titulo: 'Devoluções no período', sub: `${r.mensal ? 'Agrupadas por mês' : 'Evolução diária'} · data da saída observada`, tipo: 'line', categorias: r.fluxo.map(i => r.mensal ? i.data.slice(5) + '/' + i.data.slice(0, 4) : fmtData(i.data).slice(0, 5)), series: ['usadas', 'novas'].filter(t => !r.filtros.tipo || r.filtros.tipo === t).map((t, n) => ({ nome: t === 'usadas' ? 'Usadas' : 'Novas', valores: r.fluxo.map(i => i[t]), cor: CORES_RELATORIO[t === 'usadas' ? 2 : 0] })) },
-    { titulo: 'Estoque por família', sub: 'Composição dos materiais em aberto', tipo: 'bar', categorias: familias.map(i => i.nome), series: [{ nome: 'Peças', valores: familias.map(i => i.valor), cor: CORES_RELATORIO[2] }] },
+    { titulo: 'Peças com maior estoque', sub: '5 maiores saldos · código e descrição da peça', tipo: 'bar', categorias: pecas.map(i => i.codigo), descricoes: pecas.map(i => i.descricao), series: [{ nome: 'Peças', valores: pecas.map(i => i.valor), cor: CORES_RELATORIO[2] }],
+      nota: `${pecas.length} de ${r.porPeca.length} códigos · ${r.k.estoque ? fmtPct(qtdTop / r.k.estoque) : '0%'} do estoque. Demais códigos: ${fmtNum(r.k.estoque - qtdTop)} peças.` },
   ];
 }
 
-/* SVG com a mesma geometria no painel e no PDF; planilhas recebem gráficos nativos. */
+/* A mesma imagem de cada gráfico preserva a diagramação no Excel e no PDF. */
 function svgGraficoRelatorio(g, impressao = false) {
   const ink = impressao ? '#17202A' : 'var(--ink)', muted = impressao ? '#596675' : 'var(--muted)', grid = impressao ? '#E4E9ED' : 'var(--line)';
   const total = somar(g.series, s => somar(s.valores));
@@ -161,7 +158,10 @@ function svgGraficoRelatorio(g, impressao = false) {
     const max = Math.max(1, ...g.series[0].valores), passo = 238 / Math.max(1, g.categorias.length);
     g.categorias.forEach((c, n) => {
       const y = 20 + n * passo, valor = g.series[0].valores[n], largura = valor / max * 470;
-      corpo += texto(12, y, c.length > 52 ? c.slice(0, 49) + '…' : c) + texto(548, y, fmtNum(valor), 'text-anchor="end" font-weight="700"') + `<rect x="12" y="${y + 7}" width="536" height="8" rx="4" fill="${grid}"/><rect class="rel-barra" x="12" y="${y + 7}" width="${largura}" height="8" rx="4" fill="${g.series[0].cor}"><title>${esc(c)}: ${fmtNum(valor)}</title></rect>`;
+      const descricao = g.descricoes?.[n], barraY = y + (descricao ? 24 : 7);
+      corpo += texto(12, y, c.length > 52 ? c.slice(0, 49) + '…' : c, descricao ? 'font-weight="700"' : '') + texto(548, y, fmtNum(valor), 'text-anchor="end" font-weight="700"');
+      if (descricao) corpo += texto(12, y + 16, descricao.length > 58 ? descricao.slice(0, 55) + '…' : descricao, `style="fill:${muted};font-size:12px"`);
+      corpo += `<rect x="12" y="${barraY}" width="536" height="7" rx="3.5" fill="${grid}"/><rect class="rel-barra" x="12" y="${barraY}" width="${largura}" height="7" rx="3.5" fill="${g.series[0].cor}"><title>${esc(c)}${descricao ? ' · ' + esc(descricao) : ''}: ${fmtNum(valor)}</title></rect>`;
     });
   } else {
     const max = Math.max(1, ...g.series.flatMap(s => s.valores)), teto = max <= 4 ? Math.ceil(max) : Math.ceil(max / 4) * 4;
@@ -178,7 +178,27 @@ function svgGraficoRelatorio(g, impressao = false) {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 280" width="560" height="280" role="img" aria-label="${esc(g.titulo)}"><title>${esc(g.titulo)} — ${esc(g.sub)}</title>${corpo}</svg>`;
 }
 function tabelaGraficoRelatorio(g) {
-  return `<details class="rel-dados-grafico"><summary>Ver dados do gráfico</summary><div class="tabela-rolagem"><table class="tabela compacta"><thead><tr><th>Categoria</th>${g.series.map(s => `<th>${esc(s.nome)}</th>`).join('')}</tr></thead><tbody>${g.categorias.map((c, n) => `<tr><th scope="row">${esc(c)}</th>${g.series.map(s => `<td class="num">${fmtNum(s.valores[n])}</td>`).join('')}</tr>`).join('')}</tbody></table></div></details>`;
+  return `<details class="rel-dados-grafico"><summary>Ver dados do gráfico</summary><div class="tabela-rolagem"><table class="tabela compacta"><thead><tr><th>${g.descricoes ? 'Código / descrição' : 'Categoria'}</th>${g.series.map(s => `<th>${esc(s.nome)}</th>`).join('')}</tr></thead><tbody>${g.categorias.map((c, n) => `<tr><th scope="row">${esc(c)}${g.descricoes ? `<small class="sub-celula">${esc(g.descricoes[n])}</small>` : ''}</th>${g.series.map(s => `<td class="num">${fmtNum(s.valores[n])}</td>`).join('')}</tr>`).join('')}</tbody></table></div></details>`;
+}
+function graficoPecasRelatorio(r) {
+  const pecas = r.porPeca.slice(0, 5), max = pecas[0]?.valor || 1;
+  if (!pecas.length) return `<div class="rel-grafico">${svgGraficoRelatorio(graficosRelatorio(r)[3])}</div>`;
+  return `<ol class="rel-pecas-top" aria-label="Cinco peças com maior saldo">${pecas.map(i => `<li><div><strong class="mono">${esc(i.codigo)}</strong><span><b>${fmtNum(i.valor)}</b><small>peças</small></span></div><p title="${esc(i.descricao)}">${esc(i.descricao)}</p><div class="rel-peca-trilho" aria-hidden="true"><i style="--parte:${i.valor / max * 100}%"></i></div></li>`).join('')}</ol>`;
+}
+function modalPecasRelatorio() {
+  if (!relatorioPronto()) return;
+  const r = calcularRelatorio(), todas = r.porPeca;
+  const m = abrirModal({ titulo: 'Estoque por peça', subtitulo: 'Código identifica a peça · filtros aplicados ao relatório', largura: 'larga', corpo: '<label class="campo"><span>Buscar código ou descrição</span><input type="search" data-rel-peca-busca placeholder="Ex.: 11176614 ou PL SUB KEY" autofocus></label><div data-rel-pecas-lista></div>', rodape: '<button class="btn" data-fechar>Fechar</button>' });
+  let pagina = 1;
+  function desenhar() {
+    const termos = normBusca(m.el.querySelector('input').value).split(/\s+/).filter(Boolean);
+    const lista = todas.filter(i => termos.every(t => normBusca(`${i.codigo} ${i.descricao}`).includes(t)));
+    const paginas = Math.max(1, Math.ceil(lista.length / 20)); pagina = Math.min(pagina, paginas);
+    m.el.querySelector('[data-rel-pecas-lista]').innerHTML = `<p class="nota">${plural(lista.length, 'código', 'códigos')} · ${fmtNum(somar(lista, i => i.valor))} peças</p><div class="tabela-rolagem"><table class="tabela"><thead><tr><th>Código / descrição</th><th>Usadas</th><th>Novas</th><th>Total</th></tr></thead><tbody>${lista.slice((pagina - 1) * 20, pagina * 20).map(i => `<tr><td><strong class="mono">${esc(i.codigo)}</strong><small class="sub-celula">${esc(i.descricao)}</small></td><td class="num">${fmtNum(i.usadas)}</td><td class="num">${fmtNum(i.novas)}</td><td class="num">${fmtNum(i.valor)}</td></tr>`).join('') || '<tr><td colspan="4">Nenhuma peça encontrada.</td></tr>'}</tbody></table></div><div class="paginacao"><span>${pagina} / ${paginas}</span><div><button class="btn pequeno" data-rel-passo="-1" ${pagina === 1 ? 'disabled' : ''}>Anterior</button><button class="btn pequeno" data-rel-passo="1" ${pagina === paginas ? 'disabled' : ''}>Próxima</button></div></div>`;
+  }
+  m.el.querySelector('input').addEventListener('input', () => { pagina = 1; desenhar(); });
+  m.el.addEventListener('click', e => { const b = e.target.closest('[data-rel-passo]'); if (b && !b.disabled) { pagina += Number(b.dataset.relPasso); desenhar(); } });
+  desenhar();
 }
 function renderRelatorios() {
   if (relatorioHistorico.chave !== chaveHistoricoRelatorio()) UI.posRender = carregarHistoricoRelatorio;
@@ -187,7 +207,12 @@ function renderRelatorios() {
   const tecnicos = tids.filter(tid => (E.cadastro[tid]?.tipo || 'tecnico') === 'tecnico').map(tid => ({ tid, nome: nomeTecnico(tid) })).sort((a, b) => comparar(a.nome, b.nome));
   const regioes = [...new Set([...D.regioes, ...relatorioHistorico.devolucoes.map(i => i.regiao), ...relatorioHistorico.movimentos.map(i => i.regiao)].filter(Boolean))].sort();
   const select = (campo, titulo, opcoes) => `<label class="campo"><span>${titulo}</span><select name="${campo}">${opcoes.map(([v, t]) => `<option value="${esc(v)}" ${f[campo] === v ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></label>`;
-  const cabecalho = `<section class="relatorios" aria-label="Relatórios gerenciais"><header class="rel-intro"><div><span class="sobretitulo">INFORMAÇÃO GERENCIAL</span><h2>Relatórios da operação</h2><p>Do estoque à devolução. Uma visão consolidada para decidir e compartilhar.</p></div><div class="rel-exportacoes">${['excel', 'pdf'].map(formato => `<button class="btn ${formato === 'excel' ? 'prim' : ''}" data-acao="relatorios-exportar" data-formato="${formato}" ${!pronto || UIrelatorios.exportando ? 'disabled' : ''}>${icone(formato === 'excel' ? 'baixar' : 'arquivo')}${UIrelatorios.exportando === formato ? 'Preparando…' : 'Exportar ' + (formato === 'excel' ? 'Excel' : 'PDF')}</button>`).join('')}</div></header>
+  const formatos = [
+    ['simples', 'Exportação simples', 'Excel · dados completos, sem gráficos', 'tabela'],
+    ['indicadores', 'Exportação com indicadores', 'Excel · resumo visual em 2 abas', 'grafico'],
+    ['pdf', 'Exportar PDF', 'Resumo executivo em 2 páginas', 'arquivo'],
+  ];
+  const cabecalho = `<section class="relatorios" aria-label="Relatórios gerenciais"><header class="rel-intro"><div><span class="sobretitulo">INFORMAÇÃO GERENCIAL</span><h2>Relatórios da operação</h2><p>Indicadores para decidir. Dados completos quando você precisar aprofundar.</p></div></header><div class="rel-exportacoes">${formatos.map(([formato, titulo, sub, ic]) => `<button class="btn rel-exportar ${formato === 'indicadores' ? 'prim' : ''}" data-acao="relatorios-exportar" data-formato="${formato}" ${!pronto || UIrelatorios.exportando ? 'disabled' : ''}>${icone(ic)}<span><strong>${UIrelatorios.exportando === formato ? 'Preparando…' : titulo}</strong><small>${sub}</small></span>${icone('baixar')}</button>`).join('')}</div>
     <form class="rel-filtros" data-form="relatorios" aria-label="Filtros dos relatórios"><div class="rel-filtros-topo"><strong>${icone('filtro')}Defina o recorte</strong><div class="rel-atalhos">${[['semana', 'Esta semana'], ['mes', 'Este mês'], ['30dias', 'Últimos 30 dias']].map(([v, t]) => `<button type="button" class="btn pequeno" data-acao="relatorios-periodo" data-periodo="${v}">${t}</button>`).join('')}</div></div><div class="rel-campos">
     <label class="campo"><span>Saídas a partir de</span><input type="date" name="inicio" required max="${hojeISO()}" value="${esc(f.inicio)}"></label><label class="campo"><span>Até</span><input type="date" name="fim" required max="${hojeISO()}" value="${esc(f.fim)}"></label>
     ${select('tipo', 'Tipo de peça', [['', 'Novas e usadas'], ['usadas', 'Usadas'], ['novas', 'Novas']])}${select('regiao', 'Estado', [['', 'Todas as UFs'], ...regioes.map(uf => [uf, uf])])}${select('tid', 'Técnico', [['', 'Todos os técnicos'], ...tecnicos.map(t => [t.tid, t.nome])])}${select('localidade', 'Localidade', [['', 'Todas'], ['capital', 'Capital'], ['interior', 'Interior'], ['nao_informada', 'Não informada']])}</div>
@@ -201,8 +226,8 @@ function renderRelatorios() {
   return cabecalho + `<div class="rel-recorte"><span>${icone('calendario')}<strong>${fmtData(r.inicio)} a ${fmtData(r.fim)}</strong><span>${esc(r.filtrosTexto)}</span></span><small>Estoque avaliado em ${fmtData(r.hoje)}</small></div>
     ${atrasadas.length || !r.frescor.length ? `<div class="rel-aviso">${icone('info')}<span>${r.frescor.length ? `${atrasadas.length} de ${r.frescor.length} planilhas deste recorte não foram atualizadas hoje. O saldo usa a última importação disponível.` : 'Ainda não há planilhas importadas para este recorte. Os saldos não confirmam ausência de estoque.'}</span></div>` : ''}
     <div class="rel-kpis">${indicadoresRelatorio(r).map(i => `<article class="rel-kpi" style="--rel-cor:${CORES_RELATORIO[i.cor]}"><div><span>${i.escopo}</span>${icone(ICONES[i.icone] ? i.icone : 'grafico')}</div><h3>${i.titulo}</h3><strong>${valorIndicadorRelatorio(i)}</strong><p>${i.detalhe}</p></article>`).join('')}</div>
-    <div class="rel-graficos">${graficos.map((g, n) => cartao(g.titulo, `<div class="rel-grafico">${svgGraficoRelatorio(g)}</div>${tabelaGraficoRelatorio(g)}`, { sub: esc(g.sub), classe: `rel-cartao rel-grafico-${n}`, acoes: `<span class="rel-numero">0${n + 1}</span>` })).join('')}</div>
+    <div class="rel-graficos">${graficos.map((g, n) => cartao(g.titulo, `${n === 3 ? graficoPecasRelatorio(r) : `<div class="rel-grafico">${svgGraficoRelatorio(g)}</div>`}${g.nota ? `<div class="rel-nota-pecas"><p>${esc(g.nota)}</p><button class="btn pequeno" data-acao="relatorios-pecas">Ver todas as peças${icone('direita')}</button></div>` : ''}${tabelaGraficoRelatorio(g)}`, { sub: esc(g.sub), classe: `rel-cartao rel-grafico-${n}`, acoes: `<span class="rel-numero">0${n + 1}</span>` })).join('')}</div>
     <div class="rel-faixa"><div>${icone('arquivo')}<span><strong>${fmtNum(r.k.classificar)}</strong> novas com saída a classificar</span></div><div><strong>${fmtNum(r.k.transferidas)}</strong><span>peças transferidas / ajustadas</span></div><p>Essas saídas ficam separadas das devoluções e do uso confirmado.</p></div>
-    ${cartao('Consolidado por técnico', `<div class="tabela-rolagem"><table class="tabela rel-tabela"><thead><tr><th>Técnico / localidade</th><th class="num">Usadas<br><small>Em aberto</small></th><th class="num">Novas<br><small>Saldo físico</small></th><th class="num">Em atraso<br><small>Atual</small></th><th class="num">Devolvidas<br><small>Período</small></th><th class="num">No prazo<br><small>Devoluções</small></th><th class="num">Uso de novas<br><small>Confirmado</small></th><th class="num">Excesso<br><small>Novas</small></th></tr></thead><tbody>${linhas.map(t => `<tr><td><button class="link-forte" data-acao="tecnico" data-tid="${esc(t.tid)}">${esc(t.nome)}</button><small class="sub-celula">${esc(t.regiao)} · ${esc(t.localidade)}${t.semPlanilha ? ' · sem planilha de novas' : ''}</small></td><td class="num">${r.filtros.tipo === 'novas' ? '—' : fmtNum(t.usadas)}</td><td class="num">${r.filtros.tipo === 'usadas' || t.semPlanilha ? '—' : fmtNum(t.novas)}</td><td class="num ${t.atrasadas ? 'rel-critico' : ''}">${fmtNum(t.atrasadas)}</td><td class="num">${fmtNum(t.devolvidas)}</td><td class="num">${t.taxa === null ? '—' : fmtPct(t.taxa)}</td><td class="num">${r.filtros.tipo === 'usadas' ? '—' : fmtNum(t.uso)}</td><td class="num">${t.excesso === null ? '—' : fmtNum(t.excesso)}</td></tr>`).join('') || '<tr><td colspan="8">Nenhum técnico corresponde aos filtros aplicados.</td></tr>'}</tbody></table></div>${paginacao(r.tecnicos.length, UIrelatorios.pagina, 20, 'relatorios')}`, { sub: 'Estoque atual e resultados do período. Os arquivos incluem todos os técnicos e todas as linhas do recorte.', classe: 'rel-consolidado' })}
-    <details class="rel-metodologia"><summary>${icone('info')}Como os indicadores são calculados e o que será exportado</summary><p><strong>Excel:</strong> resumo com gráficos editáveis, técnicos, inventário, movimentações, materiais, dados dos gráficos e critérios. <strong>PDF:</strong> resumo visual, consolidado e relação completa de inventário e saídas. Os dois usam os filtros aplicados, sem limitar à página da tabela.</p>${r.notas.map(n => `<p>${esc(n)}</p>`).join('')}<ul>${r.frescor.map(i => `<li>${esc(i.regiao)} / ${esc(i.tipo)}: ${i.em ? esc(fmtDataHora(i.em)) : 'Sem importação'}</li>`).join('')}</ul></details><p class="rel-privacidade">${icone('cadeado')}Exportações geradas no seu navegador, com os dados aos quais sua conta tem acesso.</p></section>`;
+    ${cartao('Consolidado por técnico', `<div class="tabela-rolagem"><table class="tabela rel-tabela"><thead><tr><th>Técnico / localidade</th><th class="num">Usadas<br><small>Em aberto</small></th><th class="num">Novas<br><small>Saldo físico</small></th><th class="num">Em atraso<br><small>Atual</small></th><th class="num">Devolvidas<br><small>Período</small></th><th class="num">No prazo<br><small>Devoluções</small></th><th class="num">Uso de novas<br><small>Confirmado</small></th><th class="num">Excesso<br><small>Novas</small></th></tr></thead><tbody>${linhas.map(t => `<tr><td><button class="link-forte" data-acao="tecnico" data-tid="${esc(t.tid)}">${esc(t.nome)}</button><small class="sub-celula">${esc(t.regiao)} · ${esc(t.localidade)}${t.semPlanilha ? ' · sem planilha de novas' : ''}</small></td><td class="num">${r.filtros.tipo === 'novas' ? '—' : fmtNum(t.usadas)}</td><td class="num">${r.filtros.tipo === 'usadas' || t.semPlanilha ? '—' : fmtNum(t.novas)}</td><td class="num ${t.atrasadas ? 'rel-critico' : ''}">${fmtNum(t.atrasadas)}</td><td class="num">${fmtNum(t.devolvidas)}</td><td class="num">${t.taxa === null ? '—' : fmtPct(t.taxa)}</td><td class="num">${r.filtros.tipo === 'usadas' ? '—' : fmtNum(t.uso)}</td><td class="num">${t.excesso === null ? '—' : fmtNum(t.excesso)}</td></tr>`).join('') || '<tr><td colspan="8">Nenhum técnico corresponde aos filtros aplicados.</td></tr>'}</tbody></table></div>${paginacao(r.tecnicos.length, UIrelatorios.pagina, 20, 'relatorios')}`, { sub: 'Estoque atual e resultados do período. Use a exportação simples para consultar todas as linhas do recorte.', classe: 'rel-consolidado' })}
+    <details class="rel-metodologia"><summary>${icone('info')}Como os indicadores são calculados e o que será exportado</summary><p><strong>Exportação simples:</strong> inventário e movimentações completos, em tabelas sem gráficos, prontos para você montar suas análises. <strong>Com indicadores:</strong> duas abas com os totais, gráficos e até 8 técnicos prioritários. Os gráficos são imagens para preservar a apresentação. <strong>PDF:</strong> o mesmo resumo em duas páginas. Todos usam os filtros aplicados; os totais consideram o recorte inteiro, mesmo quando o gráfico mostra apenas os primeiros colocados.</p>${r.notas.map(n => `<p>${esc(n)}</p>`).join('')}<ul>${r.frescor.map(i => `<li>${esc(i.regiao)} / ${esc(i.tipo)}: ${i.em ? esc(fmtDataHora(i.em)) : 'Sem importação'}</li>`).join('')}</ul></details><p class="rel-privacidade">${icone('cadeado')}Exportações geradas no seu navegador, com os dados aos quais sua conta tem acesso.</p></section>`;
 }

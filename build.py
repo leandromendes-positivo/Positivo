@@ -94,7 +94,9 @@ def main() -> int:
     (DIST / "site").mkdir(parents=True, exist_ok=True)
     # Geradores carregados sob demanda, servidos pelo próprio site (sem CDN).
     for destino in (DIST / "vendor", DIST / "site" / "vendor"):
-        shutil.copytree(SRC / "vendor", destino, dirs_exist_ok=True)
+        if destino.exists():
+            shutil.rmtree(destino)
+        shutil.copytree(SRC / "vendor", destino)
     cabecalho, corpo = pagina.split("<!--__CORPO__-->", 1)
     cabecalho_site = cabecalho
     # Arquivos reais e URLs relativas funcionam no Pages e em domínio próprio.

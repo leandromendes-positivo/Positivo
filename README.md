@@ -88,18 +88,31 @@ clique em **Aplicar filtros**. Há atalhos para esta semana, este mês e último
 - **Indicadores:** estoque físico, peças acima do prazo, devoluções, pontualidade,
   uso confirmado de novas e quantidade acima do limite individual.
 - **Gráficos:** pizza em formato de rosca para os prazos, barras de atraso por
-  técnico, evolução das devoluções e composição do estoque por família.
-- **Excel:** sete abas com resumo, quatro gráficos nativos editáveis, técnicos,
-  inventário, movimentações, materiais, dados dos gráficos e critérios. Inclui
-  cores, formatos numéricos, datas, filtros e cabeçalhos congelados nas tabelas.
-- **PDF:** resumo visual e tabelas paginadas com a relação completa de técnicos,
-  inventário, saídas e materiais, além dos critérios e da última importação por UF.
+  técnico, evolução das devoluções e as **cinco peças com maior estoque**, com
+  código e descrição. O código identifica a peça: descrições iguais não fundem
+  códigos diferentes. A legenda informa a participação dos cinco maiores e o
+  saldo dos demais. **Ver todas as peças** permite buscar código/descrição e paginar.
+- **Exportação simples — Excel:** inventário e movimentações completos, sem
+  indicadores ou gráficos. Cabeçalhos na primeira linha, filtros e dados tipados
+  para montar suas próprias análises. Uma terceira aba informa o recorte e os critérios.
+- **Exportação com indicadores — Excel:** duas abas, **Visão geral** e
+  **Prioridades**, com seis indicadores, quatro gráficos e até oito técnicos
+  prioritários. Os gráficos são imagens de alta resolução para preservar o visual;
+  use a versão simples para criar gráficos e tabelas dinâmicas editáveis.
+- **PDF:** resumo executivo de **duas páginas**, com os mesmos indicadores,
+  gráficos e prioridades. O documento não anexa o inventário linha a linha.
 
 O intervalo filtra as **movimentações**, enquanto o **estoque e os atrasos em
 aberto** representam a última planilha disponível, avaliados no dia da emissão.
-As exportações usam os filtros aplicados e todas as linhas, não apenas a página
-visível da tabela. O histórico completo é consultado, incluindo saídas anteriores
-a 120 dias; uma falha de leitura bloqueia a exportação para evitar arquivos parciais.
+Os totais usam todas as linhas dos filtros aplicados, não apenas a página visível
+da tabela. Gráficos e prioridades identificam quando exibem somente os primeiros
+colocados; a exportação simples preserva todas as linhas. O histórico completo é
+consultado, incluindo saídas anteriores a 120 dias; uma falha de leitura bloqueia
+a exportação para evitar arquivos parciais.
+
+Ao concluir uma nova importação, os relatórios abertos são recalculados com o
+saldo e as devoluções atualizados. Uma nova exportação usa esse novo estado.
+Arquivos já baixados não se alteram: gere outro Excel ou PDF após importar.
 
 Bases e cadastros ignorados não entram neste relatório. Novas sem destino
 classificado ficam separadas de devoluções e uso. O limite é um teto, respeita as

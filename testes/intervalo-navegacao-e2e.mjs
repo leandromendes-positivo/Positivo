@@ -127,6 +127,9 @@ try {
   assert.equal(await page.locator('.rail').isVisible(), true);
   // Setas nunca oferecem seções administrativas para um usuário comum.
   await page.evaluate(() => { Acesso.modo = 'firebase'; Acesso.perfil = { ativo: true, perfil: 'usuario' }; irPara('tecnicos'); });
+  assert.match(await nav.locator('[data-direcao="proxima"]').getAttribute('aria-label'), /Relatórios/);
+  await nav.locator('[data-direcao="proxima"]').click();
+  assert.equal(await page.evaluate(() => UI.pagina), 'relatorios');
   assert.match(await nav.locator('[data-direcao="proxima"]').getAttribute('aria-label'), /Minha conta/);
   await nav.locator('[data-direcao="proxima"]').click();
   assert.equal(await page.evaluate(() => UI.pagina), 'conta');

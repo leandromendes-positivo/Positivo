@@ -79,6 +79,39 @@ A ativação inicial exige configuração no Firebase e, para Microsoft, no Entr
 3. **Cobranças → Cobrar hoje**: o botão **Cobrar** monta a mensagem para WhatsApp ou **E-mail / Outlook**; depois de enviar, registre a cobrança e a **previsão de devolução** que o técnico informar.
 4. Peça **usada** que sai do relatório (inclusive redução parcial da quantidade) conta como **devolvida**. Para novas, confira **Consulta avançada → Saídas de novas** e classifique a baixa como devolução, uso em atendimento ou transferência/ajuste.
 
+### Relatórios gerenciais
+
+O menu **Relatórios** está disponível para usuários autorizados e administradores.
+Selecione o intervalo de datas, tipo de peça, UF, técnico e localidade, depois
+clique em **Aplicar filtros**. Há atalhos para esta semana, este mês e últimos 30 dias.
+
+- **Indicadores:** estoque físico, peças acima do prazo, devoluções, pontualidade,
+  uso confirmado de novas e quantidade acima do limite individual.
+- **Gráficos:** pizza em formato de rosca para os prazos, barras de atraso por
+  técnico, evolução das devoluções e composição do estoque por família.
+- **Excel:** sete abas com resumo, quatro gráficos nativos editáveis, técnicos,
+  inventário, movimentações, materiais, dados dos gráficos e critérios. Inclui
+  cores, formatos numéricos, datas, filtros e cabeçalhos congelados nas tabelas.
+- **PDF:** resumo visual e tabelas paginadas com a relação completa de técnicos,
+  inventário, saídas e materiais, além dos critérios e da última importação por UF.
+
+O intervalo filtra as **movimentações**, enquanto o **estoque e os atrasos em
+aberto** representam a última planilha disponível, avaliados no dia da emissão.
+As exportações usam os filtros aplicados e todas as linhas, não apenas a página
+visível da tabela. O histórico completo é consultado, incluindo saídas anteriores
+a 120 dias; uma falha de leitura bloqueia a exportação para evitar arquivos parciais.
+
+Bases e cadastros ignorados não entram neste relatório. Novas sem destino
+classificado ficam separadas de devoluções e uso. O limite é um teto, respeita as
+configurações individuais e exclui os tipos de envio desconsiderados; o saldo
+físico continua mostrando essas peças. A ausência de uma planilha de novas não
+é tratada como estoque conhecido de zero peças.
+
+Os arquivos são gerados no navegador. As bibliotecas versionadas e suas licenças
+ficam em [src/vendor](src/vendor/README.md), sem serviço externo de conversão.
+Ao hospedar manualmente, mantenha a pasta `vendor` produzida pelo build ao lado
+do HTML; o GitHub Pages já publica esses arquivos automaticamente.
+
 ### Mensagens de cobrança pelo Outlook
 
 Em **Cobrar → E-mail / Outlook**, confira o destinatário, assunto e mensagem já preenchidos. Há também o atalho **Configurações → Mensagens de cobrança → Preparar e-mail**. O assunto padrão é **Devolução de peças**. O conteúdo reúne resumo, prazo próprio do técnico, quantidades, códigos, descrições, chamados e previsões, com todas as peças selecionadas, sem assinatura do painel.
@@ -236,6 +269,9 @@ node testes/limite-estoque-e2e.mjs
 node testes/intervalo-navegacao-e2e.mjs
 node testes/rolagem-e2e.mjs
 node testes/responsividade-e2e.mjs
+node testes/relatorios-e2e.mjs
+# Após o teste de relatórios, com openpyxl e PyMuPDF instalados:
+python3 testes/relatorios-arquivos.py
 ```
 
 Os testes abrem `pagina-completa.html` e exigem armazenamento em memória antes de importar dados. Verificam cobranças, previsões, agenda, devoluções, mapa, gráficos, cálculos, filtros combinados, agrupamento, períodos civis, uso sem duplicação, saídas classificadas, devoluções parciais, persistência e desfazer. A regressão de interface cobre contraste dos botões em repouso, com cursor e foco, seleção parcial, quantidades em lote, avisos e navegação por teclado nas janelas dos dois temas. Use `PW_PATH` e `CHROMIUM` para indicar instalações específicas; `URL_PAINEL_TESTE` permite mudar a URL local. O teste de prazos verifica herança, limites, alertas, mensagens, histórico, rankings e falhas de gravação. O teste com emuladores Firebase também verifica prazos personalizados e classificação em dois dispositivos, recarregamento e reversão das saídas de novas.

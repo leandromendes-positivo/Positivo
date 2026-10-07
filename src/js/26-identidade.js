@@ -115,6 +115,7 @@ function bloquearSessao(mensagem = 'Seu acesso foi desativado. Procure o adminis
   MenuLateral.fechar({ restaurarFoco: false });
   Acesso.perfil = null;
   limparHistoricoRanking();
+  limparHistoricoRelatorio();
   Object.assign(UIinventario,{devolucoes:[],movimentos:[],chave:null,carregando:false,erro:''});
   for (const parar of E.ouvintes) parar(); E.ouvintes = [];
   E.usadas = []; E.novas = []; E.cadastro = {}; E.acomp = {}; E.acompLegado = {};

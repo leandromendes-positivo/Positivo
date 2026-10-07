@@ -18,6 +18,7 @@ import hashlib
 import json
 import pathlib
 import re
+import shutil
 import sys
 
 RAIZ = pathlib.Path(__file__).resolve().parent
@@ -56,7 +57,7 @@ def config_firebase() -> str:
 
 
 def main() -> int:
-    css = "\n".join((SRC / nome).read_text(encoding="utf-8") for nome in ("estilos.css", "operacao.css", "gestao.css", "analises.css", "acesso.css"))
+    css = "\n".join((SRC / nome).read_text(encoding="utf-8") for nome in ("estilos.css", "operacao.css", "gestao.css", "analises.css", "acesso.css", "relatorios.css"))
     # Imagens embutidas preservam as três versões de HTML autocontidas.
     for nome, marcador in (("positivo-claro.png", "/*__LOGO_CLARA__*/"), ("positivo-escuro.png", "/*__LOGO_ESCURA__*/")):
         imagem = base64.b64encode((SRC / "assets" / nome).read_bytes()).decode("ascii")
@@ -91,6 +92,9 @@ def main() -> int:
               .replace("<!--__BOTAO_TEMA__-->", botao_tema))
     config = config_firebase()
     (DIST / "site").mkdir(parents=True, exist_ok=True)
+    # Geradores carregados sob demanda, servidos pelo próprio site (sem CDN).
+    for destino in (DIST / "vendor", DIST / "site" / "vendor"):
+        shutil.copytree(SRC / "vendor", destino, dirs_exist_ok=True)
     cabecalho, corpo = pagina.split("<!--__CORPO__-->", 1)
     cabecalho_site = cabecalho
     # Arquivos reais e URLs relativas funcionam no Pages e em domínio próprio.

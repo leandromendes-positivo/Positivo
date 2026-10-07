@@ -22,6 +22,7 @@ const PAGINAS = {
   inventario: { titulo: "Histórico de inventário", icone: "caixa", render: renderInventario },
   estoque: { titulo: "Estoque de novas", icone: "caixa", render: renderEstoque },
   tecnicos: { titulo: "Técnicos", icone: "pessoas", render: renderTecnicos },
+  relatorios: { titulo: "Relatórios", icone: "grafico", render: renderRelatorios },
   importar: { admin: true, titulo: "Importar planilhas", icone: "upload", render: renderImportar },
   config: { admin: true, titulo: "Configurações", icone: "ajustes", render: renderConfig, depois: posRenderConfig },
   usuarios: { admin: true, titulo: "Usuários e permissões", nav: "Cadastro de usuários", icone: "pessoas", render: renderUsuarios },
@@ -168,6 +169,10 @@ function itensSelecionados() {
 }
 
 const ACOES = {
+  "relatorios-exportar": el => exportarRelatorio(el.dataset.formato),
+  "relatorios-atualizar": () => { relatorioHistorico.chave = ''; renderizar(true); },
+  "relatorios-limpar": () => { UIrelatorios.filtros = filtrosIniciaisRelatorio(); UIrelatorios.rascunho = null; UIrelatorios.pagina = 1; renderizar(true); },
+  "relatorios-periodo": el => periodoRapidoRelatorio(el.dataset.periodo),
   notificacoes: () => Notificacoes.abrir(),
   'limpar-foco-cobranca': () => { UI.cob.foco = ''; renderizar(true); },
   "navegar-secao": el => {
@@ -271,6 +276,7 @@ const ACOES = {
     else if (alvo === "ficha") UI.ficha.pagina = p;
     else if (alvo === "consulta") UIconsulta.pagina = p;
     else if (alvo === "inventario") UIinventario.pagina = p;
+    else if (alvo === "relatorios") UIrelatorios.pagina = p;
     renderizar(true);
   },
   ordenar: (el) => {
@@ -386,6 +392,11 @@ function ligarEventos() {
   });
   document.addEventListener("input", (ev) => {
     const el = ev.target;
+    if (el.closest('[data-form="relatorios"]')) {
+      UIrelatorios.rascunho = Object.fromEntries(new FormData(el.form));
+      el.form.querySelector('[role="alert"]').textContent = '';
+      return;
+    }
     if (el.dataset.rankingData) {
       UIranking.rascunho = { ...(UIranking.rascunho || UIranking), [el.dataset.rankingData]: el.value };
       el.closest('form').querySelector('[role="alert"]').textContent = '';
@@ -399,6 +410,7 @@ function ligarEventos() {
     if (!form) return;
     ev.preventDefault();
     if (form.dataset.form === 'consulta') { aplicarConsulta(form); return; }
+    if (form.dataset.form === 'relatorios') { aplicarFiltrosRelatorio(form); return; }
     if (form.dataset.form === 'ranking-intervalo') { aplicarIntervaloRanking(form); return; }
     salvarFormulario(form).catch((e) => toast(erroAmigavel(e).message, "erro"));
   });

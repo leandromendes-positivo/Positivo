@@ -61,7 +61,6 @@ function alertasOperacionais(D = derivar()) {
 
 const Notificacoes = (() => {
   let chave = '', lidos = {}, lista = [], modal = null, filtro = 'todas', persistente = true;
-  let animacao;
   const autorizado = () => E.status === 'pronto' && (Acesso.modo !== 'firebase' || Boolean(Acesso.usuario?.uid && Acesso.perfil?.ativo));
   const chaveConta = () => `cp-notificacoes-v1-${hash36(`${Acesso.projeto || configFirebase()?.projectId || Acesso.modo}:${Acesso.usuario?.uid || E.usuario.id || 'local'}`)}`;
   function carregarLeitura() {
@@ -85,6 +84,7 @@ const Notificacoes = (() => {
     if (!autorizado()) {
       lista = []; modal?.fechar(); modal = null; chave = ''; lidos = {};
       botao.querySelector('[data-notif-contador]').hidden = true;
+      botao.classList.remove('tem-nao-lidas');
       botao.setAttribute('aria-expanded', 'false');
       botao.setAttribute('aria-label', 'Notificações'); return;
     }
@@ -97,10 +97,7 @@ const Notificacoes = (() => {
     for (const id of Object.keys(lidos)) if (!ativos.has(id)) { delete lidos[id]; alterou = true; }
     if (alterou) salvar();
     const n = lista.filter(a => !lida(a)).length, contador = botao.querySelector('[data-notif-contador]');
-    if (n > Number(contador.textContent || 0)) {
-      botao.classList.remove('notif-nova'); void botao.offsetWidth; botao.classList.add('notif-nova');
-      clearTimeout(animacao); animacao = setTimeout(() => botao.classList.remove('notif-nova'), 900);
-    }
+    botao.classList.toggle('tem-nao-lidas', n > 0);
     contador.textContent = String(n); contador.hidden = !n;
     botao.setAttribute('aria-label', `Notificações, ${plural(n, 'não lida', 'não lidas')}`);
     desenhar();
@@ -121,7 +118,7 @@ const Notificacoes = (() => {
       <h3>${esc(a.titulo)}</h3><p>${esc(a.texto)}</p>
       ${a.detalhes?.length ? `<details data-notif-detalhes="${a.id}"><summary>Ver detalhes (${a.detalhes.length})</summary><ul>${a.detalhes.map(d => `<li>${esc(d)}</li>`).join('')}</ul></details>` : ''}
       ${a.orientacao ? `<p class="nota">${esc(a.orientacao)}</p>` : ''}
-      <div class="notif-acoes">${a.acao ? `<button type="button" class="link-forte" data-notif-destino="${a.id}">${esc(a.acao)}${icone('direita')}</button>` : ''}<button type="button" class="link" data-notif-leitura="${a.id}" aria-label="${lida(a) ? 'Marcar como não lida' : 'Marcar como lida'}: ${esc(a.titulo)}">${icone(lida(a) ? 'sino' : 'ok')}${lida(a) ? 'Não lida' : 'Marcar como lida'}</button></div>
+      <div class="notif-acoes">${a.acao ? `<button type="button" class="link-forte" data-notif-destino="${a.id}">${esc(a.acao)}${icone('direita')}</button>` : ''}<button type="button" class="link" data-notif-leitura="${a.id}" aria-label="${lida(a) ? 'Marcar como não lida' : 'Marcar como lida'}: ${esc(a.titulo)}">${icone(lida(a) ? 'sino' : 'ok')}${lida(a) ? 'Marcar como não lida' : 'Marcar como lida'}</button></div>
       </div></article>`).join('') || vazio('ok', filtro === 'nao-lidas' && lista.length ? 'Você leu todos os alertas' : 'Nenhum alerta no momento', filtro === 'nao-lidas' && lista.length ? 'As pendências ainda ativas continuam na aba Todas.' : !Object.keys(E.indice.arquivos || {}).length ? 'Importe as planilhas para começar o acompanhamento.' : 'As regras monitoradas não encontraram pendências nos dados disponíveis.');
     if (area.dataset.conteudo === html) return;
     const aberto = [...area.querySelectorAll('details[open]')].map(d => d.dataset.notifDetalhes);

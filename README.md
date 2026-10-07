@@ -107,9 +107,9 @@ O sino **Notificações**, no topo de todas as páginas, reúne alertas ativos c
 
 Os atalhos de retorno e contato abrem **Cobranças** com um filtro identificado e removível, sem reaproveitar buscas ou regiões anteriores. Os cartões mostram todas as peças a cobrar dos técnicos selecionados; o resumo e a exportação respeitam esse filtro da central. Abrir outra aba de cobrança ou um atalho do dashboard limpa esse filtro.
 
-**Marcar como lida** apenas altera a leitura pessoal: não registra cobrança, não agenda devolução e não remove a pendência. Alertas resolvidos saem da central; reincidências e alterações relevantes voltam a ser não lidas. A leitura é salva **por conta e projeto, neste navegador**, somente como identificadores e versões dos alertas, sem copiar contatos ou mensagens. Não é sincronizada entre dispositivos. Se o armazenamento estiver bloqueado, a central informa que a leitura dura apenas enquanto a página estiver aberta.
+**Marcar como lida** e **Marcar como não lida** alteram apenas a leitura pessoal: não registram cobrança, não agendam devolução e não removem a pendência. Alertas resolvidos saem da central; reincidências e alterações relevantes voltam a ser não lidas. A leitura é salva **por conta e projeto, neste navegador**, somente como identificadores e versões dos alertas, sem copiar contatos ou mensagens. Não é sincronizada entre dispositivos. Se o armazenamento estiver bloqueado, a central informa que a leitura dura apenas enquanto a página estiver aberta.
 
-A central tem navegação por teclado, retorno do foco ao sino, rolagem independente e animações breves que respeitam a preferência por movimento reduzido. Não solicita permissão de notificações do navegador nem envia mensagens externas.
+Enquanto houver notificações não lidas, o sino faz um breve balanço a cada 5 segundos e o contador recebe um destaque suave. Ler todas interrompe a animação; marcar uma como não lida a reativa. A central tem navegação por teclado, retorno do foco ao sino, rolagem independente e respeita a preferência por movimento reduzido. Não solicita permissão de notificações do navegador nem envia mensagens externas.
 
 ### Visão geral da operação
 

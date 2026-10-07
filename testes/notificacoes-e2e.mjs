@@ -39,6 +39,22 @@ try {
     mudou();irPara('cobrancas');
   });
   assert.equal(await sino.locator('[data-notif-contador]').innerText(),'5');
+  await page.emulateMedia({reducedMotion:'no-preference'});
+  const movimento=await sino.locator('.ic').evaluate(e=>{
+    const estilo=getComputedStyle(e),animacao=e.getAnimations().find(a=>a.animationName==='sino-notificacao');
+    if(!animacao)throw new Error('O sino não está animado');
+    const repeticao=estilo.animationIterationCount;
+    animacao.pause();animacao.currentTime=200;const giro=getComputedStyle(e).transform;
+    animacao.currentTime=1200;const repouso=getComputedStyle(e).transform;
+    animacao.currentTime=5200;const segundoGiro=getComputedStyle(e).transform;
+    animacao.play();return {repeticao,giro,repouso,segundoGiro};
+  });
+  assert.equal(movimento.repeticao,'infinite');
+  assert.notEqual(movimento.giro,movimento.repouso,'o sino oscila e descansa entre os ciclos');
+  assert.equal(movimento.giro,movimento.segundoGiro,'animação volta a tocar no próximo ciclo');
+  assert.equal(await sino.locator('b').evaluate(e=>getComputedStyle(e).animationName),'contador-notificacao');
+  await page.emulateMedia({reducedMotion:'reduce'});
+  for(const elemento of ['.ic','b'])assert.equal(await sino.locator(elemento).evaluate(e=>getComputedStyle(e).animationName),'none','respeita movimento reduzido');
   await abrir();
   assert.equal(await page.locator('.notif-item').count(),5);
   assert.equal(await page.locator('.notif-item').first().getAttribute('data-notif-id'),'planilhas');
@@ -51,6 +67,11 @@ try {
   const antes=await page.evaluate(()=>JSON.stringify([E.acomp,E.usadas,E.novas,E.contatos,E.usuarios]));
   await page.locator('[data-notif-leitura="sem_previsao"]').click();
   assert.equal(await page.locator('[data-notif-id="sem_previsao"]').getAttribute('class'),'notif-item lida');
+  assert.equal(await page.locator('[data-notif-leitura="sem_previsao"]').innerText(),'Marcar como não lida');
+  await page.locator('[data-notif-leitura="sem_previsao"]').click();
+  assert.equal(await page.locator('[data-notif-id="sem_previsao"]').getAttribute('class'),'notif-item nao-lida');
+  assert.equal(await sino.locator('[data-notif-contador]').innerText(),'5','marcar não lida restaura o contador');
+  await page.locator('[data-notif-leitura="sem_previsao"]').click();
   assert.equal(await page.evaluate(()=>JSON.stringify([E.acomp,E.usadas,E.novas,E.contatos,E.usuarios])),antes);
   const chave=await page.evaluate(()=>Object.keys(localStorage).find(k=>k.startsWith('cp-notificacoes-v1-')));
   const leitura=await page.evaluate(k=>JSON.parse(localStorage.getItem(k)),chave);
@@ -63,6 +84,14 @@ try {
   await page.keyboard.press('Escape');
   assert.equal(await sino.evaluate(e=>e===document.activeElement),true,'Escape devolve o foco ao sino');
   assert.equal(await sino.locator('[data-notif-contador]').isVisible(),false);
+  await page.emulateMedia({reducedMotion:'no-preference'});
+  assert.equal(await sino.locator('.ic').evaluate(e=>getComputedStyle(e).animationName),'none','sino para ao ler tudo');
+  await abrir();
+  await page.locator('[data-notif-leitura="sem_previsao"]').click();
+  assert.equal(await sino.locator('.ic').evaluate(e=>getComputedStyle(e).animationName),'sino-notificacao','marcar não lida retoma a animação');
+  await page.locator('[data-notif-leitura="sem_previsao"]').click();
+  await page.emulateMedia({reducedMotion:'reduce'});
+  await page.keyboard.press('Escape');
   await abrir();assert.equal(await page.locator('.notif-item.lida').count(),5,'abrir a central preserva as leituras');
   // Filtro abre a lista certa, descarta busca/UF anteriores e respeita leitura individual.
   await page.evaluate(()=>Object.assign(UI.cob,{busca:'outro',regiao:'SC'}));

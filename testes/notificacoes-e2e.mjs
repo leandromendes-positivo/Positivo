@@ -47,15 +47,20 @@ try {
   const movimento=await sino.locator('.ic').evaluate(e=>{
     const estilo=getComputedStyle(e),animacao=e.getAnimations().find(a=>a.animationName==='sino-notificacao');
     if(!animacao)throw new Error('O sino não animou ao passar o mouse');
-    const repeticao=estilo.animationIterationCount,duracao=estilo.animationDuration;
-    animacao.pause();animacao.currentTime=170;const direita=getComputedStyle(e).transform;
-    animacao.currentTime=340;const esquerda=getComputedStyle(e).transform;
-    animacao.currentTime=1020;const proximoCiclo=getComputedStyle(e).transform;
-    animacao.play();return {repeticao,duracao,direita,esquerda,proximoCiclo};
+    const repeticao=estilo.animationIterationCount,duracao=estilo.animationDuration,atraso=estilo.animationDelay;
+    animacao.pause();animacao.currentTime=16;const inicio=getComputedStyle(e).transform;
+    animacao.currentTime=64;const direita=getComputedStyle(e).transform;
+    animacao.currentTime=128;const esquerda=getComputedStyle(e).transform;
+    animacao.currentTime=640;const depois=getComputedStyle(e).transform;
+    animacao.currentTime=0;animacao.play();return {repeticao,duracao,atraso,inicio,direita,esquerda,depois};
   });
-  assert.equal(movimento.repeticao,'infinite');assert.equal(movimento.duracao,'0.85s');
+  assert.equal(movimento.repeticao,'1');assert.equal(movimento.duracao,'0.32s');assert.equal(movimento.atraso,'0s');
+  assert.notEqual(movimento.inicio,'matrix(1, 0, 0, 1, 0, 0)','já se move no primeiro quadro, sem espera');
   assert.notEqual(movimento.direita,movimento.esquerda,'balança para os dois lados');
-  assert.equal(movimento.direita,movimento.proximoCiclo,'repete sem pausas longas enquanto o mouse permanece');
+  assert.equal(movimento.depois,'matrix(1, 0, 0, 1, 0, 0)','um único movimento, sem repetição');
+  await page.waitForFunction(()=>!document.querySelector('#botao-notificacoes > .ic').getAnimations().some(a=>a.playState==='running'));
+  assert.equal(await sino.evaluate(e=>e.matches(':hover')),true,'cursor permanece sobre o botão');
+  assert.equal(await sino.locator('.ic').evaluate(e=>getComputedStyle(e).transform),'matrix(1, 0, 0, 1, 0, 0)','encerra sozinho mesmo mantendo o cursor');
   assert.deepEqual(await sino.boundingBox(),posicao,'o botão fica imóvel para não perder o hover');
   assert.equal(await sino.locator('b').evaluate(e=>getComputedStyle(e).animationName),'none','contador não pulsa sozinho');
   await page.mouse.move(0,0);
@@ -63,6 +68,7 @@ try {
   assert.equal(await sino.locator('.ic').evaluate(e=>getComputedStyle(e).transform),'matrix(1, 0, 0, 1, 0, 0)','retorna à posição inicial');
   await sino.hover();
   assert.equal(await sino.locator('.ic').evaluate(e=>getComputedStyle(e).animationName),'sino-notificacao','reinicia em um novo hover');
+  assert.equal(await sino.locator('.ic').evaluate(e=>e.getAnimations().some(a=>a.playState==='running')),true,'nova entrada do cursor executa novamente');
   await page.emulateMedia({reducedMotion:'reduce'});
   assert.equal(await sino.locator('.ic').evaluate(e=>getComputedStyle(e).animationName),'none','respeita movimento reduzido');
   await abrir();

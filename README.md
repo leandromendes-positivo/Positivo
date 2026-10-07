@@ -109,7 +109,7 @@ Os atalhos de retorno e contato abrem **Cobranças** com um filtro identificado 
 
 **Marcar como lida** e **Marcar como não lida** alteram apenas a leitura pessoal: não registram cobrança, não agendam devolução e não removem a pendência. Alertas resolvidos saem da central; reincidências e alterações relevantes voltam a ser não lidas. A leitura é salva **por conta e projeto, neste navegador**, somente como identificadores e versões dos alertas, sem copiar contatos ou mensagens. Não é sincronizada entre dispositivos. Se o armazenamento estiver bloqueado, a central informa que a leitura dura apenas enquanto a página estiver aberta.
 
-O sino balança suavemente enquanto o mouse está sobre o botão, com ou sem alertas não lidos, e volta à posição inicial ao retirar o cursor. O botão permanece imóvel e o contador não anima automaticamente. Em telas de toque, tocar no sino abre a central normalmente. A central tem navegação por teclado, retorno do foco ao sino, rolagem independente e respeita a preferência por movimento reduzido. Não solicita permissão de notificações do navegador nem envia mensagens externas.
+O sino faz um único balanço rápido de 320 ms, sem atraso, quando o cursor entra no botão, com ou sem alertas não lidos. Não repete ao manter o mouse sobre ele; uma nova entrada do cursor executa o movimento novamente. Ao retirar o cursor, o sino retorna à posição inicial. O botão permanece imóvel e o contador não anima automaticamente. Em telas de toque, tocar no sino abre a central normalmente. A central tem navegação por teclado, retorno do foco ao sino, rolagem independente e respeita a preferência por movimento reduzido. Não solicita permissão de notificações do navegador nem envia mensagens externas.
 
 ### Visão geral da operação
 

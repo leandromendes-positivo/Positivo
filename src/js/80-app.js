@@ -6,7 +6,7 @@ const UI = {
   pagina: "painel",
   tid: null,
   posRender: null,
-  cob: { aba: "cobrar", regiao: "", busca: "", ordem: "dias", abertos: new Set() },
+  cob: { aba: "cobrar", foco: "", regiao: "", busca: "", ordem: "dias", abertos: new Set() },
   us: { aba: "pendentes", status: "todas", regiao: "", tid: "", busca: "", faixa: null, ordem: { campo: "dias", dir: "desc" }, pagina: 1, paginaDev: 1, sel: new Set() },
   es: { regiao: "", status: "", busca: "", bases: false, ordem: { campo: "novasQtd", dir: "desc" }, abertos: new Set() },
   tc: { tipo: "tecnico", localidade: "", regiao: "", busca: "", mostrarSemDados: false, ordem: { campo: "nome", dir: "asc" } },
@@ -108,6 +108,7 @@ function renderizar(forcar = false) {
 }
 
 function atualizarMoldura() {
+  Notificacoes.atualizar();
   atualizarNavegacaoSecoes();
   const D = E.status === "pronto" ? derivar() : null;
   document.getElementById("entrada-topo").closest("label").hidden = !podeAdministrar();
@@ -167,6 +168,8 @@ function itensSelecionados() {
 }
 
 const ACOES = {
+  notificacoes: () => Notificacoes.abrir(),
+  'limpar-foco-cobranca': () => { UI.cob.foco = ''; renderizar(true); },
   "navegar-secao": el => {
     const pagina = paginasVizinhas()[el.dataset.direcao];
     if (!pagina) return;
@@ -244,7 +247,7 @@ const ACOES = {
     modalPrevisao(itens, `Previsão de ${t.nome}`);
   },
   "abrir-cob": (el) => { const s = UI.cob.abertos; s.has(el.dataset.tid) ? s.delete(el.dataset.tid) : s.add(el.dataset.tid); renderizar(true); },
-  "aba-cob": (el) => { UI.cob.aba = el.dataset.aba; renderizar(true); },
+  "aba-cob": (el) => { UI.cob.aba = el.dataset.aba; UI.cob.foco = ''; renderizar(true); },
   "regiao-cob": (el) => { UI.cob.regiao = el.dataset.regiao; renderizar(true); },
   "copiar-resumo": () => copiarTexto(resumoTexto()),
   "exportar-cobrancas": () => exportarCobrancas(),
@@ -457,6 +460,7 @@ async function iniciar() {
   RolagemHorizontal.iniciar();
   montarMoldura();
   ligarEventos();
+  Notificacoes.iniciar();
   aoMudar.add(debounce(() => renderizar(), 40));
   const inicial = (location.hash || "").replace("#", "");
   if (PAGINAS[inicial]) UI.pagina = inicial;

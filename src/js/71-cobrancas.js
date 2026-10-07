@@ -95,6 +95,7 @@ function renderCobrancas() {
     contagem[a.id] = porAba[a.id].length;
   }
   let lista = porAba[s.aba] || [];
+  if (s.foco) lista = lista.filter(t => tecnicoNoFocoCobranca(t, s.foco, D.hoje));
   if (s.regiao) lista = lista.filter((t) => t.regiao === s.regiao);
   if (busca) lista = lista.filter((t) => normBusca(t.nome + " " + t.nomeOriginal).includes(busca));
   const maxAba = (t) => Math.max(0, ...itensDaAba(t, s.aba, D.hoje).map((i) => i.dias));
@@ -107,6 +108,7 @@ function renderCobrancas() {
   const totalPecas = somar(lista, qtdAba);
 
   return `
+    ${s.foco ? `<div class="faixa info compacta notif-filtro-cobranca">${icone('sino')}<div><strong>${esc(FOCOS_COBRANCA[s.foco] || '')}</strong><span>Filtro da central de notificações. Cada cartão reúne todas as peças a cobrar desse técnico.</span></div><button type="button" class="btn pequeno" data-acao="limpar-foco-cobranca">Limpar filtro</button></div>` : ''}
     <div class="abas" role="tablist">${ABAS_COB.map((a) => `<button role="tab" class="aba${a.id === s.aba ? " ativa" : ""}" aria-selected="${a.id === s.aba}" data-acao="aba-cob" data-aba="${a.id}">${esc(a.rotulo)}<span class="contador">${contagem[a.id]}</span></button>`).join("")}</div>
     <div class="barra-filtros">
       <div class="chips">${["", ...D.regioes].map((r) => `<button class="chip${s.regiao === r ? " ativo" : ""}" data-acao="regiao-cob" data-regiao="${esc(r)}">${r ? esc(r) : "Todas as regiões"}</button>`).join("")}</div>
@@ -128,23 +130,25 @@ function renderCobrancas() {
 /** Texto curto do dia para colar no WhatsApp/e-mail do supervisor. */
 function resumoTexto() {
   const D = derivar();
+  const tecnicos = D.cobrarTec.filter(t => tecnicoNoFocoCobranca(t, UI.cob.foco, D.hoje));
   const linhas = [`*Controle de peças — ${fmtDataExtensa(D.hoje)}*`, ""];
-  if (!D.cobrarTec.length) linhas.push("Nenhum técnico com peça usada atrasada.");
+  if (UI.cob.foco) linhas.push(FOCOS_COBRANCA[UI.cob.foco], '');
+  if (!tecnicos.length) linhas.push("Nenhum técnico com peça usada atrasada neste filtro.");
   else {
-    linhas.push(`Técnicos para cobrar: ${D.cobrarTec.length} (${plural(D.kpi.cobrarPecas, "peça", "peças")})`, "");
-    for (const t of D.cobrarTec.slice(0, 40)) {
+    linhas.push(`Técnicos para cobrar: ${tecnicos.length} (${plural(somar(tecnicos, t => t.nCobrar), "peça", "peças")})`, "");
+    for (const t of tecnicos.slice(0, 40)) {
       linhas.push(`• ${t.nome} (${t.regiao}) — ${plural(t.nCobrar, "peça", "peças")}, mais antiga com ${t.maxDias} dias${t.nPrevVencida ? " — previsão vencida" : ""}`);
     }
-    if (D.cobrarTec.length > 40) linhas.push(`• ... e mais ${D.cobrarTec.length - 40}`);
+    if (tecnicos.length > 40) linhas.push(`• ... e mais ${tecnicos.length - 40}`);
   }
-  linhas.push("", `Pendentes: ${fmtNum(D.kpi.usadas)} · Atrasadas: ${fmtNum(D.kpi.atrasadas)}`);
+  linhas.push("", `Total da operação — Pendentes: ${fmtNum(D.kpi.usadas)} · Atrasadas: ${fmtNum(D.kpi.atrasadas)}`);
   return linhas.join("\n");
 }
 
 async function exportarCobrancas() {
   const D = derivar();
   const linhas = [];
-  for (const t of D.cobrarTec) for (const i of t.itensCobrar) {
+  for (const t of D.cobrarTec.filter(t => tecnicoNoFocoCobranca(t, UI.cob.foco, D.hoje))) for (const i of t.itensCobrar) {
     linhas.push([t.nome, t.regiao, fmtTelefone(t.telefone), i.chamado, i.mat, i.desc, i.dataFT, i.dias, i.atraso, STATUS[i.status].rotulo, i.previsao, i.ultimaCobranca, i.nCobrancas, i.obs, i.nf, i.remessa]);
   }
   await exportarExcel(`cobrancas-${D.hoje}.xlsx`, [{

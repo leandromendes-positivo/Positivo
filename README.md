@@ -95,6 +95,22 @@ O e-mail e o telefone do técnico são somente contatos. Não criam usuário aut
 
 Preparar, abrir ou baixar um rascunho não envia e-mail nem registra envio no histórico. Após enviar pelo Outlook, clique em **Registrar cobrança**; o responsável registrado é o operador autenticado, nunca o destinatário.
 
+### Central de notificações
+
+O sino **Notificações**, no topo de todas as páginas, reúne alertas ativos com contador de **não lidos**, prioridades e atalhos. A central acompanha importações, contatos e agendamentos enquanto está aberta, e recalcula as regras na virada do dia.
+
+- **Cobranças que precisam de retorno:** técnicos com pelo menos uma peça usada acima do prazo, cobrada há **2 dias corridos ou mais**, ainda sem previsão registrada. A regra considera a cobrança de cada peça: um contato recente sobre outro material não esconde a pendência. Não presume que o técnico deixou de responder fora do sistema.
+- **Faltam contatos para cobrar:** técnicos na fila sem e-mail em formato válido e sem telefone com 10 a 15 dígitos. Bases e cadastros ignorados não entram neste alerta. Telefones e e-mails continuam sendo somente contatos, sem permissão de acesso ao painel.
+- **Previsões vencidas:** a data combinada passou e as peças ainda constam no último relatório. O atalho abre a aba de previsões vencidas.
+- **Estoque acima do limite:** considera somente estoque conhecido de técnicos e respeita limites personalizados. Saldo igual ou inferior ao limite, inclusive zero, não gera alerta; bases e tipos de envio desconsiderados não são tratados como excesso de técnico.
+- **Planilhas não atualizadas hoje ou faltando:** aparece primeiro para lembrar que o saldo pode estar desatualizado antes de cobrar. Mostra a última importação de cada tipo/UF. Administradores podem abrir a importação; os demais recebem orientação para solicitar a atualização.
+
+Os atalhos de retorno e contato abrem **Cobranças** com um filtro identificado e removível, sem reaproveitar buscas ou regiões anteriores. Os cartões mostram todas as peças a cobrar dos técnicos selecionados; o resumo e a exportação respeitam esse filtro da central. Abrir outra aba de cobrança ou um atalho do dashboard limpa esse filtro.
+
+**Marcar como lida** apenas altera a leitura pessoal: não registra cobrança, não agenda devolução e não remove a pendência. Alertas resolvidos saem da central; reincidências e alterações relevantes voltam a ser não lidas. A leitura é salva **por conta e projeto, neste navegador**, somente como identificadores e versões dos alertas, sem copiar contatos ou mensagens. Não é sincronizada entre dispositivos. Se o armazenamento estiver bloqueado, a central informa que a leitura dura apenas enquanto a página estiver aberta.
+
+A central tem navegação por teclado, retorno do foco ao sino, rolagem independente e animações breves que respeitam a preferência por movimento reduzido. Não solicita permissão de notificações do navegador nem envia mensagens externas.
+
 ### Visão geral da operação
 
 - **Indicadores no topo:** peças pendentes, técnicos a cobrar, compromissos de hoje e estoque conhecido. Fotografias cobrem todo o fundo dos cartões nos dois temas, com enquadramento proporcional e sobreposição para leitura dos números. As barras representam peças dentro/fora do prazo, contatos da fila atual, compromissos dos próximos 7 dias e técnicos dentro ou acima do limite de estoque. Os cartões abrem as consultas correspondentes e limpam filtros antigos.
@@ -211,6 +227,7 @@ python3 -m http.server 8000 --directory dist
 node testes/operacao-e2e.mjs
 node testes/gestao-e2e.mjs
 node testes/interface-e2e.mjs
+node testes/notificacoes-e2e.mjs
 node testes/email-cobranca-e2e.mjs
 node testes/analises-e2e.mjs
 node testes/prazos-e2e.mjs

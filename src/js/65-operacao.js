@@ -150,7 +150,7 @@ function atualizarFiltroPainel(chave, valor, seletor) {
 }
 
 function abrirCobrancasPainel(aba = "cobrar") {
-  Object.assign(UI.cob, { aba, regiao: "", busca: "", ordem: "dias" });
+  Object.assign(UI.cob, { aba, foco: "", regiao: "", busca: "", ordem: "dias" });
   irPara("cobrancas");
 }
 

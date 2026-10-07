@@ -84,7 +84,6 @@ const Notificacoes = (() => {
     if (!autorizado()) {
       lista = []; modal?.fechar(); modal = null; chave = ''; lidos = {};
       botao.querySelector('[data-notif-contador]').hidden = true;
-      botao.classList.remove('tem-nao-lidas');
       botao.setAttribute('aria-expanded', 'false');
       botao.setAttribute('aria-label', 'Notificações'); return;
     }
@@ -97,7 +96,6 @@ const Notificacoes = (() => {
     for (const id of Object.keys(lidos)) if (!ativos.has(id)) { delete lidos[id]; alterou = true; }
     if (alterou) salvar();
     const n = lista.filter(a => !lida(a)).length, contador = botao.querySelector('[data-notif-contador]');
-    botao.classList.toggle('tem-nao-lidas', n > 0);
     contador.textContent = String(n); contador.hidden = !n;
     botao.setAttribute('aria-label', `Notificações, ${plural(n, 'não lida', 'não lidas')}`);
     desenhar();

@@ -117,6 +117,7 @@ function renderFicha(tid) {
         ${t.usadas.length ? `<button class="btn prim" data-acao="cobrar" data-tid="${esc(t.tid)}" data-aba="${t.itensCobrar.length ? "cobrar" : "todos"}">${icone("mensagem")}Cobrar</button>` : ""}
         <button class="btn" data-acao="editar-tecnico" data-tid="${esc(t.tid)}">${icone("lapis")}Editar cadastro</button>
       </div>
+      ${imagemCabecalho()}
     </section>
     <section class="ficha-prazos" aria-label="Prazos de devolução do técnico">${icone('relogio')}<div><h3>Prazos de devolução</h3><p>${LOCALIDADES[t.localidade] || LOCALIDADES[""]} · A regra pessoal prevalece sobre a geral.</p></div><dl>${[['usadas','Usadas',t.prazo,t.cad.prazoUsadas],['novas','Novas',t.prazoNovas,t.cad.prazoNovas]].map(([tipo,nome,dias,proprio]) => `<div><dt>${nome}</dt><dd>${dias} dias <small>${prazoValido(proprio) !== null ? 'Personalizado' : 'Regra geral'}</small></dd></div>`).join('')}</dl><button class="btn pequeno" data-acao="editar-prazos" data-tid="${esc(t.tid)}">${icone('ajustes')}Alterar prazos</button></section>
     ${kpis}

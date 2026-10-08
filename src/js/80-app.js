@@ -116,6 +116,7 @@ function atualizarMoldura() {
   document.getElementById("entrada-topo").closest("label").hidden = !podeAdministrar();
   const p = PAGINAS[UI.pagina];
   const titulo = document.getElementById("titulo");
+  titulo.closest('.topo').dataset.pagina = UI.pagina;
   const grupo = document.getElementById('topo-grupo');
   grupo.textContent = p.admin ? 'Administração' : UI.pagina === 'conta' ? 'Minha conta' : ['consulta', 'inventario', 'relatorios'].includes(UI.pagina) ? 'Análises e consultas' : ['estoque', 'tecnicos'].includes(UI.pagina) ? 'Recursos' : 'Monitoramento';
   const marca = document.getElementById('topo-icone'), simbolo = UI.tid ? 'pessoa' : p.icone;

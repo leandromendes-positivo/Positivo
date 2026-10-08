@@ -86,6 +86,8 @@ def main() -> int:
         icones.append((nome, dados, uri))
     ilustracao = base64.b64encode((SRC / "assets" / "indicadores-tecnologia.png").read_bytes()).decode("ascii")
     css = css.replace("/*__INDICADORES_IMAGEM__*/", "data:image/png;base64," + ilustracao)
+    cabecalhos = base64.b64encode((SRC / "assets" / "cabecalhos-operacao.webp").read_bytes()).decode("ascii")
+    css = css.replace("/*__CABECALHOS_IMAGEM__*/", "data:image/webp;base64," + cabecalhos)
     botao_tema = (SRC / "botao-tema.html").read_text(encoding="utf-8").strip()
     pagina = (pagina.replace("/*__CSS__*/", css).replace("/*__JS__*/", js)
               .replace("/*__TEMA__*/", tema)

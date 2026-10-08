@@ -65,5 +65,5 @@ function cabecalhoSecao(pagina, D) {
   };
   const [titulo, texto, dados] = textos[pagina] || [];
   if (!titulo) return "";
-  return `<section class="secao-resumo"><div class="secao-apresentacao"><span class="secao-marcador">${icone(PAGINAS[pagina].icone)}</span><div><h2>${titulo}</h2><p>${texto}</p></div></div><dl>${dados.map(([nome, n, unidade]) => `<div><dt>${nome}</dt><dd>${n}</dd><small>${unidade}</small></div>`).join("")}</dl></section>`;
+  return `<section class="secao-resumo"><div class="secao-apresentacao"><span class="secao-marcador">${icone(PAGINAS[pagina].icone)}</span><div><h2>${titulo}</h2><p>${texto}</p></div>${imagemCabecalho()}</div><dl>${dados.map(([nome, n, unidade]) => `<div><dt>${nome}</dt><dd>${n}</dd><small>${unidade}</small></div>`).join("")}</dl></section>`;
 }

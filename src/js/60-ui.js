@@ -29,7 +29,7 @@ function abrirModal({ titulo, subtitulo = "", corpo = "", rodape = "", largura =
   fundo.className = "modal-fundo";
   fundo.innerHTML = `<div class="modal ${largura}" role="dialog" aria-modal="true" aria-labelledby="${idTitulo}" tabindex="-1">
     <header class="modal-topo"><div><h2 id="${idTitulo}"></h2>${subtitulo ? `<p class="modal-sub"></p>` : ""}</div>
-    <button class="btn-icone" data-fechar aria-label="Fechar">${icone("fechar")}</button></header>
+    <button class="btn-icone" data-fechar aria-label="Fechar">${icone("fechar")}</button>${largura.split(/\s+/).includes('calendario') ? '' : imagemCabecalho()}</header>
     <div class="modal-corpo">${corpo}</div>
     ${rodape ? `<footer class="modal-rodape">${rodape}</footer>` : ""}
   </div>`;
@@ -122,7 +122,12 @@ function vazio(icon, titulo, texto, botao = "") {
   return `<div class="vazio">${icone(icon)}<h3>${esc(titulo)}</h3><p>${texto}</p>${botao}</div>`;
 }
 function cartao(titulo, corpo, { acoes = "", classe = "", sub = "" } = {}) {
-  return `<section class="cartao cartao-separado ${classe}"><header class="cartao-topo"><div><h2>${esc(titulo)}</h2>${sub ? `<p>${sub}</p>` : ""}</div>${acoes ? `<div class="cartao-acoes">${acoes}</div>` : ""}</header><div class="cartao-corpo">${corpo}</div></section>`;
+  return `<section class="cartao cartao-separado ${classe}"><header class="cartao-topo"><div><h2>${esc(titulo)}</h2>${sub ? `<p>${sub}</p>` : ""}</div>${acoes ? `<div class="cartao-acoes">${acoes}</div>` : ""}${imagemCabecalho()}</header><div class="cartao-corpo">${corpo}</div></section>`;
+}
+
+/** Camada decorativa compartilhada, sem interferir nos controles ou na leitura assistiva. */
+function imagemCabecalho() {
+  return '<span class="cabecalho-imagem" aria-hidden="true"><span class="cabecalho-arte"></span></span>';
 }
 function paginacao(total, pagina, porPagina, alvo) {
   const paginas = Math.max(1, Math.ceil(total / porPagina));

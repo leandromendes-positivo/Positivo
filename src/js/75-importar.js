@@ -132,7 +132,7 @@ function cartaoResultado(r) {
   const D = derivar();
   return `<section class="cartao cartao-separado resultado">
     <header class="cartao-topo"><div><h2>${icone("ok")}Importação concluída</h2><p>${plural(r.resultados.length, "planilha", "planilhas")}${r.devolvidas ? ` · ${plural(r.devolvidas, "peça usada devolvida", "peças usadas devolvidas")} desde a importação anterior` : ""}</p></div>
-    <div class="cartao-acoes"><button class="btn" data-acao="ir" data-pagina="painel">Ver painel</button><button class="btn prim" data-acao="ir" data-pagina="cobrancas">${icone("sino")}Cobranças de hoje (${D.kpi.cobrarTecnicos})</button></div></header>
+    <div class="cartao-acoes"><button class="btn" data-acao="ir" data-pagina="painel">Ver painel</button><button class="btn prim" data-acao="ir" data-pagina="cobrancas">${icone("sino")}Cobranças de hoje (${D.kpi.cobrarTecnicos})</button></div>${imagemCabecalho()}</header>
     <div class="cartao-corpo">${(r.avisos || []).map((a) => `<p class="aviso-linha">${icone("info")}${esc(a)}</p>`).join("")}
     <div class="tabela-rolagem"><table class="tabela compacta"><thead><tr><th>Arquivo</th><th>UF</th><th>Tipo</th><th class="num">Linhas</th><th class="num">Peças</th><th>O que mudou</th></tr></thead><tbody>${linhas}</tbody></table></div>
     </div></section>`;

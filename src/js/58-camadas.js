@@ -32,6 +32,8 @@ const Camadas = (() => {
     document.querySelector('.principal').inert = Boolean(bloquear);
     document.querySelector('.rail').inert = login || modais.length > 0;
     for (const modal of modais) modal.inert = login || modal !== modais.at(-1);
+    if (login) Pesquisas.fechar();
+    else if (bloquear) Pesquisas.fechar(document.querySelector('.principal'));
   }
   function iniciar() {
     // Inclui remoções de diálogos causadas por saída da conta ou perda de acesso.

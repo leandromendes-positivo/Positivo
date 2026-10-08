@@ -2,6 +2,13 @@
    Página: Estoque de peças novas — limite máximo por técnico.
    ========================================================================== */
 
+function filtrarEstoque(D, s = UI.es) {
+  const busca = normBusca(s.busca);
+  return D.tecnicos.filter(t => t.tipo === (s.bases ? 'base' : 'tecnico') && (t.estoqueConhecido || t.temDados)
+    && (!s.regiao || t.regiao === s.regiao) && (!s.status || t.statusNovas === s.status)
+    && (!busca || normBusca(t.nome + ' ' + t.nomeOriginal).includes(busca)));
+}
+
 function renderEstoque() {
   const D = derivar();
   const s = UI.es;
@@ -11,12 +18,8 @@ function renderEstoque() {
     return vazio("caixa", "Sem peças novas importadas", "Importe as planilhas de peças novas para identificar estoques acima do limite máximo.", `<button class="btn prim" data-acao="ir" data-pagina="importar">Importar planilhas</button>`);
   }
   const cfg = D.cfg;
-  const busca = normBusca(s.busca);
   const base = D.tecnicos.filter((t) => t.tipo === (s.bases ? "base" : "tecnico") && (t.estoqueConhecido || t.temDados));
-  let lista = base.filter((t) =>
-    (!s.regiao || t.regiao === s.regiao) &&
-    (!s.status || t.statusNovas === s.status) &&
-    (!busca || normBusca(t.nome + " " + t.nomeOriginal).includes(busca)));
+  let lista = filtrarEstoque(D, s);
   lista = ordenarLista(lista, s.ordem, { nome: (t) => t.nome, novasQtd: (t) => t.novasQtd, dif: (t) => t.excessoNovas, itens: (t) => t.novasItens });
   const tipos = D.tiposEnvio;
   const k = { novas: estoque.total, novasTecnicos: estoque.tecnicos.length, mediaNovas: estoque.tecnicos.length ? estoque.total / estoque.tecnicos.length : 0, dentro: estoque.dentro.length, acima: estoque.acima.length };

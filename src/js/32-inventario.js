@@ -23,8 +23,8 @@ function linhasInventario() {
   for(const m of UIinventario.movimentos) adicionar({...m,tipo:'novas',estado:m.destino==='pendente'?'presumida':m.destino==='devolucao'?'devolvida':m.destino,saida:m.em,origem:'historico',situacao:m.destino==='pendente'?'Devolução presumida':DESTINOS_NOVAS[m.destino]||'Saída registrada'});
   return linhas;
 }
-function filtrarInventario(linhas=linhasInventario()) {
-  const f=UIinventario,termos=normBusca(f.busca).split(/\s+/).filter(Boolean);
+function filtrarInventario(linhas=linhasInventario(), f=UIinventario) {
+  const termos=normBusca(f.busca).split(/\s+/).filter(Boolean);
   return linhas.filter(i=>(!f.tid||i.tid===f.tid)&&(!f.tipo||i.tipo===f.tipo)&&(!f.estado||(f.estado==='devolvidas'?['devolvida','presumida'].includes(i.estado):i.estado===f.estado))&&termos.every(t=>normBusca(`${i.mat} ${i.desc} ${i.nome} ${i.chamado||''} ${i.nf||''}`).includes(t)))
     .sort((a,b)=>comparar(b.saida||'9999',a.saida||'9999')||comparar(a.nome,b.nome)||comparar(a.mat,b.mat));
 }

@@ -197,6 +197,11 @@ function modalPecasRelatorio() {
     m.el.querySelector('[data-rel-pecas-lista]').innerHTML = `<p class="nota">${plural(lista.length, 'código', 'códigos')} · ${fmtNum(somar(lista, i => i.valor))} peças</p><div class="tabela-rolagem"><table class="tabela"><thead><tr><th>Código / descrição</th><th>Usadas</th><th>Novas</th><th>Total</th></tr></thead><tbody>${lista.slice((pagina - 1) * 20, pagina * 20).map(i => `<tr><td><strong class="mono">${esc(i.codigo)}</strong><small class="sub-celula">${esc(i.descricao)}</small></td><td class="num">${fmtNum(i.usadas)}</td><td class="num">${fmtNum(i.novas)}</td><td class="num">${fmtNum(i.valor)}</td></tr>`).join('') || '<tr><td colspan="4">Nenhuma peça encontrada.</td></tr>'}</tbody></table></div><div class="paginacao"><span>${pagina} / ${paginas}</span><div><button class="btn pequeno" data-rel-passo="-1" ${pagina === 1 ? 'disabled' : ''}>Anterior</button><button class="btn pequeno" data-rel-passo="1" ${pagina === paginas ? 'disabled' : ''}>Próxima</button></div></div>`;
   }
   m.el.querySelector('input').addEventListener('input', () => { pagina = 1; desenhar(); });
+  Pesquisas.registrar(m.el.querySelector('input'), {
+    nome: 'Buscar código ou descrição', tipos: ['peca'],
+    linhas: () => todas.map(i => ({ mat: i.codigo, desc: i.descricao })),
+    executar: () => { pagina = 1; desenhar(); },
+  });
   m.el.addEventListener('click', e => { const b = e.target.closest('[data-rel-passo]'); if (b && !b.disabled) { pagina += Number(b.dataset.relPasso); desenhar(); } });
   desenhar();
 }

@@ -205,7 +205,9 @@ function idSeguro(chave) {
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 function debounce(fn, ms) {
   let t;
-  return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
+  const adiada = (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
+  adiada.cancelar = () => clearTimeout(t);
+  return adiada;
 }
 function agrupar(lista, chave) {
   const m = new Map();

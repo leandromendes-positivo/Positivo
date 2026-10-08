@@ -72,11 +72,13 @@ function renderizar(forcar = false) {
   const seletorFoco = ativo && conteudo.contains(ativo)
     ? [...ativo.attributes].filter((a) => a.name.startsWith("data-")).map((a) => `[${a.name}="${CSS.escape(a.value)}"]`).join("") : "";
   // não atrapalha quem está digitando: refaz a tela quando sair do campo
-  if (!forcar && (Calendarios.ativo() || (ativo && conteudo.contains(ativo) && /^(INPUT|TEXTAREA|SELECT)$/.test(ativo.tagName) && ativo.type !== "checkbox"))) {
+  const editando = ativo && conteudo.contains(ativo) && (ativo.closest('.pesquisa-controle') || (/^(INPUT|TEXTAREA|SELECT)$/.test(ativo.tagName) && ativo.type !== 'checkbox'));
+  if (!forcar && (Calendarios.ativo() || editando)) {
     renderPendente = true;
     return;
   }
   renderPendente = false;
+  Pesquisas.fechar(conteudo);
   atualizarMoldura();
   if (E.status === "carregando" && !E.usadas.length && !E.novas.length) {
     conteudo.innerHTML = `<div class="carregando"><div class="girando"></div><p>Carregando os dados…</p></div>`;
@@ -96,6 +98,7 @@ function renderizar(forcar = false) {
   conteudo.dataset.pagina = UI.pagina;
   conteudo.innerHTML = cabecalhoSecao(UI.pagina, derivar()) + p.render();
   Calendarios.preparar(conteudo);
+  Pesquisas.preparar(conteudo);
   if (!podeAdministrar()) {
     document.querySelectorAll('[data-acao="editar-tecnico"], [data-acao="editar-prazos"], [data-acao="consulta-classificar"], [data-acao="desfazer-importacao"]').forEach(el=>el.disabled=true);
     document.querySelectorAll('[data-mudar="tipo-tecnico"]').forEach(el=>el.disabled=true);
@@ -383,11 +386,18 @@ const DIGITACAO = {
   "busca-tc": (v) => { UI.tc.busca = v; },
 };
 const aplicarBusca = debounce((campo) => {
+  if (!campo.isConnected) return;
+  if (document.activeElement !== campo) { renderizar(); return; }
   const pos = campo.selectionStart;
   const chave = campo.dataset.digitar;
+  const estado = Pesquisas.estado(campo);
   renderizar(true);
   const novo = document.querySelector(`[data-digitar="${chave}"]`);
-  if (novo) { novo.focus(); try { novo.setSelectionRange(pos, pos); } catch (_) {} }
+  if (novo) {
+    novo.focus({ preventScroll: true });
+    try { novo.setSelectionRange(pos, pos); } catch (_) {}
+    Pesquisas.restaurar(novo, estado);
+  }
 }, 220);
 
 function ligarEventos() {
@@ -405,6 +415,7 @@ function ligarEventos() {
   });
   document.addEventListener("input", (ev) => {
     const el = ev.target;
+    if (ev.isComposing || Pesquisas.compondo(el)) return;
     if (el.closest('[data-form="relatorios"]')) {
       UIrelatorios.rascunho = Object.fromEntries(new FormData(el.form));
       el.form.querySelector('[role="alert"]').textContent = '';
@@ -431,7 +442,7 @@ function ligarEventos() {
     setTimeout(() => {
       const a = document.activeElement;
       const conteudo = document.getElementById("conteudo");
-      if (renderPendente && !(a && conteudo && conteudo.contains(a) && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) renderizar();
+      if (renderPendente && !(a && conteudo && conteudo.contains(a) && (a.closest('.pesquisa-controle') || /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)))) renderizar();
     }, 50);
   });
   document.addEventListener("keydown", (ev) => {

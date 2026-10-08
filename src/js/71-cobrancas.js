@@ -83,21 +83,25 @@ function campoPrevisao(i) {
   return `<input type="date" class="campo-data" value="${esc(i.previsao)}" data-mudar="previsao-item" data-tid="${esc(i.tid)}" data-k="${esc(i.k)}" aria-label="Previsão de devolução">${i.previsao ? `<small class="sub-celula autoria-previsao" title="${esc(i.agendadoPor?.email || '')}">${esc(autorPrevisao(i))}</small>` : ''}`;
 }
 
+function filtrarCobrancas(D, s = UI.cob) {
+  const busca = normBusca(s.busca);
+  return D.tecnicos.filter(t => itensDaAba(t, s.aba, D.hoje).length
+    && (!s.foco || tecnicoNoFocoCobranca(t, s.foco, D.hoje))
+    && (!s.regiao || t.regiao === s.regiao)
+    && (!busca || normBusca(t.nome + ' ' + t.nomeOriginal).includes(busca)));
+}
+
 function renderCobrancas() {
   const D = derivar();
   if (!E.usadas.length) return vazio("upload", "Sem peças usadas importadas", "Importe as planilhas de peças usadas para ver quem precisa ser cobrado.", `<button class="btn prim" data-acao="ir" data-pagina="importar">Importar planilhas</button>`);
   const s = UI.cob;
-  const busca = normBusca(s.busca);
   const contagem = {};
   const porAba = {};
   for (const a of ABAS_COB) {
     porAba[a.id] = D.tecnicos.filter((t) => itensDaAba(t, a.id, D.hoje).length);
     contagem[a.id] = porAba[a.id].length;
   }
-  let lista = porAba[s.aba] || [];
-  if (s.foco) lista = lista.filter(t => tecnicoNoFocoCobranca(t, s.foco, D.hoje));
-  if (s.regiao) lista = lista.filter((t) => t.regiao === s.regiao);
-  if (busca) lista = lista.filter((t) => normBusca(t.nome + " " + t.nomeOriginal).includes(busca));
+  let lista = filtrarCobrancas(D, s);
   const maxAba = (t) => Math.max(0, ...itensDaAba(t, s.aba, D.hoje).map((i) => i.dias));
   const qtdAba = (t) => somar(itensDaAba(t, s.aba, D.hoje), (i) => i.qtd);
   if (s.ordem === "pecas") lista = [...lista].sort((a, b) => qtdAba(b) - qtdAba(a));

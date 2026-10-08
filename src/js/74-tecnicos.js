@@ -2,16 +2,20 @@
    Página: Técnicos (cadastro) e ficha individual do técnico.
    ========================================================================== */
 
+function filtrarTecnicos(D, s = UI.tc) {
+  const busca = normBusca(s.busca);
+  return D.tecnicos.filter(t => t.tipo === s.tipo && (s.tipo === 'ignorar' || t.temDados || s.mostrarSemDados)
+    && (!s.localidade || (s.localidade === 'nao-informado' ? !t.localidade : t.localidade === s.localidade))
+    && (!s.regiao || t.regiao === s.regiao)
+    && (!busca || normBusca(`${t.nome} ${t.nomeOriginal} ${t.telefone} ${t.email}`).includes(busca)));
+}
+
 function renderTecnicos() {
   if (UI.tid) return renderFicha(UI.tid);
   const D = derivar();
   const s = UI.tc;
-  const busca = normBusca(s.busca);
   const contar = (tipo) => D.tecnicos.filter((t) => t.tipo === tipo && (tipo === "ignorar" || t.temDados)).length;
-  let lista = D.tecnicos.filter((t) => t.tipo === s.tipo && (s.tipo === "ignorar" || t.temDados || s.mostrarSemDados));
-  if (s.localidade) lista = lista.filter(t => s.localidade === "nao-informado" ? !t.localidade : t.localidade === s.localidade);
-  if (s.regiao) lista = lista.filter((t) => t.regiao === s.regiao);
-  if (busca) lista = lista.filter((t) => normBusca(`${t.nome} ${t.nomeOriginal} ${t.telefone} ${t.email}`).includes(busca));
+  let lista = filtrarTecnicos(D, s);
   lista = ordenarLista(lista, s.ordem, {
     nome: (t) => t.nome, usadas: (t) => t.nUsadas, atrasadas: (t) => t.nAtrasadas, maxDias: (t) => t.maxDias,
     novas: (t) => t.novasQtd, media: (t) => t.mediaDiasDev,

@@ -189,6 +189,8 @@ Quando as colunas não cabem na tela, uma **barra horizontal inferior** acompanh
 
 ### Consulta avançada e rankings
 
+Os campos de pesquisa sugerem até **seis opções enquanto você digita**, conforme os filtros da tela: técnicos por nome e peças por descrição/código, além dos documentos disponíveis. Selecione por clique/toque ou use **↑/↓ e Enter**. A **lupa ao lado do campo** pesquisa o texto digitado; Escape fecha as sugestões. As opções também estão disponíveis no histórico e na janela **Estoque por peça** dos relatórios. Na consulta avançada, a seleção aplica os demais filtros preenchidos e preserva os códigos separados por vírgula ou ponto e vírgula.
+
 **Consulta avançada**, no menu lateral, localiza materiais por nome ou código, inclusive códigos com zeros à esquerda. Combine palavras para refinar a descrição ou separe códigos por vírgula/ponto e vírgula. Os filtros incluem técnico, UF, novas/usadas, posição atual/histórico, família, situação, tipo de envio, chamado/NF/remessa, datas, dias e quantidade por registro. Campos ausentes no relatório não são inventados. A visão por responsável agrupa as quantidades; **Ver peças** abre seu detalhamento. **Exportar resultado** exporta todas as linhas filtradas, não apenas a página exibida.
 
 Na **Visão geral**, os rankings têm filtros de **esta semana** (segunda-feira até hoje), **este mês** (dia 1 até hoje), **intervalo personalizado** (data inicial e final inclusivas), UF e novas/usadas, com usadas selecionadas inicialmente:
@@ -272,6 +274,7 @@ python3 -m http.server 8000 --directory dist
 # Em outro terminal, com Playwright e Chromium instalados:
 node testes/operacao-e2e.mjs
 node testes/agenda-e2e.mjs
+node testes/pesquisas-e2e.mjs
 node testes/gestao-e2e.mjs
 node testes/interface-e2e.mjs
 node testes/notificacoes-e2e.mjs

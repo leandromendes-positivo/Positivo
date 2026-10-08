@@ -24,6 +24,7 @@ function toast(msg, tipo = "ok", { acao, aoAgir, duracao = 4200 } = {}) {
 let sequenciaModal = 0;
 /** Janela modal. Devolve {el, fechar}. */
 function abrirModal({ titulo, subtitulo = "", corpo = "", rodape = "", largura = "", aoFechar }) {
+  Pesquisas.fechar();
   const fundo = document.createElement("div");
   const idTitulo = `modal-titulo-${++sequenciaModal}`;
   fundo.className = "modal-fundo";
@@ -39,6 +40,7 @@ function abrirModal({ titulo, subtitulo = "", corpo = "", rodape = "", largura =
   const janelaAtual = () => [...document.querySelectorAll(".modal-fundo")].at(-1);
   const fechar = () => {
     if (!fundo.isConnected) return;
+    Pesquisas.fechar(fundo);
     fundo.remove();
     Camadas.atualizar();
     document.removeEventListener("keydown", tecla);
@@ -65,6 +67,7 @@ function abrirModal({ titulo, subtitulo = "", corpo = "", rodape = "", largura =
   document.body.appendChild(fundo);
   Camadas.atualizar();
   Calendarios.preparar(fundo);
+  Pesquisas.preparar(fundo);
   setTimeout(() => {
     // A aba inicial pode ocultar campos. Não roube o foco de quem já começou a editar.
     if (!fundo.isConnected || janelaAtual() !== fundo || fundo.contains(document.activeElement)) return;

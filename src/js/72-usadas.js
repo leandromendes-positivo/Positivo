@@ -15,8 +15,7 @@ const FILTROS_STATUS = [
 ];
 const POR_PAGINA = 50;
 
-function filtrarUsadas(D) {
-  const s = UI.us;
+function filtrarUsadas(D, s = UI.us) {
   const fs = FILTROS_STATUS.find((x) => x.id === s.status);
   const busca = normBusca(s.busca);
   return D.itens.filter((i) =>
@@ -113,12 +112,15 @@ function tabelaUsadas(D) {
     ${paginacao(lista.length, s.pagina, POR_PAGINA, "us")}`;
 }
 
-function tabelaDevolvidas(D) {
-  const s = UI.us;
+function filtrarDevolvidas(s = UI.us) {
   const busca = normBusca(s.busca);
-  let lista = E.devolucoes.filter((d) =>
+  return E.devolucoes.filter((d) =>
     (!s.regiao || d.regiao === s.regiao) && (!s.tid || d.tid === s.tid) &&
     (!busca || normBusca(`${nomeTecnico(d.tid)} ${d.chamado} ${d.mat} ${E.catalogo[d.mat] || ""}`).includes(busca)));
+}
+function tabelaDevolvidas(D) {
+  const s = UI.us;
+  let lista = filtrarDevolvidas(s);
   lista = [...lista].sort((a, b) => comparar(b.em, a.em));
   if (!lista.length) {
     return vazio("retorno", "Nenhuma devolução registrada", "Quando uma peça usada sumir do relatório numa importação, ela aparece aqui com a data e quantos dias ficou com o técnico.");

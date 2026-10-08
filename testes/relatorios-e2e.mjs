@@ -2,6 +2,7 @@
 import { createRequire } from 'node:module';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import { preencherData } from './calendario-ajudante.mjs';
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PW_PATH || 'playwright');
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM || undefined });
@@ -60,11 +61,11 @@ try {
   await baixar('indicadores', 'relatorio-indicadores.xlsx'); await baixar('simples', 'relatorio-simples.xlsx'); await baixar('pdf', 'relatorio.pdf');
   // Filtros reais pelo formulário, incluindo histórico anterior a 120 dias.
   const formulario = page.locator('[data-form="relatorios"]');
-  await formulario.locator('[name="inicio"]').fill('2026-05-01'); await formulario.locator('[name="fim"]').fill('2026-05-31');
+  await preencherData(formulario.locator('[name="inicio"]'), '2026-05-01'); await preencherData(formulario.locator('[name="fim"]'), '2026-05-31');
   await formulario.locator('[type="submit"]').click();
   assert.equal(await page.evaluate(() => calcularRelatorio().k.devolvidas), 2);
   assert.equal(await page.evaluate(() => calcularRelatorio().k.estoque), 33, 'datas não escondem estoque atual');
-  await formulario.locator('[name="inicio"]').fill('2026-10-07'); await formulario.locator('[name="fim"]').fill('2026-10-01');
+  await preencherData(formulario.locator('[name="inicio"]'), '2026-10-07'); await preencherData(formulario.locator('[name="fim"]'), '2026-10-01');
   await formulario.locator('[type="submit"]').click(); assert.match(await formulario.locator('[role="alert"]').innerText(), /posterior/);
   assert.equal(await page.evaluate(() => UIrelatorios.filtros.inicio), '2026-05-01', 'intervalo inválido não substitui o aplicado');
   await page.locator('[data-acao="relatorios-limpar"]').click();

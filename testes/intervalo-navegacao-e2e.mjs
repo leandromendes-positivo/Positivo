@@ -3,6 +3,7 @@ import { createRequire } from 'node:module';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import { preencherData } from './calendario-ajudante.mjs';
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PW_PATH || 'playwright');
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM || undefined });
@@ -35,7 +36,7 @@ try {
   await page.locator('[data-valor="intervalo"]').click();
   const form = page.locator('[data-form="ranking-intervalo"]');
   async function aplicar(inicio, fim) {
-    await form.locator('[name="inicio"]').fill(inicio); await form.locator('[name="fim"]').fill(fim);
+    await preencherData(form.locator('[name="inicio"]'), inicio); await preencherData(form.locator('[name="fim"]'), fim);
     await form.locator('[type="submit"]').click();
     await page.waitForFunction(() => !!dadosDesempenhoRanking());
   }
@@ -56,15 +57,16 @@ try {
   await aplicar('2024-01-12', '2024-01-12');
   assert.equal(await page.evaluate(() => dadosDesempenhoRanking().uso[0].uso), 6, 'intervalo de um único dia');
   // Erros não trocam o intervalo aplicado nem alteram os indicadores.
-  await form.locator('[name="inicio"]').fill('2024-01-13');
+  await preencherData(form.locator('[name="inicio"]'), '2024-01-13');
   await form.locator('[type="submit"]').click();
   assert.match(await form.locator('[role="alert"]').innerText(), /igual ou posterior/);
   assert.equal(await page.evaluate(() => UIranking.inicio), '2024-01-12');
-  await form.locator('[name="fim"]').fill('2027-01-01');
+  // Uma atribuição externa também continua sujeita à validação nativa do formulário.
+  await form.locator('[name="fim"]').evaluate(el => { el.value = '2027-01-01'; el.dispatchEvent(new Event('input', { bubbles: true })); });
   await form.locator('[type="submit"]').click();
   assert.equal(await form.locator('[name="fim"]').evaluate(e => e.validity.rangeOverflow), true);
   assert.equal(await page.evaluate(() => UIranking.fim), '2024-01-12');
-  await form.locator('[name="inicio"]').fill('');
+  await preencherData(form.locator('[name="inicio"]'), '');
   await form.locator('[type="submit"]').click();
   assert.equal(await form.locator('[name="inicio"]').evaluate(e => e.validity.valueMissing), true);
   assert.equal(await page.evaluate(() => { try { periodoDesempenho('intervalo', hojeISO(), { inicio: '2024-02-30', fim: '2024-03-01' }); return false; } catch { return true; } }), true);

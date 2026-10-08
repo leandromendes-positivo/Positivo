@@ -3,6 +3,7 @@
 // PW_PATH=/caminho/playwright CHROMIUM=/usr/bin/chromium node testes/operacao-e2e.mjs
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
+import { preencherData } from './calendario-ajudante.mjs';
 import fs from "node:fs";
 import path from "node:path";
 const require = createRequire(import.meta.url);
@@ -74,7 +75,7 @@ try {
 
   // Cobrança real pela interface atualiza a fila e a agenda, mas não dá baixa.
   await page.locator('.fila-operacao [data-acao="cobrar"]').first().click();
-  await page.fill('input[name="previsao"]', "2026-10-08");
+  await preencherData(page.locator('input[name="previsao"]'), "2026-10-08");
   await page.locator("[data-registrar]").click();
   await page.waitForFunction(() => !document.querySelector(".modal") && derivar().kpi.cobrarTecnicos === 2);
   await page.locator('[data-acao="painel-dia"][data-dia="2026-10-08"]').click();

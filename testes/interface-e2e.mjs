@@ -1,6 +1,7 @@
 // Regressão dos estados de seleção, botões, avisos e janelas. Somente dados fictícios em memória.
 import { createRequire } from 'node:module';
 import assert from 'node:assert/strict';
+import { preencherData } from './calendario-ajudante.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 const require = createRequire(import.meta.url);
@@ -88,7 +89,7 @@ try {
     await page.keyboard.press('Shift+Tab');
     assert.equal(await ultimo.evaluate((e) => document.activeElement === e), true);
     const previsao = tema === 'dark' ? '2026-10-08' : '2026-10-09';
-    await page.fill('#prev-data', previsao);
+    await preencherData(page.locator('#prev-data'), previsao);
     await page.locator('[data-salvar]').click();
     await page.waitForFunction(() => !document.querySelector('.modal'));
     await page.waitForFunction((data) => [...document.querySelectorAll('[data-mudar="previsao-item"]')].every((e) => e.value === data), previsao);

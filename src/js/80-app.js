@@ -72,7 +72,7 @@ function renderizar(forcar = false) {
   const seletorFoco = ativo && conteudo.contains(ativo)
     ? [...ativo.attributes].filter((a) => a.name.startsWith("data-")).map((a) => `[${a.name}="${CSS.escape(a.value)}"]`).join("") : "";
   // não atrapalha quem está digitando: refaz a tela quando sair do campo
-  if (!forcar && ativo && conteudo.contains(ativo) && /^(INPUT|TEXTAREA|SELECT)$/.test(ativo.tagName) && ativo.type !== "checkbox") {
+  if (!forcar && (Calendarios.ativo() || (ativo && conteudo.contains(ativo) && /^(INPUT|TEXTAREA|SELECT)$/.test(ativo.tagName) && ativo.type !== "checkbox"))) {
     renderPendente = true;
     return;
   }
@@ -95,6 +95,7 @@ function renderizar(forcar = false) {
   UI.posRender = null;
   conteudo.dataset.pagina = UI.pagina;
   conteudo.innerHTML = cabecalhoSecao(UI.pagina, derivar()) + p.render();
+  Calendarios.preparar(conteudo);
   if (!podeAdministrar()) {
     document.querySelectorAll('[data-acao="editar-tecnico"], [data-acao="editar-prazos"], [data-acao="consulta-classificar"], [data-acao="desfazer-importacao"]').forEach(el=>el.disabled=true);
     document.querySelectorAll('[data-mudar="tipo-tecnico"]').forEach(el=>el.disabled=true);

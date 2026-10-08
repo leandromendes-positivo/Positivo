@@ -10,6 +10,7 @@ const FILTROS_STATUS = [
   { id: "vencendo", rotulo: "Vencem em breve", f: (i) => i.status === "vencendo" },
   { id: "no_prazo", rotulo: "No prazo", f: (i) => i.status === "no_prazo" },
   { id: "aguardando", rotulo: "Com previsão", f: (i) => !!i.previsao },
+  { id: "sem_previsao", rotulo: "Sem previsão", f: (i) => !i.previsao },
   { id: "previsao_vencida", rotulo: "Previsão vencida", f: (i) => i.status === "previsao_vencida" },
 ];
 const POR_PAGINA = 50;

@@ -308,15 +308,6 @@ body { font-size: 14px; }
 .regiao-barra { flex: 1; height: 4px; background: var(--surface-3); }
 .regiao-barra i { display: block; height: 100%; background: var(--risco); transition: width .5s; }
 .mapa-nota { font-size: 9px; }
-.cartao-agenda { margin-bottom: 18px; }
-.agenda-dia { padding: 12px 6px; border-radius: 5px; background: var(--surface); }
-.agenda-dia strong { font: 500 22px var(--f-mono); }
-.agenda-dia.ativo { background: var(--accent-soft); box-shadow: none; }
-.agenda-dia:hover { transform: translateY(-2px); }
-.agenda-resumo > strong { font-weight: 600; font-size: 19px; }
-.agenda-tecnico, .agenda-vazia { border-radius: 5px; }
-.agenda-tecnico .avatar { border-radius: 4px; }
-.agenda-nota { font-size: 10px; }
 .anel-prazos strong { font: 500 31px var(--f-mono); letter-spacing: -.05em; }
 .anel-valor { stroke: var(--good); filter: none; }
 .saude-legenda i { background: var(--good); }

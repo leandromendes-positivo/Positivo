@@ -161,7 +161,7 @@ O sino faz um único balanço rápido de 320 ms, sem atraso, quando o cursor ent
 
 - **Indicadores no topo:** peças pendentes, técnicos a cobrar, compromissos de hoje e estoque conhecido. Fotografias cobrem todo o fundo dos cartões nos dois temas, com enquadramento proporcional e sobreposição para leitura dos números. As barras representam peças dentro/fora do prazo, contatos da fila atual, compromissos dos próximos 7 dias e técnicos dentro ou acima do limite de estoque. Os cartões abrem as consultas correspondentes e limpam filtros antigos.
 - **Prioridades de cobrança:** técnicos a cobrar, previsões vencidas e devoluções previstas hoje. As promessas vencidas aparecem primeiro, seguidas das peças mais antigas. O botão **Cobrar** abre o registro de contato e previsão.
-- **Agenda de devoluções:** compromissos dos próximos 7 dias, com quantidade de peças e técnicos por data. Registrar uma previsão não confirma a devolução.
+- **Agenda de devoluções:** calendário semanal de segunda a domingo, com setas para trocar a semana e botão Hoje. Mostra previsões vencidas, peças previstas hoje e peças sem previsão. Cada compromisso agrupa somente as peças do mesmo técnico e da mesma data, permite conferir códigos/chamados, reagendar ou preparar a mensagem de cobrança/lembrete, e identifica quem agendou. Dias vazios indicam o próximo compromisso disponível. Registrar uma previsão não confirma a devolução: peças baixadas na próxima importação deixam a agenda, mantendo o histórico. As datas têm uma animação curta de folha de calendário, sem repetição contínua; as setas do teclado navegam pelos dias, Home/End vão aos extremos da semana e PageUp/PageDown trocam de semana.
 - **Mapa do Brasil:** selecione um estado para conferir pendências ou estoque. A escala de verde a coral representa quatro faixas da taxa de atraso: 0–10%, >10–25%, >25–50% e >50%. No modo Novas, representa a proporção de técnicos acima do limite máximo de estoque. Estados sem planilha usam hachuras; uma planilha vazia importada conta como dado conhecido. O mapa não usa localização individual dos técnicos.
 - **Indicadores e gráficos:** cumprimento do prazo, idade média ponderada pela quantidade de peças, atraso crítico (mais de duas vezes o prazo) e devoluções confirmadas em 7 dias. A evolução usa azul para pendências e coral tracejado para atrasos. O histórico começa com suas importações, sem números simulados.
 - **Demais telas:** cobranças, peças, estoque, técnicos, importação e configurações têm resumos operacionais, tabelas e filtros com a mesma organização visual. Relatórios de novas ausentes não contam como estoque zerado nem como estoque dentro do limite.
@@ -271,6 +271,7 @@ python3 build.py
 python3 -m http.server 8000 --directory dist
 # Em outro terminal, com Playwright e Chromium instalados:
 node testes/operacao-e2e.mjs
+node testes/agenda-e2e.mjs
 node testes/gestao-e2e.mjs
 node testes/interface-e2e.mjs
 node testes/notificacoes-e2e.mjs

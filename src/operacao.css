@@ -179,32 +179,6 @@ input:focus, select:focus, textarea:focus { box-shadow: 0 0 0 4px var(--accent-s
 .rodape-link .ic { width: 16px; height: 16px; transition: transform .25s var(--ease); }
 .rodape-link:hover .ic { transform: translateX(5px); }
 .rodape-link:hover { text-decoration: underline; text-underline-offset: 4px; }
-/* Agenda semanal com compromissos por data. */
-.cartao-agenda { margin-bottom: 26px; }
-.agenda-dias { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 10px; }
-.agenda-dia { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 16px 8px; border: 1px solid var(--line); background: var(--surface-2); border-radius: 13px; cursor: pointer; transition: .3s var(--ease); }
-.agenda-dia:hover { border-color: var(--accent); transform: translateY(-4px); box-shadow: var(--sombra); }
-.agenda-dia.ativo { color: var(--accent); background: var(--accent-soft); border-color: var(--accent); box-shadow: 0 4px 14px color-mix(in srgb, var(--accent) 10%, transparent); }
-.agenda-dia > span { font-size: 11px; text-transform: capitalize; color: var(--muted); }
-.agenda-dia strong { font-size: 26px; font-weight: 800; letter-spacing: -.045em; }
-.agenda-dia small { font-size: 11px; color: var(--muted); }
-.agenda-dia i { width: 5px; height: 5px; border-radius: 50%; background: var(--line-2); margin-top: 4px; }
-.agenda-dia i.com-previsao { background: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
-.agenda-detalhe { display: grid; grid-template-columns: minmax(0, .75fr) minmax(0, 1.25fr); gap: 26px; margin-top: 24px; padding-top: 22px; border-top: 1px solid var(--line); }
-.agenda-resumo .sobretitulo { font-size: 11px; }
-.agenda-resumo > strong { display: block; font-size: 21px; margin-top: 5px; font-weight: 800; letter-spacing: -.04em; }
-.agenda-resumo p { font-size: 12px; color: var(--muted); margin: 6px 0 0; }
-.agenda-tecnicos { max-height: 220px; overflow: auto; }
-.agenda-tecnico { display: flex; align-items: center; gap: 12px; border: 1px solid transparent; border-radius: 11px; padding: 12px; background: var(--surface-2); width: 100%; text-align: left; margin-bottom: 6px; cursor: pointer; transition: .2s; }
-.agenda-tecnico:hover { background: var(--accent-soft); border-color: var(--accent); }
-.agenda-tecnico > span:not(.avatar) { flex: 1; min-width: 0; }
-.agenda-tecnico strong { display: block; font-size: 12px; }
-.agenda-tecnico small { display: block; font-size: 11px; color: var(--muted); margin-top: 4px; }
-.agenda-tecnico .avatar { width: 32px; height: 32px; font-size: 11px; }
-.agenda-vazia { display: flex; align-items: center; gap: 16px; color: var(--muted); padding: 20px; background: var(--surface-2); border-radius: 12px; font-size: 12px; }
-.agenda-vazia > .ic { width: 26px; height: 26px; color: var(--accent); }
-.agenda-nota { display: flex; gap: 7px; align-items: center; color: var(--muted); font-size: 11px; padding-top: 15px; margin: 12px 0 0; }
-.agenda-nota > .ic { width: 14px; height: 14px; }
 /* Gráficos e indicadores, com contraste e exploração por teclado. */
 .saude-conteudo { display: flex; flex-direction: column; align-items: center; }
 .anel-prazos { width: 200px; height: 200px; position: relative; }
@@ -384,13 +358,6 @@ input:focus, select:focus, textarea:focus { box-shadow: 0 0 0 4px var(--accent-s
   .fila-operacao li > .btn { margin-left: 46px; }
   .fila-operacao .avatar { align-self: flex-start; }
   .fila-abas button { font-size: 10px; }
-  .agenda-dias { gap: 5px; }
-  .agenda-dia { padding: 12px 2px; border-radius: 9px; }
-  .agenda-dia > span { font-size: 9px; }
-  .agenda-dia strong { font-size: 21px; }
-  .agenda-dia small { font-size: 8px; }
-  .agenda-detalhe { grid-template-columns: minmax(0, 1fr); gap: 18px; }
-  .agenda-nota { align-items: flex-start; font-size: 10px; }
   .grade-analise { grid-template-columns: minmax(0, 1fr); }
   .cartao-devolucoes .lista-simples { grid-template-columns: minmax(0, 1fr); }
   .historico-inicial { padding: 20px 4px; min-height: 200px; }

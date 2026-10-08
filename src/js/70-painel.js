@@ -73,7 +73,7 @@ function boasVindas() {
   </section>`;
 }
 
-const UIpainel = { tabelas: new Set(), fila: "cobrar", dia: "", mapaModo: "usadas", regiao: "", periodo: 30, zoom: 1 };
+const UIpainel = { tabelas: new Set(), fila: "cobrar", dia: "", agendaVencidas: false, mapaModo: "usadas", regiao: "", periodo: 30, zoom: 1 };
 
 function renderPainel() {
   const D = derivar();
@@ -120,6 +120,7 @@ function tabelaEvolucao() {
 }
 function desenharPainel() {
   ligarMapaPainel();
+  ligarAgendaPainel();
   const D = derivar();
   const el = (id) => document.querySelector(`.grafico[data-grafico="${id}"]`);
   if (el("idade")) graficoColunas(el("idade"), {

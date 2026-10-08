@@ -25,27 +25,6 @@ function filaHoje(D) {
   </li>`).join("")}</ol><button class="rodape-link" data-acao="painel-cobrancas" data-aba="${aba}">Abrir lista completa · ${plural(lista.length, "técnico", "técnicos")}${icone("seta")}</button>` : vazio("ok", ...vazios[UIpainel.fila])), { sub: "Previsões vencidas primeiro. Depois, as peças mais antigas.", classe: "cartao-fila" });
 }
 
-function agendaDoPainel(D) {
-  return Array.from({ length: 7 }, (_, n) => {
-    const dia = somaDias(D.hoje, n);
-    const itens = D.itens.filter((i) => i.previsao === dia);
-    return { dia, itens, qtd: somar(itens, (i) => i.qtd), tecnicos: agrupar(itens, (i) => i.tid) };
-  });
-}
-
-function agendaDevolucoes(D) {
-  const dias = agendaDoPainel(D);
-  if (!dias.some((d) => d.dia === UIpainel.dia)) UIpainel.dia = D.hoje;
-  const atual = dias.find((d) => d.dia === UIpainel.dia);
-  const botoes = `<div class="agenda-dias" aria-label="Dias com previsão de devolução">${dias.map((d, n) => `<button type="button" data-acao="painel-dia" data-dia="${d.dia}" aria-pressed="${d.dia === atual.dia}" class="agenda-dia ${d.dia === atual.dia ? "ativo" : ""}">
-    <span>${n === 0 ? "Hoje" : SEMANA[new Date(numDia(d.dia) * 86400000).getUTCDay()].slice(0, 3)}</span><strong>${d.dia.slice(8, 10)}</strong><small>${plural(d.qtd, "peça", "peças")}</small><i class="${d.qtd ? "com-previsao" : ""}"></i>
-  </button>`).join("")}</div>`;
-  const lista = [...atual.tecnicos.entries()].sort((a, b) => somar(b[1], (i) => i.qtd) - somar(a[1], (i) => i.qtd));
-  const detalhe = `<div class="agenda-detalhe"><div class="agenda-resumo"><span class="sobretitulo">${fmtData(atual.dia)}</span><strong>${plural(atual.qtd, "peça prevista", "peças previstas")}</strong><p>${lista.length ? `${plural(lista.length, "técnico combinou", "técnicos combinaram")} a devolução para esta data.` : "Nenhum técnico combinou uma devolução para esta data."}</p></div>
-    <div class="agenda-tecnicos">${lista.length ? lista.map(([tid, itens]) => `<button class="agenda-tecnico" data-acao="tecnico" data-tid="${esc(tid)}">${avatar(nomeTecnico(tid), "tecnico")}<span><strong>${esc(nomeTecnico(tid))}</strong><small>${[...new Set(itens.map((i) => i.regiao))].map(esc).join(", ")} · ${plural(somar(itens, (i) => i.qtd), "peça", "peças")}</small><small class="autoria-previsao">Agendado por ${esc(autoresAgenda(itens))}</small></span>${icone("direita")}</button>`).join("") : `<div class="agenda-vazia">${icone("calendario")}<span>As datas registradas nas cobranças aparecem aqui automaticamente.</span></div>`}</div></div>`;
-  return cartao("Agenda de devoluções", botoes + detalhe + `<p class="agenda-nota">${icone("info")}Previsão é um compromisso. A devolução só é confirmada quando a peça sai da próxima planilha importada.</p>`, { sub: "Os próximos 7 dias, a partir do que foi combinado com cada técnico.", classe: "cartao-agenda" });
-}
-
 function dadosMapa(D) {
   const tipo = UIpainel.mapaModo === "novas" ? "novas" : "usadas";
   return D.frescor.filter((f) => f.tipo === tipo && f.em).map((f) => D.porRegiao.find((r) => r.regiao === f.regiao) || { regiao: f.regiao, no_prazo: 0, vencendo: 0, cobrar: 0, aguardando: 0, total: 0, ideal: 0, acima: 0, excessoNovas: 0, novas: 0 });
@@ -132,7 +111,7 @@ function ajustarZoomMapa(passo) {
 function atualizarFiltroPainel(chave, valor, seletor) {
   const transformacaoAnterior = document.querySelector(".mapa-cena")?.style.transform;
   UIpainel[chave] = valor;
-  const alvos = { regiao: [".cartao-mapa", mapaOperacao], mapaModo: [".cartao-mapa", mapaOperacao], fila: [".cartao-fila", filaHoje], dia: [".cartao-agenda", agendaDevolucoes] };
+  const alvos = { regiao: [".cartao-mapa", mapaOperacao], mapaModo: [".cartao-mapa", mapaOperacao], fila: [".cartao-fila", filaHoje] };
   if (alvos[chave] && document.querySelector(alvos[chave][0])) {
     const [alvo, montar] = alvos[chave];
     document.querySelector(alvo).outerHTML = montar(derivar());
@@ -140,7 +119,7 @@ function atualizarFiltroPainel(chave, valor, seletor) {
       ligarMapaPainel();
       Movimento.animar(document.querySelector(".mapa-cena"), [{ transform: transformacaoAnterior }, { transform: transformacaoMapa() }], 600);
       Movimento.detalhe(document.querySelector(".mapa-detalhe"));
-    } else Movimento.detalhe(document.querySelector(alvo + (chave === "dia" ? " .agenda-detalhe" : " .fila-operacao")));
+    } else Movimento.detalhe(document.querySelector(alvo + " .fila-operacao"));
   } else {
     renderizar(true);
     Movimento.detalhe(document.querySelector(".cartao-evolucao .grafico"));

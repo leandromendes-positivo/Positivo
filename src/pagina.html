@@ -35,7 +35,11 @@
   </aside>
   <main class="principal">
     <header class="topo">
-      <div class="topo-identidade"><button type="button" class="btn-icone btn-mostrar-menu" data-acao="menu-lateral" aria-label="Mostrar menu lateral" aria-expanded="false" aria-controls="menu-lateral" title="Mostrar menu lateral"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16m5-11 3 3-3 3"/></svg></button><div><span class="topo-contexto">Positivo / Operação de campo</span><h1 id="titulo">Painel</h1><p id="subtitulo"></p></div></div>
+      <div class="topo-identidade">
+        <button type="button" class="btn-icone btn-mostrar-menu" data-acao="menu-lateral" aria-label="Mostrar menu lateral" aria-expanded="false" aria-controls="menu-lateral" title="Mostrar menu lateral"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16m5-11 3 3-3 3"/></svg></button>
+        <span class="topo-icone" id="topo-icone" aria-hidden="true"></span>
+        <div class="topo-texto"><div class="topo-contexto"><span>Positivo</span><span aria-hidden="true">/</span><span id="topo-grupo">Monitoramento</span></div><h1 id="titulo">Painel</h1><p id="subtitulo"></p></div>
+      </div>
       <div class="acoes-topo">
         <nav class="navegacao-secoes navegacao-secoes-topo" data-navegacao-secoes aria-label="Navegar entre seções"></nav>
         <button type="button" id="botao-notificacoes" class="btn botao-notificacoes" data-acao="notificacoes" aria-label="Notificações" aria-haspopup="dialog" aria-expanded="false" hidden>

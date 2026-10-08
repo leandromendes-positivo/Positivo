@@ -116,6 +116,10 @@ function atualizarMoldura() {
   document.getElementById("entrada-topo").closest("label").hidden = !podeAdministrar();
   const p = PAGINAS[UI.pagina];
   const titulo = document.getElementById("titulo");
+  const grupo = document.getElementById('topo-grupo');
+  grupo.textContent = p.admin ? 'Administração' : UI.pagina === 'conta' ? 'Minha conta' : ['consulta', 'inventario', 'relatorios'].includes(UI.pagina) ? 'Análises e consultas' : ['estoque', 'tecnicos'].includes(UI.pagina) ? 'Recursos' : 'Monitoramento';
+  const marca = document.getElementById('topo-icone'), simbolo = UI.tid ? 'pessoa' : p.icone;
+  if (marca.dataset.icone !== simbolo) { marca.innerHTML = icone(simbolo); marca.dataset.icone = simbolo; }
   const tituloTexto = UI.tid && D && D.mapa.get(UI.tid) ? "Ficha do técnico" : p.titulo;
   if (titulo) titulo.textContent = tituloTexto;
   const sub = document.getElementById("subtitulo");

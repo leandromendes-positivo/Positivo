@@ -122,7 +122,7 @@ function vazio(icon, titulo, texto, botao = "") {
   return `<div class="vazio">${icone(icon)}<h3>${esc(titulo)}</h3><p>${texto}</p>${botao}</div>`;
 }
 function cartao(titulo, corpo, { acoes = "", classe = "", sub = "" } = {}) {
-  return `<section class="cartao ${classe}"><header class="cartao-topo"><div><h2>${esc(titulo)}</h2>${sub ? `<p>${sub}</p>` : ""}</div>${acoes ? `<div class="cartao-acoes">${acoes}</div>` : ""}</header>${corpo}</section>`;
+  return `<section class="cartao cartao-separado ${classe}"><header class="cartao-topo"><div><h2>${esc(titulo)}</h2>${sub ? `<p>${sub}</p>` : ""}</div>${acoes ? `<div class="cartao-acoes">${acoes}</div>` : ""}</header><div class="cartao-corpo">${corpo}</div></section>`;
 }
 function paginacao(total, pagina, porPagina, alvo) {
   const paginas = Math.max(1, Math.ceil(total / porPagina));

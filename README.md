@@ -67,7 +67,7 @@ Abra o site → **Entrar com Google** ou **Entrar com Microsoft** com o e-mail d
 - **Cadastro de usuários:** administradores autorizam endereços exatos de qualquer domínio, atribuem perfis e desativam acessos. E-mail verificado e permissão ativa são exigidos no banco, inclusive se alguém tentar ignorar os botões da interface.
 - **Minha conta:** mostra o primeiro nome extraído do início do e-mail, o endereço e o perfil. O mesmo nome aparece ao lado do e-mail no rodapé do menu.
 - **Agendamentos:** nome do responsável nas previsões e na agenda; **Ficha do técnico → Histórico de agendamentos** mostra e-mail, horário e alterações. Registros anteriores sem autoria conhecida não recebem nomes inventados. Horários do servidor são exibidos em Brasília.
-- **Capital/interior:** **Técnicos → Editar cadastro → Localidade do técnico**. O campo começa como não informado e pode ser filtrado na lista e na consulta avançada; também aparece nas exportações.
+- **Capital/interior:** **Técnicos → Editar cadastro → Localidade do técnico**. O campo começa como não informado e serve apenas para identificar o técnico no cadastro, nas consultas e nas exportações, sem filtro por capital/interior.
 - **Login:** vídeo de circuitos do banco Pexels, incorporado ao próprio painel, com reprodução automática, silenciosa, em loop e sem controle de pausa. Inclui versões WebM/MP4, imagem de abertura, botões Google/Microsoft e enquadramento para celular. [Origem e licença do vídeo](src/assets/VIDEO-LICENCA.md).
 
 A ativação inicial exige configuração no Firebase e, para Microsoft, no Entra. Veja o [guia de implantação e segurança](seguranca/README.md). O workflow não publica o novo site se não conseguir publicar as regras do banco.
@@ -82,7 +82,7 @@ A ativação inicial exige configuração no Firebase e, para Microsoft, no Entr
 ### Relatórios gerenciais
 
 O menu **Relatórios** está disponível para usuários autorizados e administradores.
-Selecione o intervalo de datas, tipo de peça, UF, técnico e localidade, depois
+Selecione o intervalo de datas, tipo de peça, UF e técnico, depois
 clique em **Aplicar filtros**. Há atalhos para esta semana, este mês e últimos 30 dias.
 
 - **Indicadores:** estoque físico, peças acima do prazo, devoluções, pontualidade,
@@ -185,7 +185,7 @@ O botão **Recolher**, no topo do menu lateral, amplia a área do painel no comp
 
 No celular e em tablets com menu compacto, o menu abre sobre a página e tem **rolagem independente**. O fundo fica imóvel e não recebe cliques ou foco. Feche pelo botão, por Escape ou tocando na área escurecida: a página volta à mesma posição. Selecionar uma seção fecha o menu e abre a seção no topo. Ao passar para uma largura de computador, o menu compacto é encerrado automaticamente. Janelas e login também isolam a rolagem do fundo; os formulários acompanham a altura útil da tela, inclusive com teclado virtual.
 
-Quando as colunas não cabem na tela, uma **barra horizontal inferior** acompanha a tabela visível, sem precisar descer até a última linha. Arraste o controle, toque na barra, use suas setas ou a roda do mouse sobre ela; não é necessário segurar Shift. Pelo teclado, as setas deslocam as colunas, e Home/End vão ao início/fim. Funciona também nas fichas de técnicos e nos detalhes em janelas, adapta-se ao menu recolhido e desaparece quando a tabela cabe inteira.
+Quando as colunas não cabem na tela, uma **barra horizontal inferior** acompanha a tabela visível, substituindo a barra nativa enquanto está ativa, sem duplicação e sem precisar descer até a última linha. Arraste o controle, toque na barra, use suas setas ou a roda do mouse sobre ela; não é necessário segurar Shift. Pelo teclado, as setas deslocam as colunas, e Home/End vão ao início/fim. Funciona também nas fichas de técnicos e nos detalhes em janelas, adapta-se ao menu recolhido e desaparece quando a tabela cabe inteira.
 
 ### Consulta avançada e rankings
 

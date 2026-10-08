@@ -70,7 +70,7 @@ try {
   assert.equal(await page.evaluate(() => UIrelatorios.filtros.inicio), '2026-05-01', 'intervalo inválido não substitui o aplicado');
   await page.locator('[data-acao="relatorios-limpar"]').click();
   await formulario.locator('[name="tipo"]').selectOption('novas'); await formulario.locator('[name="tid"]').selectOption('bruno');
-  await formulario.locator('[name="localidade"]').selectOption('interior'); await formulario.locator('[name="regiao"]').selectOption('SC');
+  await formulario.locator('[name="regiao"]').selectOption('SC');
   await formulario.locator('[type="submit"]').click();
   assert.deepEqual(await page.evaluate(() => { const r = calcularRelatorio(); return [r.k.estoque, r.k.atrasadas, r.k.devolvidas, r.k.uso, r.k.classificar, r.k.excesso]; }), [6, 0, 0, 2, 9, 1]);
   await baixar('indicadores', 'filtrado-indicadores.xlsx'); await baixar('simples', 'filtrado-simples.xlsx'); await baixar('pdf', 'filtrado.pdf');
@@ -91,6 +91,8 @@ try {
   assert.match(await page.locator('[data-rel-pecas-lista]').innerText(), /17 peças/);
   await page.locator('[data-rel-peca-busca]').fill('NVMe');
   assert.match(await page.locator('[data-rel-pecas-lista]').innerText(), /000456/);
+  await page.keyboard.press('Escape');
+  assert.equal(await page.locator('.pesquisa-sugestoes:visible').count(), 0);
   await page.keyboard.press('Escape');
   await page.locator('.rel-dados-grafico summary').first().click(); assert.match(await page.locator('.rel-dados-grafico[open]').innerText(), /Dentro do prazo/i);
   await page.evaluate(() => { document.getElementById('toasts').innerHTML = ''; });

@@ -5,7 +5,6 @@
 function filtrarTecnicos(D, s = UI.tc) {
   const busca = normBusca(s.busca);
   return D.tecnicos.filter(t => t.tipo === s.tipo && (s.tipo === 'ignorar' || t.temDados || s.mostrarSemDados)
-    && (!s.localidade || (s.localidade === 'nao-informado' ? !t.localidade : t.localidade === s.localidade))
     && (!s.regiao || t.regiao === s.regiao)
     && (!busca || normBusca(`${t.nome} ${t.nomeOriginal} ${t.telefone} ${t.email}`).includes(busca)));
 }
@@ -28,7 +27,6 @@ function renderTecnicos() {
     ${numericos && s.tipo !== "ignorar" ? `<div class="faixa info compacta">${icone("info")}<div><strong>${plural(numericos, "identificador numérico foi classificado", "identificadores numéricos foram classificados")} como base/depósito</strong><span>Nos relatórios, códigos como 110301019 costumam ser estoques, não pessoas. Se algum for um técnico, troque o tipo na lista "Bases e depósitos" e dê um nome a ele.</span></div></div>` : ""}
     ${semWhats && s.tipo === "tecnico" ? `<div class="faixa neutra compacta">${icone("telefone")}<div><strong>${plural(semWhats, "técnico está", "técnicos estão")} sem WhatsApp cadastrado</strong><span>Com o número salvo, o botão Cobrar abre a conversa já com a mensagem pronta.</span></div></div>` : ""}
     <div class="barra-filtros">
-      <select data-mudar="localidade-tc" aria-label="Localidade dos técnicos"><option value="">Capital e interior</option>${[['capital','Capital'],['interior','Interior'],['nao-informado','Não informado']].map(([v,n])=>`<option value="${v}" ${s.localidade===v?'selected':''}>${n}</option>`).join('')}</select>
       <div class="chips">
         <button class="chip${s.tipo === "tecnico" ? " ativo" : ""}" data-acao="tipo-tc" data-tipo="tecnico">Técnicos <span>${contar("tecnico")}</span></button>
         <button class="chip${s.tipo === "base" ? " ativo" : ""}" data-acao="tipo-tc" data-tipo="base">Bases e depósitos <span>${contar("base")}</span></button>

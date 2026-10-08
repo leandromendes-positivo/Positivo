@@ -9,7 +9,7 @@ const UI = {
   cob: { aba: "cobrar", foco: "", regiao: "", busca: "", ordem: "dias", abertos: new Set() },
   us: { aba: "pendentes", status: "todas", regiao: "", tid: "", busca: "", faixa: null, ordem: { campo: "dias", dir: "desc" }, pagina: 1, paginaDev: 1, sel: new Set() },
   es: { regiao: "", status: "", busca: "", bases: false, ordem: { campo: "novasQtd", dir: "desc" }, abertos: new Set() },
-  tc: { tipo: "tecnico", localidade: "", regiao: "", busca: "", mostrarSemDados: false, ordem: { campo: "nome", dir: "asc" } },
+  tc: { tipo: "tecnico", regiao: "", busca: "", mostrarSemDados: false, ordem: { campo: "nome", dir: "asc" } },
   ficha: { tid: null, aba: "usadas", pagina: 1 },
   im: { fila: [], processando: false, progresso: "", resultado: null, erro: null },
 };
@@ -368,7 +368,6 @@ const MUDANCAS = {
   },
   "regiao-es": (el) => { UI.es.regiao = el.value; renderizar(true); },
   "inventario-filtro": el => { UIinventario[el.dataset.campo]=el.value;UIinventario.pagina=1;renderizar(true); },
-  "localidade-tc": (el) => { UI.tc.localidade = el.value; renderizar(true); },
   "regiao-tc": (el) => { UI.tc.regiao = el.value; renderizar(true); },
   "sem-dados-tc": (el) => { UI.tc.mostrarSemDados = el.checked; renderizar(true); },
   "tipo-tecnico": async (el) => {

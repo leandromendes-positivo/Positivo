@@ -6,6 +6,12 @@ const RolagemHorizontal = (() => {
   let observador;
   const agendar = () => { if (!quadro) quadro = requestAnimationFrame(atualizar); };
 
+  function selecionarTabela(el) {
+    if (ativa !== el) ativa?.classList.remove('rolagem-com-controle');
+    ativa = el;
+    ativa?.classList.add('rolagem-com-controle');
+  }
+
   function deslocar(valor) {
     if (!ativa?.isConnected) return;
     ativa.scrollLeft = Math.max(0, Math.min(ativa.scrollWidth - ativa.clientWidth, valor));
@@ -83,15 +89,17 @@ const RolagemHorizontal = (() => {
     const limites = { topo: Math.max(topo, modal ? caixaArea.top : menu), fim: Math.min(fim, modal ? caixaArea.bottom : fim) - 8 };
     const candidatos = [];
     for (const [el, dados] of tabelas) {
-      if (!area.contains(el) || dados.reserva.hidden || !el.getClientRects().length) continue;
-      const caixa = el.getBoundingClientRect(), visivel = Math.min(caixa.bottom, limites.fim) - Math.max(caixa.top, limites.topo);
-      if (visivel < Math.min(40, caixa.height) || limites.fim - Math.max(caixa.top, limites.topo) < altura) continue;
+      if (!area.contains(el) || dados.reserva.hidden || el.closest('details:not([open])') || !el.getClientRects().length) continue;
+      // A elegibilidade usa o conteúdo, sem a altura da barra nativa que será substituída.
+      const caixa = el.getBoundingClientRect(), fimConteudo = caixa.top + el.clientTop + el.clientHeight;
+      const visivel = Math.min(fimConteudo, limites.fim) - Math.max(caixa.top, limites.topo);
+      if (visivel < Math.min(40, el.clientHeight) || limites.fim - Math.max(caixa.top, limites.topo) < altura) continue;
       candidatos.push({ el, dados, caixa, visivel });
     }
     const focoNaBarra = barra.contains(document.activeElement);
     const alvo = candidatos.find(c => c.el === (focoNaBarra ? ativa : preferida)) || candidatos.sort((a,b) => b.visivel - a.visivel)[0];
-    if (!alvo || E.status !== 'pronto') { barra.hidden = true; ativa = null; return; }
-    ativa = alvo.el;
+    if (!alvo || E.status !== 'pronto') { barra.hidden = true; selecionarTabela(null); return; }
+    selecionarTabela(alvo.el);
     const esquerda = Math.max(8, alvo.caixa.left), direita = Math.min(document.documentElement.clientWidth - 8, alvo.caixa.right);
     const y = Math.min(alvo.dados.reserva.getBoundingClientRect().top, limites.fim - altura);
     barra.style.left = `${esquerda}px`; barra.style.top = `${y}px`; barra.style.width = `${Math.max(0, direita - esquerda)}px`;

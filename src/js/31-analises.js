@@ -33,7 +33,7 @@ function linhasConsulta(D = derivar()) {
   for (const m of E.movimentos) completar({ ...m, prazo: prazoDaDevolucao(m, 'novas', D.cfg), tipo: 'novas', origem: 'saida', data: m.em.slice(0, 10), referencia: 'Saída do relatório', status: m.destino, situacao: DESTINOS_NOVAS[m.destino] || DESTINOS_NOVAS.pendente, atrasada: m.dias > prazoDaDevolucao(m, 'novas', D.cfg), atraso: Math.max(0, m.dias - prazoDaDevolucao(m, 'novas', D.cfg)) });
   return linhas;
 }
-const FILTROS_CONSULTA = { busca: '', correspondencia: 'termos', tecnico: '', tid: '', tipo: '', origem: 'atual', regiao: '', localidade: '', familia: '', situacao: '', envio: '', documento: '', inicio: '', fim: '', diasMin: '', diasMax: '', qtdMin: '', qtdMax: '', responsavel: 'tecnico' };
+const FILTROS_CONSULTA = { busca: '', correspondencia: 'termos', tecnico: '', tid: '', tipo: '', origem: 'atual', regiao: '', familia: '', situacao: '', envio: '', documento: '', inicio: '', fim: '', diasMin: '', diasMax: '', qtdMin: '', qtdMax: '', responsavel: 'tecnico' };
 function filtrarConsulta(linhas, f) {
   const opcoesBusca = limpar(f.busca).split(/[;,]+/).map((s) => limpar(s)).filter(Boolean);
   const nomes = normBusca(limpar(f.tecnico)).split(/\s+/).filter(Boolean);
@@ -45,7 +45,6 @@ function filtrarConsulta(linhas, f) {
     if (f.origem === 'devolvida' && !(i.origem === 'devolvida' || (i.origem === 'saida' && i.destino === 'devolucao'))) return false;
     if (f.origem === 'saida' && i.origem !== 'saida') return false;
     if (f.regiao && i.regiao !== f.regiao) return false;
-    if (f.localidade && (f.localidade === 'nao-informado' ? i.localidade : i.localidade !== f.localidade)) return false;
     if (f.familia && i.familia !== f.familia) return false;
     if (f.situacao && (f.situacao === 'atrasada' ? !i.atrasada : f.situacao === 'em_dia' ? i.atrasada : i.status !== f.situacao)) return false;
     if (f.envio && i.tipoEnvio !== f.envio) return false;

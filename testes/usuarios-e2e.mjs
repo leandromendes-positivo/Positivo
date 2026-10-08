@@ -29,8 +29,7 @@ try {
  await admin.locator('[name="localidade"]').selectOption('interior');await admin.locator('.modal [data-salvar]').click();
  await admin.waitForFunction(tid=>E.cadastro[tid].localidade==='interior',tid);
  await admin.evaluate(()=>irPara('tecnicos'));
- await admin.locator('[data-mudar="localidade-tc"]').selectOption('interior');
- await admin.waitForFunction(()=>document.querySelectorAll('#conteudo tbody tr').length===1);
+ assert.match(await admin.locator('tr').filter({has:admin.locator(`[data-acao="tecnico"][data-tid="${tid}"]`)}).innerText(),/Interior/);
  await admin.reload();await admin.waitForFunction(()=>E.status==='pronto');
  assert.equal(await admin.evaluate(tid=>E.cadastro[tid].localidade,tid),'interior');
  await admin.locator('[data-nav="usuarios"]').click();await admin.locator('[data-acao="novo-usuario"]').click();

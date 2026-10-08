@@ -46,6 +46,7 @@ try {
       throw erro;
     });
     await page.waitForFunction(el => Math.abs(document.querySelector('.rolagem-horizontal').getBoundingClientRect().width - el.clientWidth) < 3, await tabela.elementHandle());
+    assert.equal(await tabela.evaluate(el => getComputedStyle(el).scrollbarWidth), 'none', 'controle substitui a barra nativa sem duplicar');
     const rect = await barra.boundingBox();
     assert.ok(rect.x >= 0 && rect.x + rect.width <= page.viewportSize().width + 1 && rect.y >= 0 && rect.y + rect.height <= page.viewportSize().height, 'barra inteira dentro da tela');
   }
@@ -84,7 +85,7 @@ try {
   await conferirColunas(tabela);
   await page.evaluate(() => { UI.us.pagina = 1; renderizar(true); });
   // Todas as seções, ambas as paletas e larguras de computador/tablet/celular.
-  const paginas = ['painel', 'cobrancas', 'usadas', 'devolvidas', 'consulta', 'inventario', 'estoque', 'tecnicos', 'ficha-novas', 'importar', 'config', 'usuarios', 'conta'];
+  const paginas = ['painel', 'cobrancas', 'usadas', 'devolvidas', 'consulta', 'inventario', 'estoque', 'tecnicos', 'relatorios', 'ficha-novas', 'importar', 'config', 'usuarios', 'conta'];
   for (const tema of ['dark', 'light']) {
     await page.evaluate(tema => document.documentElement.dataset.theme = tema, tema);
     for (const width of [1366, 1024, 390, 320]) {
@@ -99,6 +100,10 @@ try {
           if (pagina === 'cobrancas') { UI.cob.abertos = new Set(derivar().cobrarTec.map(t => t.tid)); renderizar(true); }
         }, pagina);
         if (pagina === 'inventario') await page.waitForFunction(() => !UIinventario.carregando);
+        if (pagina === 'relatorios') {
+          await page.waitForFunction(() => relatorioPronto());
+          for (const resumo of await page.locator('.rel-dados-grafico summary').all()) await resumo.click();
+        }
         await page.waitForFunction(() => [...document.querySelectorAll('.tabela-rolagem')].every(el => el.id));
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `${tema}/${width}/${pagina}: sem corte na página`);
         assert.equal(await page.locator('#conteudo table').evaluateAll(es => es.every(el => el.closest('.tabela-rolagem'))), true, `${pagina}: tabelas protegidas`);

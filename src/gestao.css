@@ -369,6 +369,9 @@ select, input[type="text"], input[type="date"], input[type="number"], textarea {
 .rail::-webkit-scrollbar, .modal-corpo::-webkit-scrollbar { width: 12px; }
 .tabela-rolagem::-webkit-scrollbar-track, .abas::-webkit-scrollbar-track, .rail::-webkit-scrollbar-track, .modal-corpo::-webkit-scrollbar-track { background: var(--surface-3); }
 .tabela-rolagem::-webkit-scrollbar-thumb, .abas::-webkit-scrollbar-thumb, .rail::-webkit-scrollbar-thumb, .modal-corpo::-webkit-scrollbar-thumb { background: var(--muted); border: 3px solid var(--surface-3); border-radius: 8px; }
+/* A tabela controlada usa só a barra com setas. As demais mantêm a barra nativa. */
+.tabela-rolagem.rolagem-com-controle { scrollbar-width: none; }
+.tabela-rolagem.rolagem-com-controle::-webkit-scrollbar { height: 0; }
 .tabela-rolagem:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .rolagem-reserva { height: 54px; }
 .rolagem-horizontal { position: fixed; z-index: 35; box-sizing: border-box; height: 54px; display: flex; align-items: center; gap: 10px; padding: 6px 8px; background: var(--surface); color: var(--ink); border: 1px solid var(--line-2); border-radius: 7px; box-shadow: 0 -3px 16px #00000018; }

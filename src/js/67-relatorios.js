@@ -1,6 +1,6 @@
 /* Relatório gerencial: saldo atual separado das saídas observadas no período. */
 function filtrosIniciaisRelatorio() {
-  return { inicio: hojeISO().slice(0, 7) + '-01', fim: hojeISO(), tipo: '', regiao: '', tid: '', localidade: '' };
+  return { inicio: hojeISO().slice(0, 7) + '-01', fim: hojeISO(), tipo: '', regiao: '', tid: '' };
 }
 const UIrelatorios = { filtros: filtrosIniciaisRelatorio(), rascunho: null, pagina: 1, exportando: '' };
 const relatorioHistorico = { chave: '', pedido: 0, carregando: false, erro: '', devolucoes: [], movimentos: [] };
@@ -56,7 +56,6 @@ function calcularRelatorio(f = UIrelatorios.filtros, H = relatorioHistorico, D =
   const intervalo = periodoDesempenho('intervalo', D.hoje, f);
   const permitido = i => (E.cadastro[i.tid]?.tipo || 'tecnico') === 'tecnico'
     && (!f.tid || i.tid === f.tid) && (!f.regiao || i.regiao === f.regiao)
-    && (!f.localidade || (E.cadastro[i.tid]?.localidade || 'nao_informada') === f.localidade)
     && (!f.tipo || i.tipo === f.tipo);
   const completar = i => ({ ...i, nome: nomeTecnico(i.tid), desc: E.catalogo[i.mat] || 'Sem descrição', localidade: LOCALIDADES[E.cadastro[i.tid]?.localidade || ''] || 'Não informada' });
   const estoque = linhasConsulta(D).filter(i => i.origem === 'atual' && permitido(i)).map(completar);
@@ -113,7 +112,7 @@ function calcularRelatorio(f = UIrelatorios.filtros, H = relatorioHistorico, D =
   devolucoes.forEach(i => { const b = fluxo.get(chaveData(i.em)); if (b) b[i.tipo] += i.qtd; });
   const regioesTecnico = new Set([...estoque, ...saidas, ...(f.tid && D.mapa.has(f.tid) ? [D.mapa.get(f.tid)] : [])].map(i => i.regiao));
   const frescor = D.frescor.filter(i => (!f.regiao || i.regiao === f.regiao) && (!f.tipo || i.tipo === f.tipo) && (!f.tid || regioesTecnico.has(i.regiao)));
-  const filtros = [f.tipo === 'usadas' ? 'Peças usadas' : f.tipo === 'novas' ? 'Peças novas' : 'Novas e usadas', f.regiao || 'Todas as UFs', f.tid ? nomeTecnico(f.tid) : 'Todos os técnicos', !f.localidade ? 'Todas as localidades' : f.localidade === 'nao_informada' ? 'Localidade não informada' : LOCALIDADES[f.localidade]];
+  const filtros = [f.tipo === 'usadas' ? 'Peças usadas' : f.tipo === 'novas' ? 'Peças novas' : 'Novas e usadas', f.regiao || 'Todas as UFs', f.tid ? nomeTecnico(f.tid) : 'Todos os técnicos'];
   return { filtros: { ...f }, filtrosTexto: filtros.join(' · '), ...intervalo, emitido: agoraISO(), hoje: D.hoje, k, estoque, saidas, tecnicos, fluxo: [...fluxo.values()], mensal, porPeca, frescor, notas: [...NOTAS_RELATORIO] };
 }
 function indicadoresRelatorio(r) {
@@ -220,7 +219,7 @@ function renderRelatorios() {
   const cabecalho = `<section class="relatorios" aria-label="Relatórios gerenciais"><header class="rel-intro"><div><span class="sobretitulo">INFORMAÇÃO GERENCIAL</span><h2>Relatórios da operação</h2><p>Indicadores para decidir. Dados completos quando você precisar aprofundar.</p></div>${imagemCabecalho()}</header><div class="rel-exportacoes">${formatos.map(([formato, titulo, sub, ic]) => `<button class="btn rel-exportar ${formato === 'indicadores' ? 'prim' : ''}" data-acao="relatorios-exportar" data-formato="${formato}" ${!pronto || UIrelatorios.exportando ? 'disabled' : ''}>${icone(ic)}<span><strong>${UIrelatorios.exportando === formato ? 'Preparando…' : titulo}</strong><small>${sub}</small></span>${icone('baixar')}</button>`).join('')}</div>
     <form class="rel-filtros" data-form="relatorios" aria-label="Filtros dos relatórios"><div class="rel-filtros-topo"><strong>${icone('filtro')}Defina o recorte</strong><div class="rel-atalhos">${[['semana', 'Esta semana'], ['mes', 'Este mês'], ['30dias', 'Últimos 30 dias']].map(([v, t]) => `<button type="button" class="btn pequeno" data-acao="relatorios-periodo" data-periodo="${v}">${t}</button>`).join('')}</div></div><div class="rel-campos">
     <label class="campo"><span>Saídas a partir de</span><input type="date" name="inicio" required max="${hojeISO()}" value="${esc(f.inicio)}"></label><label class="campo"><span>Até</span><input type="date" name="fim" required max="${hojeISO()}" value="${esc(f.fim)}"></label>
-    ${select('tipo', 'Tipo de peça', [['', 'Novas e usadas'], ['usadas', 'Usadas'], ['novas', 'Novas']])}${select('regiao', 'Estado', [['', 'Todas as UFs'], ...regioes.map(uf => [uf, uf])])}${select('tid', 'Técnico', [['', 'Todos os técnicos'], ...tecnicos.map(t => [t.tid, t.nome])])}${select('localidade', 'Localidade', [['', 'Todas'], ['capital', 'Capital'], ['interior', 'Interior'], ['nao_informada', 'Não informada']])}</div>
+    ${select('tipo', 'Tipo de peça', [['', 'Novas e usadas'], ['usadas', 'Usadas'], ['novas', 'Novas']])}${select('regiao', 'Estado', [['', 'Todas as UFs'], ...regioes.map(uf => [uf, uf])])}${select('tid', 'Técnico', [['', 'Todos os técnicos'], ...tecnicos.map(t => [t.tid, t.nome])])}</div>
     <div class="rel-aplicar"><span>Datas filtram as saídas. O inventário mostra a posição atual.</span><button type="button" class="btn fantasma" data-acao="relatorios-limpar">Limpar filtros</button><button class="btn prim" type="submit">Aplicar filtros${icone('direita')}</button></div><p class="rel-erro" role="alert"></p></form>`;
   if (!pronto) return cabecalho + (relatorioHistorico.erro && relatorioHistorico.chave === chaveHistoricoRelatorio()
     ? vazio('alerta', 'Não foi possível consultar o histórico', `${esc(relatorioHistorico.erro)} Nenhum arquivo parcial será gerado.`, '<button class="btn" data-acao="relatorios-atualizar">Tentar novamente</button>')

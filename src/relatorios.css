@@ -19,8 +19,8 @@
 .rel-filtros-topo>strong{display:flex;align-items:center;gap:8px;font-size:14px}
 .rel-filtros-topo>strong .ic{color:var(--muted)}
 .rel-atalhos{display:flex;gap:7px;flex-wrap:wrap}
-.rel-campos{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
-.rel-campos .campo{min-width:0;margin:0}.rel-campos .campo:nth-last-child(2){grid-column:span 2}
+.rel-campos{display:grid;grid-template-columns:repeat(4,minmax(0,1fr)) minmax(0,1.5fr);gap:14px}
+.rel-campos .campo{min-width:0;margin:0}
 .rel-campos :is(input,select){width:100%;min-width:0;max-width:100%;min-height:42px}
 .rel-aplicar{display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-top:17px;padding-top:16px;border-top:1px solid var(--line)}
 .rel-aplicar>span{margin-right:auto;color:var(--muted);font-size:12px;line-height:1.6}
@@ -58,8 +58,8 @@
 .rel-metodologia p{margin:12px 0}.rel-privacidade{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--muted);margin:0}.rel-privacidade .ic{width:14px}
 @media(hover:hover) and(pointer:fine){.rel-kpi:hover{border-color:var(--rel-cor);transform:translateY(-2px)}}
 @media(prefers-reduced-motion:no-preference){.rel-barra{transform-origin:left;animation:rel-barra-entrada .5s ease-out both}.rel-linha{animation:rel-linha-entrada .6s ease-out both}.rel-anel{animation:rel-linha-entrada .5s ease-out both}@keyframes rel-barra-entrada{from{transform:scaleX(.1);opacity:.4}to{transform:scaleX(1);opacity:1}}@keyframes rel-linha-entrada{from{opacity:0}to{opacity:1}}}
-@media(max-width:1100px){.rel-intro{align-items:flex-start;flex-direction:column;gap:16px}.rel-campos{grid-template-columns:repeat(3,minmax(0,1fr))}.rel-campos .campo:nth-last-child(2){grid-column:auto}.rel-recorte{flex-direction:column;align-items:flex-start;gap:8px}}
+@media(max-width:1100px){.rel-intro{align-items:flex-start;flex-direction:column;gap:16px}.rel-campos{grid-template-columns:repeat(3,minmax(0,1fr))}.rel-campos .campo:last-child{grid-column:span 2}.rel-recorte{flex-direction:column;align-items:flex-start;gap:8px}}
 @media(max-width:800px){.rel-graficos{grid-template-columns:1fr}.rel-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.rel-aplicar{flex-wrap:wrap}.rel-aplicar>span{flex-basis:100%;margin-bottom:4px}.rel-filtros-topo{align-items:flex-start;flex-direction:column}.rel-campos{grid-template-columns:repeat(2,minmax(0,1fr))}.rel-filtros{padding:16px}.rel-faixa{gap:14px}.rel-faixa p{flex-basis:100%}}
-@media(max-width:480px){.relatorios{gap:17px}.rel-intro h2{font-size:25px}.rel-intro p{font-size:13px}.rel-exportacoes{width:100%;gap:8px}.rel-exportacoes .btn{flex:1;min-width:0;padding:10px;font-size:12px}.rel-campos{grid-template-columns:1fr}.rel-kpi{padding:14px 13px}.rel-kpi>strong{font-size:29px}.rel-kpi h3{font-size:12px}.rel-kpis{gap:10px}.rel-kpi>div{font-size:9px;letter-spacing:.3px}.rel-kpi>div .ic{width:16px}.rel-kpi p{font-size:10px}.rel-grafico{padding:0 4px}.rel-cartao .cartao-topo{padding:16px 14px}.rel-grafico svg{min-height:160px}.rel-filtros .btn{font-size:11px}.rel-metodologia{padding:14px}.rel-privacidade{align-items:flex-start}}
+@media(max-width:480px){.relatorios{gap:17px}.rel-intro h2{font-size:25px}.rel-intro p{font-size:13px}.rel-exportacoes{width:100%;gap:8px}.rel-exportacoes .btn{flex:1;min-width:0;padding:10px;font-size:12px}.rel-campos{grid-template-columns:1fr}.rel-campos .campo:last-child{grid-column:auto}.rel-kpi{padding:14px 13px}.rel-kpi>strong{font-size:29px}.rel-kpi h3{font-size:12px}.rel-kpis{gap:10px}.rel-kpi>div{font-size:9px;letter-spacing:.3px}.rel-kpi>div .ic{width:16px}.rel-kpi p{font-size:10px}.rel-grafico{padding:0 4px}.rel-cartao .cartao-topo{padding:16px 14px}.rel-grafico svg{min-height:160px}.rel-filtros .btn{font-size:11px}.rel-metodologia{padding:14px}.rel-privacidade{align-items:flex-start}}
 @media(max-width:480px){.rel-grafico svg text{font-size:19px!important}.rel-grafico svg text[style*="font-size:30px"]{font-size:32px!important}}
 @media(max-width:800px){.rel-exportacoes{grid-template-columns:1fr}.rel-exportar{min-height:68px}.rel-exportar strong{font-size:14px}.rel-exportar small{font-size:12px}}

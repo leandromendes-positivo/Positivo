@@ -76,8 +76,18 @@ A ativação inicial exige configuração no Firebase e, para Microsoft, no Entr
 
 1. Exporte do sistema os relatórios de peças **Novas** e **Usadas** de cada região (`PR Usadas.csv`, `PR Novas.csv`…).
 2. Abra o painel e **arraste as planilhas** (todas de uma vez).
-3. **Cobranças → Cobrar hoje**: o botão **Cobrar** monta a mensagem para WhatsApp ou **E-mail / Outlook**; depois de enviar, registre a cobrança e a **previsão de devolução** que o técnico informar.
+3. **Cobranças → Cobrar hoje**: filtre **Usadas**, **Novas** ou **Novas e usadas**. WhatsApp serve apenas como aviso. Envie a cobrança formal pelo **E-mail / Outlook** e registre o envio; quando o técnico responder por e-mail, registre as peças e a previsão em **Respostas e confirmações**.
 4. Peça **usada** que sai do relatório (inclusive redução parcial da quantidade) conta como **devolvida**. Para novas, confira **Consulta avançada → Saídas de novas** e classifique a baixa como devolução, uso em atendimento ou transferência/ajuste.
+
+### Cobrança formal e confirmação da previsão
+
+Em **Cobranças → Respostas e confirmações**, acompanhe **Aguardando resposta**, **Falta e-mail formal**, **Confirmadas** e **Previsões vencidas**, respeitando os filtros de novas/usadas, região e técnico. Avisos por WhatsApp não contam como cobrança formal nem como confirmação de previsão. A resposta deve ser enviada pelo técnico por e-mail; o painel não lê a caixa automaticamente.
+
+Depois de receber a resposta, clique em **Registrar resposta** e selecione a cobrança formal já registrada. Informe a data, uma referência ao e-mail recebido (assunto e data/hora ou link), as peças e as quantidades efetivamente confirmadas. Para novas, escolha explicitamente **Nova — retorno ao estoque**, **RMDF já aplicado** ou **Parte nova, parte com RMDF**. Se o RMDF ainda será aplicado, anote a informação e aguarde sua confirmação por e-mail antes de confirmar aquela quantidade.
+
+Quantidades não confirmadas continuam pendentes. A agenda reúne novas e usadas, com códigos, quantidades, condição, referência do e-mail e responsável pelo registro. Reconfirmar um material substitui sua previsão anterior; as alterações permanecem no histórico. **Remover previsões selecionadas** cancela apenas os compromissos escolhidos, preservando a auditoria. A gravação detecta alterações concorrentes no estoque ou na versão da previsão. Agendamentos antigos continuam visíveis; uma nova confirmação exige e-mail formal e referência à resposta.
+
+A previsão não baixa estoque nem confirma recebimento. Uma saída parcial observada na próxima importação reduz a quantidade prevista; a classificação real das saídas de novas continua sendo feita por um administrador. Se parte do material com condições mistas sair, o painel identifica a condição da **confirmação original**, sem adivinhar quais unidades novas ou com RMDF foram recebidas. E-mails e telefones dos técnicos continuam sendo somente contatos, sem autorização para acessar o painel.
 
 ### Relatórios gerenciais
 
@@ -145,7 +155,11 @@ Preparar, abrir ou baixar um rascunho não envia e-mail nem registra envio no hi
 
 O sino **Notificações**, no topo de todas as páginas, reúne alertas ativos com contador de **não lidos**, prioridades e atalhos. A central acompanha importações, contatos e agendamentos enquanto está aberta, e recalcula as regras na virada do dia.
 
-- **Cobranças que precisam de retorno:** técnicos com pelo menos uma peça usada acima do prazo, cobrada há **2 dias corridos ou mais**, ainda sem previsão registrada. A regra considera a cobrança de cada peça: um contato recente sobre outro material não esconde a pendência. Não presume que o técnico deixou de responder fora do sistema.
+**Escopo por perfil:** administradores recebem todos os alertas. Usuários padrão recebem alertas de estoque, cuja consulta é permitida, e notificações de previsões/confirmacões que eles próprios registraram e de respostas às suas cobranças. Importação, correção de cadastros e contatos antigos sem autoria identificada ficam na central administrativa. Os atalhos pessoais mantêm o recorte **Seus registros**; ele não restringe as consultas gerais já permitidas. A autoria é conferida pelo identificador da conta autenticada, sem confundir o e-mail do técnico com um usuário. Mudanças de perfil atualizam a central aberta e seu contador.
+
+- **Falta confirmação por e-mail:** a partir do dia seguinte à cobrança formal, indica peças novas/usadas ainda sem resposta registrada, inclusive quantidades não confirmadas de uma resposta parcial. Um contato sobre outro material não esconde a pendência.
+- **Avisos sem cobrança formal por e-mail:** técnicos avisados pelo WhatsApp cujas peças ainda precisam de cobrança formal registrada. **Confirmações por e-mail registradas** permite conferir as peças e datas já informadas. O operador registra a resposta recebida; o painel não presume leitura de mensagens externas.
+- **Cobranças que precisam de retorno (registros antigos):** preserva o acompanhamento de usadas cobradas há 2 dias ou mais sem previsão, evitando duplicar os alertas do novo fluxo.
 - **Faltam contatos para cobrar:** técnicos na fila sem e-mail em formato válido e sem telefone com 10 a 15 dígitos. Bases e cadastros ignorados não entram neste alerta. Telefones e e-mails continuam sendo somente contatos, sem permissão de acesso ao painel.
 - **Previsões vencidas:** a data combinada passou e as peças ainda constam no último relatório. O atalho abre a aba de previsões vencidas.
 - **Estoque acima do limite:** considera somente estoque conhecido de técnicos e respeita limites personalizados. Saldo igual ou inferior ao limite, inclusive zero, não gera alerta; bases e tipos de envio desconsiderados não são tratados como excesso de técnico.
@@ -160,6 +174,7 @@ O sino faz um único balanço rápido de 320 ms, sem atraso, quando o cursor ent
 ### Visão geral da operação
 
 - **Indicadores no topo:** peças pendentes, técnicos a cobrar, compromissos de hoje e estoque conhecido. Fotografias cobrem todo o fundo dos cartões nos dois temas, com enquadramento proporcional e sobreposição para leitura dos números. As barras representam peças dentro/fora do prazo, contatos da fila atual, compromissos dos próximos 7 dias e técnicos dentro ou acima do limite de estoque. Os cartões abrem as consultas correspondentes e limpam filtros antigos.
+- **Termômetro da operação:** mostra o motivo da situação e quatro atalhos: usadas em atraso, previsões vencidas (novas e usadas), pendências por e-mail e técnicos acima do limite de novas. **Controlada:** nenhum desvio nesses critérios e planilhas de hoje completas. **Atenção:** algum atraso em usadas, pendência por e-mail ou excesso de estoque. **Crítica:** ao menos 25% das usadas atrasadas, alguma usada acima do dobro do prazo ou alguma previsão vencida. A faixa mais grave prevalece; uma previsão futura não apaga o atraso real. Sem base completa e atual, não apresenta a operação como controlada. Respeita prazos/limites individuais, diferencia planilha ausente de inventário vazio e oferece animação breve sem repetição, temas e movimento reduzido.
 - **Prioridades de cobrança:** técnicos a cobrar, previsões vencidas e devoluções previstas hoje. As promessas vencidas aparecem primeiro, seguidas das peças mais antigas. O botão **Cobrar** abre o registro de contato e previsão.
 - **Agenda de devoluções:** calendário semanal de segunda a domingo, com setas para trocar a semana e botão Hoje. Mostra previsões vencidas, peças previstas hoje e peças sem previsão. Cada compromisso agrupa somente as peças do mesmo técnico e da mesma data, permite conferir códigos/chamados, reagendar ou preparar a mensagem de cobrança/lembrete, e identifica quem agendou. Dias vazios indicam o próximo compromisso disponível. Registrar uma previsão não confirma a devolução: peças baixadas na próxima importação deixam a agenda, mantendo o histórico. As datas têm uma animação curta de folha de calendário, sem repetição contínua; as setas do teclado navegam pelos dias, Home/End vão aos extremos da semana e PageUp/PageDown trocam de semana.
 - **Mapa do Brasil:** selecione um estado para conferir pendências ou estoque. A escala de verde a coral representa quatro faixas da taxa de atraso: 0–10%, >10–25%, >25–50% e >50%. No modo Novas, representa a proporção de técnicos acima do limite máximo de estoque. Estados sem planilha usam hachuras; uma planilha vazia importada conta como dado conhecido. O mapa não usa localização individual dos técnicos.
@@ -177,7 +192,7 @@ O mapa amplia o estado ao passar o cursor ou receber foco por teclado; sair do e
 
 Usadas que desaparecem da planilha ficam como devolvidas; reduções parciais encerram apenas a quantidade que saiu. Nas novas, uma saída sem destino informado aparece como **Devolução presumida**, separada de uso, transferência e devolução confirmada. O administrador pode confirmar/reclassificar o destino, inclusive em registros antigos. Novas presumidas não entram como devoluções confirmadas no ranking.
 
-**Peças novas com defeito (RMDF):** em **Estoque de novas → Cobrar novas** (também disponível na ficha do técnico), a mensagem do WhatsApp e o e-mail do Outlook orientam o técnico a informar código, quantidade e se o RMDF será aplicado ou já foi aplicado. Ele responde pelo canal habitual, sem formulário ou acesso ao painel. O contato fica identificado como cobrança de novas, sem interferir na fila de cobrança de usadas. Para novas, a resposta e eventual data combinada ficam na observação do contato; esse registro não cria agendamento na agenda de usadas.
+**Peças novas com defeito (RMDF):** em **Estoque de novas → Cobrar novas** (também disponível na ficha do técnico e no filtro **Novas** de Cobranças), a mensagem do WhatsApp e o e-mail do Outlook orientam o técnico a informar código, quantidade e se o RMDF será aplicado ou já foi aplicado. WhatsApp é apenas aviso; a cobrança formal e a resposta do técnico devem ser por e-mail, sem formulário ou acesso dele ao painel. O operador registra a resposta com peças, quantidades e condição em **Respostas e confirmações**, incluindo as novas na agenda de devoluções.
 
 Após a saída aparecer na planilha, abra **Estoque de novas → Devoluções de novas → Confirmar destino**. Um administrador escolhe **Devolvida** e marca **Nova — retorno ao estoque** ou **RMDF aplicado — peça com defeito**; não há escolha automática. Para quantidades mistas, classifique uma parte de cada vez (por exemplo, 2 novas e 1 RMDF). Se houver apenas promessa de aplicar RMDF, mantenha **A classificar** e anote a informação. A data da saída continua sendo a observada na planilha.
 
@@ -245,12 +260,15 @@ src/js/00…80                       lógica e telas (JavaScript puro, sem frame
 src/js/25-firebase.js              banco Firebase + login Google/Microsoft
 src/js/26-identidade.js            autorização e autoria dos agendamentos
 src/js/32-inventario.js            acervo completo de responsabilidades
+src/js/33-confirmacoes.js          quantidades previstas e acompanhamento de respostas por e-mail
+src/js/77-confirmacoes.js          confirmação por peça, condição e referência do e-mail
 src/js/79-usuarios.js              contas e cadastro de usuários
 src/js/79-inventario.js            histórico de peças por técnico
 src/js/31-analises.js              filtros, períodos, rankings e classificação de saídas
 src/js/55-movimento.js             animações progressivas e preferência de movimento reduzido
 src/js/62-indicadores.js           cálculos de gestão e resumos das seções
 src/js/65-operacao.js              fila de cobranças, mapa e agenda
+src/js/65-termometro.js            faixas e motivos da situação operacional
 src/js/66-desempenho.js            rankings com detalhamento por material
 src/js/78-consulta.js              tela de consulta avançada e exportação filtrada
 build.py                           monta dist/site/index.html (o site)
@@ -279,11 +297,14 @@ python3 build.py
 python3 -m http.server 8000 --directory dist
 # Em outro terminal, com Playwright e Chromium instalados:
 node testes/operacao-e2e.mjs
+node testes/termometro-e2e.mjs
+node testes/confirmacoes-e2e.mjs
 node testes/agenda-e2e.mjs
 node testes/pesquisas-e2e.mjs
 node testes/gestao-e2e.mjs
 node testes/interface-e2e.mjs
 node testes/notificacoes-e2e.mjs
+node testes/notificacoes-perfis-e2e.mjs
 node testes/email-cobranca-e2e.mjs
 node testes/analises-e2e.mjs
 node testes/prazos-e2e.mjs

@@ -44,9 +44,20 @@ try {
  await assertFails(dono.doc('usuarios/dono@empresa.com').update({principal:false,atualizadoEm:stamp(),atualizadoPor:por}));
  await assertFails(dono.doc('usuarios/rui@outlook.com').delete());
  await assertSucceeds(outro.doc('dados/indice').get());
- const agenda=(peca,versao=1,previsao='2026-10-10',anterior='')=>({peca,tid:'t1',versao,previsao,anterior,evento:crypto.randomUUID(),uid:'ana',email:'ana.silva@empresa.com',em:stamp()});
+ await assertSucceeds(operador.doc('contatos/formal-t1').set({tid:'t1',canal:'email',previsao:'',obs:'Cobrança formal enviada',pecas:20,itens:['p1'],uid:'ana',email:'ana.silva@empresa.com',em:stamp()}));
+ const confirmacao={tipo:'usadas',mat:'001',regiao:'PR',quantidade:1,qtdRmdf:0,contatoId:'formal-t1',referenciaEmail:'Re: Devolução — 09/10, 10h',observacao:'',dataReferencia:'2026-10-09',lotesReferencia:[]};
+ const agenda=(peca,versao=1,previsao='2026-10-10',anterior='')=>({peca,tid:'t1',versao,previsao,anterior,evento:crypto.randomUUID(),uid:'ana',email:'ana.silva@empresa.com',em:stamp(),...(previsao?{confirmacao}: {})});
  const gravar=(db,d)=>{const b=db.batch();b.set(db.doc(`agendamentos/${d.peca}`),d);b.set(db.doc(`auditoria_agendamentos/${d.evento}`),d);return b.commit();};
  let d=agenda('p1');
+ const {confirmacao:semConfirmacao,...semEmail}=d;
+ await assertFails(gravar(operador,semEmail));
+ await assertFails(gravar(operador,{...d,confirmacao:{...confirmacao,qtdRmdf:1}}));
+ await assertFails(gravar(operador,{...d,confirmacao:{...confirmacao,referenciaEmail:''}}));
+ await assertFails(gravar(operador,{...d,confirmacao:{...confirmacao,contatoId:'inexistente'}}));
+ await assertSucceeds(operador.doc('contatos/so-whats').set({tid:'t1',canal:'whatsapp',previsao:'',obs:'Aviso',pecas:1,itens:['p1'],uid:'ana',email:'ana.silva@empresa.com',em:stamp()}));
+ await assertFails(gravar(operador,{...d,confirmacao:{...confirmacao,contatoId:'so-whats'}}));
+ await assertSucceeds(operador.doc('contatos/outro-tecnico').set({tid:'t2',canal:'email',previsao:'',obs:'Formal',pecas:1,itens:['p1'],uid:'ana',email:'ana.silva@empresa.com',em:stamp()}));
+ await assertFails(gravar(operador,{...d,confirmacao:{...confirmacao,contatoId:'outro-tecnico'}}));
  await assertFails(operador.doc('agendamentos/p1').set(d)); // sem evento de auditoria
  await assertFails(gravar(operador,{...d,uid:'dono',email:'dono@empresa.com'}));
  await assertFails(gravar(operador,{...d,em:firebase.firestore.Timestamp.fromDate(new Date('2000-01-01'))}));

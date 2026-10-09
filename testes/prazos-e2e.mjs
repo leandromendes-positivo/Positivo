@@ -1,3 +1,4 @@
+import { instalarAgendaTeste, preencherConfirmacaoTeste } from './confirmacao-ajudante.mjs';
 // Prazos pessoais: fronteiras, herança, histórico, mensagens e persistência em memória.
 import { createRequire } from 'node:module';
 import assert from 'node:assert/strict';
@@ -14,6 +15,7 @@ try {
   await page.addInitScript(()=>{window.__CP_AGORA='2026-10-05T09:00:00';});
   await page.goto(process.env.URL_PAINEL_TESTE || 'http://127.0.0.1:8000/pagina-completa.html');
   await page.waitForFunction(()=>E.status==='pronto');
+  await instalarAgendaTeste(page);
   assert.equal(await page.evaluate(()=>Acesso.modo),'memoria');
   await page.setInputFiles('#entrada-topo',fs.readdirSync('exemplos').filter(f=>f.endsWith('.csv')).map(f=>path.resolve('exemplos',f)));
   await page.waitForFunction(()=>!!UI.im.resultado);
@@ -53,11 +55,11 @@ try {
   assert.match(aviso.texto,/prazo de 3 dias/);assert.doesNotMatch(aviso.texto,/com mais de 7 dias/);
   // Previsões já combinadas continuam prevalecendo para a fila de contato.
   const promessa=await page.evaluate(async(tid)=>{
-    const i=derivar().mapa.get(tid).usadas[0];await definirPrevisao([i],'2026-10-04');
+    const i=derivar().mapa.get(tid).usadas[0];await agendarComEmailTeste([i],'2026-10-04');
     const d=derivar().itens.find(x=>x.k===i.k);return [d.prazo,d.status,d.cobrar,d.atrasada];
   },ids.Ana);
   assert.deepEqual(promessa,[14,'previsao_vencida',true,false]);
-  await page.evaluate(async(tid)=>{await definirPrevisao(derivar().mapa.get(tid).usadas,'');await carregarTudo();},ids.Ana);
+  await page.evaluate(async(tid)=>{await agendarComEmailTeste(derivar().mapa.get(tid).usadas,'');await carregarTudo();},ids.Ana);
   assert.deepEqual(await page.evaluate(tid=>[E.cadastro[tid].prazoUsadas,E.cadastro[tid].prazoNovas],ids.Ana),[14,15]);
 
   for(const tema of ['dark','light']) {

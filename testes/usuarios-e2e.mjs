@@ -1,3 +1,4 @@
+import { instalarAgendaTeste, preencherConfirmacaoTeste } from './confirmacao-ajudante.mjs';
 import {createRequire} from 'node:module';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -17,6 +18,7 @@ async function abrir(email='teste@exemplo.com') {
  await p.goto(process.env.URL_PAINEL_TESTE||'http://127.0.0.1:8002/pagina-completa.html');
  if(email)await p.waitForFunction(()=>E.status==='pronto'||E.status==='erro');
  else await p.locator('#entrar-microsoft').waitFor();
+ if(email)await instalarAgendaTeste(p);
  return p;
 }
 try {
@@ -42,7 +44,7 @@ try {
  await normal.locator('.conta-menu').click();assert.match(await normal.locator('.conta-perfil').innerText(),/Maria/);
  await normal.evaluate(()=>irPara('usuarios'));assert.equal(await normal.evaluate(()=>UI.pagina),'painel');
  // Mais de um lote: cada peça guarda evento e autor conferidos pelas regras.
- await normal.evaluate(()=>definirPrevisao(derivar().itens,'2026-10-09'));
+ await normal.evaluate(()=>agendarComEmailTeste(derivar().itens,'2026-10-09'));
  await admin.waitForFunction(()=>derivar().itens.every(i=>i.previsao==='2026-10-09'&&i.agendadoPor?.email==='maria.silva@empresa.com'));
  // Uma falha depois do primeiro lote informa exatamente o que ficou salvo, sem contato integral fictício.
  const parcial=await normal.evaluate(async()=>{
@@ -54,11 +56,11 @@ try {
   return {mensagem,contatos:(await Armazem.consultar('contatos')).length-antes,atualizados:derivar().itens.filter(i=>i.previsao==='2026-10-11').length};
  });
  assert.match(parcial.mensagem,/8 de 9 registros/);assert.equal(parcial.atualizados,8);assert.equal(parcial.contatos,0);
- await normal.evaluate(()=>definirPrevisao(derivar().itens,'2026-10-09'));
+ await normal.evaluate(()=>agendarComEmailTeste(derivar().itens,'2026-10-09'));
  assert.equal(await normal.evaluate(()=>autorPrevisao(derivar().itens[0])),'Maria');
  await normal.evaluate(tid=>irPara('tecnicos',{tid}),tid);await normal.locator('[data-acao="historico-agenda"]').click();
  await normal.locator('.modal').waitFor();assert.match(await normal.locator('.modal').innerText(),/Maria/);assert.match(await normal.locator('.modal').innerText(),/maria.silva@empresa.com/);await normal.keyboard.press('Escape');
- await normal.evaluate(tid=>registrarCobranca(tid,{canal:'ligacao',previsao:'2026-10-10',obs:'Agendamento confirmado',itens:derivar().mapa.get(tid).usadas}),tid);
+ await normal.evaluate(async tid=>{await registrarCobranca(tid,{canal:'email',previsao:'',obs:'Cobrança formal',itens:derivar().mapa.get(tid).usadas});await agendarComEmailTeste(derivar().mapa.get(tid).usadas,'2026-10-10');},tid);
  await admin.waitForFunction(tid=>derivar().mapa.get(tid).usadas.every(i=>i.previsao==='2026-10-10'),tid);
  // O aviso é calculado de dados atuais no servidor, sem dar escrita de resumos ao usuário comum.
  process.env.FIRESTORE_EMULATOR_HOST='127.0.0.1:8080';const fbAdmin=require('firebase-admin');fbAdmin.initializeApp({projectId:'demo-controle-pecas'});

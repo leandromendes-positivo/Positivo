@@ -599,3 +599,76 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 }
 
 @media (max-width: 359px) { .kpi-operacional .kpi-icone { width: 22px; height: 22px; } .kpi-cabecalho { gap: 5px; } }
+
+/* Cobrança formal, retorno do técnico e composição da previsão. */
+.cobranca-tipos { display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px; }
+.respostas-resumo { display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:20px 0 14px; }
+.resposta-indicador { text-align:left;display:grid;gap:10px;padding:18px;background:var(--surface);border:1px solid var(--line);border-radius:8px;color:var(--ink);cursor:pointer;transition:background .15s,border-color .15s,transform .15s; }
+.resposta-indicador strong { font-size:28px;font-weight:600;font-variant-numeric:tabular-nums; }
+.resposta-indicador small { font-size:12px;font-weight:400;color:var(--muted); }
+.resposta-indicador>span { font-size:12px;color:var(--muted); }
+.resposta-indicador.ativo { border-color:var(--accent);background:var(--accent-soft); }
+.resposta-indicador.alerta strong { color:var(--warn-ink); }.resposta-indicador.grave strong { color:var(--serious-ink); }.resposta-indicador.ok strong { color:var(--good-ink); }.resposta-indicador.crit strong { color:var(--crit-ink); }
+.resposta-cartao { border:1px solid var(--line);background:var(--surface);border-radius:8px;margin:16px 0;overflow:hidden; }
+.resposta-cartao header { padding:18px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px;background:var(--surface-2);border-bottom:1px solid var(--line); }
+.resposta-cartao header>div:first-child { display:flex;align-items:center;gap:12px;min-width:0; }.resposta-cartao h3 { margin:0 0 5px;font-size:16px;overflow-wrap:anywhere; }
+.resposta-cartao ul { list-style:none;padding:0 18px;margin:0; }.resposta-cartao li { display:flex;gap:20px;justify-content:space-between;padding:16px 0;border-bottom:1px solid var(--line); }.resposta-cartao li:last-child { border:0; }
+.resposta-cartao li>div { min-width:0;overflow-wrap:anywhere; }.resposta-cartao li span,.resposta-cartao li small { display:block;margin-top:5px; }.resposta-cartao li small { color:var(--muted);line-height:1.5; }.resposta-cartao li>strong { flex-shrink:0; }
+.confirmacao-lista-topo { display:flex;justify-content:space-between;gap:16px;align-items:end;padding-top:14px; }.confirmacao-lista-topo h3 { margin:0 0 6px; }.confirmacao-lista-topo .campo { min-width:210px; }
+.confirmacao-lista { display:grid;gap:12px; }.confirmacao-peca { min-width:0;margin:0;border:1px solid var(--line);border-radius:8px;padding:16px;transition:border-color .15s,background .15s; }.confirmacao-peca.selecionada { border-color:var(--accent);background:var(--accent-soft); }
+.confirmacao-selecao { display:flex;align-items:flex-start;gap:12px;cursor:pointer; }.confirmacao-selecao input,.confirmacao-ateste input { width:18px;height:18px;flex:0 0 auto;accent-color:var(--accent);margin:2px 0 0; }.confirmacao-selecao>span { display:grid;gap:5px;min-width:0;overflow-wrap:anywhere; }.confirmacao-selecao small { color:var(--muted); }
+.confirmacao-valores { margin:16px 0 8px;display:grid;grid-template-columns:minmax(130px,.7fr) minmax(180px,1.4fr) minmax(130px,.7fr);gap:14px;align-items:end; }.confirmacao-valores select { width:100%; }.confirmacao-tipo { align-self:center;color:var(--muted); }
+.confirmacao-ateste { display:flex;gap:12px;align-items:flex-start;padding:14px;background:var(--surface-2);border-radius:8px;line-height:1.6; }.confirmacao-total { margin-right:auto;font-size:12px;color:var(--muted); }
+@media (max-width:900px) { .respostas-resumo { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media (max-width:600px) { .confirmacao-lista-topo { display:block; }.confirmacao-lista-topo .campo { min-width:0;margin-top:12px; }.confirmacao-valores { grid-template-columns:1fr; }.resposta-cartao header .linha-botoes { width:100%; }.resposta-cartao header .btn { flex:1;white-space:normal; }.confirmacao-total { width:100%; }.resposta-indicador { padding:12px; }.resposta-indicador strong { font-size:24px; } }
+@media (prefers-reduced-motion:reduce) { .resposta-indicador,.confirmacao-peca { transition:none; } }
+
+.confirmacao-peca legend { position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0; }
+
+/* Termômetro: resumo de risco com faixa, motivo e acesso aos dados. */
+.termometro-operacao { --term-cor: var(--good-ink); --term-fundo: var(--good-soft); display: grid; grid-template-columns: minmax(280px, 1.05fr) minmax(340px, 1fr); border: 1px solid var(--line); border-radius: var(--raio); background: var(--surface); margin-bottom: 20px; overflow: clip; }
+.termometro-operacao.nivel-atencao { --term-cor: var(--warn-ink); --term-fundo: var(--warn-soft); }
+.termometro-operacao.nivel-critica { --term-cor: var(--crit-ink); --term-fundo: var(--crit-soft); }
+.termometro-operacao.nivel-incompleta { --term-cor: var(--muted); --term-fundo: var(--surface-2); }
+.termometro-visao { padding: 24px 28px; background: linear-gradient(115deg, var(--term-fundo), var(--surface) 85%); border-inline-start: 3px solid var(--term-cor); min-width: 0; }
+.termometro-cab { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.termometro-cab .sobretitulo { margin: 0; color: var(--muted); font-size: 10px; letter-spacing: .09em; }
+.termometro-data { color: var(--muted); font: 11px var(--f-mono); }
+.termometro-visao h2 { display: flex; align-items: center; gap: 10px; font-size: clamp(22px, 2.2vw, 28px); letter-spacing: -.035em; line-height: 1.2; margin: 18px 0 10px; }
+.termometro-visao h2 i { flex: none; width: 9px; height: 9px; background: var(--term-cor); border-radius: 50%; box-shadow: 0 0 0 4px var(--term-fundo); }
+.termometro-visao p { font-size: 13px; line-height: 1.6; color: var(--ink-2); margin: 0; max-width: 58ch; }
+.termometro-escala { margin-top: 24px; }
+.termometro-trilho { display: flex; gap: 4px; height: 12px; position: relative; }
+.termometro-trilho > span { flex: 1; border-radius: 2px; }
+.termometro-trilho .faixa-controlada { background: var(--good); }
+.termometro-trilho .faixa-atencao { background: var(--warn); }
+.termometro-trilho .faixa-critica { background: var(--crit); }
+.termometro-marcador { position: absolute; left: var(--posicao); top: -5px; width: 7px; height: 22px; border: 2px solid var(--surface); border-radius: 5px; background: var(--ink); box-shadow: 0 1px 4px #0004; transform: translateX(-50%); }
+.termometro-rotulos { display: flex; gap: 4px; margin-top: 10px; font-size: 11px; color: var(--muted); }
+.termometro-rotulos span { flex: 1; text-align: center; }
+.termometro-rotulos .atual { color: var(--ink); font-weight: 600; }
+.nivel-incompleta .termometro-trilho { opacity: .35; filter: grayscale(1); }
+.termometro-fatores { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 14px; gap: 8px; align-content: center; }
+.termometro-fator { display: flex; gap: 12px; align-items: flex-start; text-align: left; border: 1px solid transparent; padding: 14px; border-radius: 6px; min-width: 0; background: var(--surface-2); color: var(--ink); cursor: pointer; transition: border-color .18s, background .18s, transform .18s; }
+.termometro-fator > span:nth-child(2) { flex: 1; min-width: 0; }
+.termometro-fator > .ic { width: 14px; height: 14px; color: var(--muted); flex: none; margin-top: 4px; }
+.termometro-fator span span { display: block; font-size: 12px; line-height: 1.3; color: var(--ink-2); }
+.termometro-fator strong { display: block; font: 500 29px/1.4 var(--f-mono); letter-spacing: -.06em; }
+.termometro-fator small { display: block; font-size: 10px; color: var(--muted); line-height: 1.4; }
+.termometro-fator-icone { color: var(--muted); margin-top: 2px; }
+.termometro-fator.com-pendencia .termometro-fator-icone { color: var(--warn-ink); }
+.termometro-fator[data-fator="vencidas"].com-pendencia .termometro-fator-icone, .termometro-fator[data-fator="usadas"].com-pendencia .termometro-fator-icone { color: var(--crit-ink); }
+.termometro-fator:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.termometro-rodape { grid-column: 1 / -1; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px 24px; border-top: 1px solid var(--line); padding: 12px 24px; font-size: 11px; color: var(--muted); }
+.termometro-rodape > span { display: flex; align-items: center; gap: 8px; }
+.termometro-rodape .ic { width: 15px; height: 15px; flex: none; }
+.termometro-rodape details { min-width: 0; }
+.termometro-rodape details[open] { flex-basis: 100%; }
+.termometro-rodape summary { cursor: pointer; color: var(--ink-2); }
+.termometro-rodape p { max-width: 110ch; line-height: 1.7; }
+@keyframes termometro-entrada { from { left: 0; opacity: 0; } to { left: var(--posicao); opacity: 1; } }
+@media (prefers-reduced-motion: no-preference) { .termometro-marcador { animation: termometro-entrada .65s cubic-bezier(.2,.7,.2,1) both; } }
+@media (hover: hover) and (pointer: fine) { .termometro-fator:hover { background: var(--surface); border-color: var(--line-2); transform: translateY(-2px); } }
+@media (max-width: 1050px) { .termometro-operacao { grid-template-columns: 1fr; } .termometro-fatores { grid-template-columns: repeat(4, minmax(0, 1fr)); } .termometro-fator { padding: 12px; gap: 8px; } .termometro-fator > .ic { display: none; } }
+@media (max-width: 700px) { .termometro-fatores { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 10px; } .termometro-visao { padding: 20px; } .termometro-rodape { padding: 12px 20px; } }
+@media (prefers-reduced-motion: reduce) { .termometro-fator { transition: none; } .termometro-fator:hover { transform: none; } }

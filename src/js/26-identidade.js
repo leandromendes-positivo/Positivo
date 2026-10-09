@@ -23,14 +23,21 @@ function autoresAgenda(itens) {
 function carimboServidor() { return Acesso.modo === 'firebase' ? firebase.firestore.FieldValue.serverTimestamp() : agoraISO(); }
 
 /** Um evento imutável e a previsão atual são gravados juntos. A versão evita sobrescrita silenciosa. */
-async function gravarAgendamentos(itens, previsao, contato = null) {
+async function gravarAgendamentos(itens, previsao, contato = null, opcoes = {}) {
   if (previsao && (!/^\d{4}-\d{2}-\d{2}$/.test(previsao) || Number.isNaN(Date.parse(previsao)))) throw new Error('Informe uma data válida.');
   const unicos = [...new Map(itens.map(i => [i.k, i])).values()];
   const identidade = identidadeAtual();
-  const criar = (i, anterior) => ({
+  const contatoId = contato ? crypto.randomUUID() : '';
+  const versaoIndice = opcoes.versaoIndice ?? E.indice.versao ?? 0;
+  const falhar = mensagem => { throw Object.assign(new Error(mensagem), {amigavel:true}); };
+  for (const i of unicos) if (previsao && !i.confirmacao) falhar('Confirme a previsão com a referência ao e-mail de resposta do técnico.');
+  const criar = (i, anterior) => {
+    if (i.versaoAgenda != null && i.versaoAgenda !== (anterior?.versao || 0)) falhar('Esta previsão mudou em outra sessão. Feche e abra a confirmação novamente.');
+    return ({
     tid: i.tid, peca: i.k, previsao: previsao || '', anterior: anterior?.previsao ?? i.previsao ?? '',
     versao: (anterior?.versao || 0) + 1, evento: crypto.randomUUID(), ...identidade, em: carimboServidor(),
-  });
+    ...(previsao ? {confirmacao:i.confirmacao} : {}),
+  }); };
   if (Acesso.modo === 'firebase') {
     // Até 8 peças por transação para respeitar os limites de consultas das regras.
     let concluidos = 0;
@@ -38,13 +45,17 @@ async function gravarAgendamentos(itens, previsao, contato = null) {
       for (let inicio = 0; inicio < unicos.length || (inicio === 0 && contato); inicio += 8) {
         const grupo = unicos.slice(inicio, inicio + 8);
         await Acesso.fs.runTransaction(async tx => {
+          if(grupo.length){
+            const indice=await tx.get(Acesso.fs.doc('dados/indice'));
+            if((indice.data()?.versao || 0)!==versaoIndice)falhar('O estoque mudou durante a confirmação. Atualize a lista de peças antes de salvar.');
+          }
           const refs = grupo.map(i => Acesso.fs.doc(`agendamentos/${i.k}`));
           const anteriores = await Promise.all(refs.map(ref => tx.get(ref)));
           grupo.forEach((i, n) => {
             const d = criar(i, anteriores[n].exists ? anteriores[n].data() : null);
             tx.set(refs[n], d); tx.set(Acesso.fs.doc(`auditoria_agendamentos/${d.evento}`), d);
           });
-          if (inicio + 8 >= unicos.length && contato) tx.set(Acesso.fs.collection('contatos').doc(), { ...contato, ...identidade, em: carimboServidor() });
+          if (inicio + 8 >= unicos.length && contato) tx.set(Acesso.fs.doc(`contatos/${contatoId}`), { ...contato, ...identidade, em: carimboServidor() });
         });
         concluidos += grupo.length;
       }
@@ -56,12 +67,13 @@ async function gravarAgendamentos(itens, previsao, contato = null) {
       throw e;
     }
   } else {
+    if(unicos.length && (E.indice.versao || 0)!==versaoIndice)falhar('O estoque mudou. Reabra a confirmação.');
     for (const i of unicos) {
       const d = criar(i, await Armazem.ler(`agendamentos/${i.k}`));
       await Armazem.gravar(`agendamentos/${i.k}`, d);
       await Armazem.gravar(`auditoria_agendamentos/${d.evento}`, d);
     }
-    if (contato) await Armazem.gravar(`contatos/${crypto.randomUUID()}`, { ...contato, ...identidade, em: agoraISO() });
+    if (contato) await Armazem.gravar(`contatos/${contatoId}`, { ...contato, ...identidade, em: agoraISO() });
   }
   await carregarAcompanhamento();
   mudou(); agendarResumo();

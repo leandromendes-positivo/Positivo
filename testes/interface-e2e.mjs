@@ -1,3 +1,4 @@
+import { instalarAgendaTeste, preencherConfirmacaoTeste } from './confirmacao-ajudante.mjs';
 // Regressão dos estados de seleção, botões, avisos e janelas. Somente dados fictícios em memória.
 import { createRequire } from 'node:module';
 import assert from 'node:assert/strict';
@@ -31,6 +32,7 @@ try {
   });
   await page.goto(process.env.URL_PAINEL_TESTE || 'http://127.0.0.1:8000/pagina-completa.html');
   await page.waitForFunction(() => E.status === 'pronto');
+  await instalarAgendaTeste(page);
   assert.equal(await page.evaluate(() => Acesso.modo), 'memoria');
   await page.setInputFiles('#entrada-topo', fs.readdirSync('exemplos').filter((f) => f.endsWith('.csv')).map((f) => path.resolve('exemplos', f)));
   await page.waitForFunction(() => !!UI.im.resultado);
@@ -76,7 +78,14 @@ try {
     assert.match(await page.locator('.toast').last().innerText(), /um técnico só/);
     await page.evaluate(() => document.getElementById('toasts').innerHTML = '');
     await page.locator('[data-acao="lote-previsao"]').click();
-    assert.equal(await page.locator('.modal-sub').innerText(), '10 peças');
+    assert.match(await page.locator('.toast').last().innerText(), /um técnico por vez/);
+    await page.locator('[data-acao="lote-limpar"]').click();
+    const escolhido=await page.evaluate(()=>derivar().itens.find(i=>i.qtd===2).tid);
+    await page.selectOption('[data-mudar="tecnico-us"]',escolhido);
+    await page.evaluate(tid=>garantirEmailTeste(tid),escolhido);
+    await todos.check();
+    await page.locator('[data-acao="lote-previsao"]').click();
+    assert.match(await page.locator('.modal-sub').innerText(), /Ana/);
     for (const width of [1440, 390, 320]) {
       await page.setViewportSize({ width, height: width === 1440 ? 1000 : 844 });
       await dentroDaTela();
@@ -89,12 +98,11 @@ try {
     await page.keyboard.press('Shift+Tab');
     assert.equal(await ultimo.evaluate((e) => document.activeElement === e), true);
     const previsao = tema === 'dark' ? '2026-10-08' : '2026-10-09';
-    await preencherData(page.locator('#prev-data'), previsao);
-    await page.locator('[data-salvar]').click();
+    await preencherConfirmacaoTeste(page,previsao);
     await page.waitForFunction(() => !document.querySelector('.modal'));
     await page.waitForFunction((data) => [...document.querySelectorAll('[data-mudar="previsao-item"]')].every((e) => e.value === data), previsao);
     assert.equal(await page.locator('[data-acao="lote-previsao"]').evaluate((e) => e === document.activeElement), true, 'foco restaurado após atualizar a tabela');
-    assert.match(await page.locator('.toast').last().innerText(), /10 peças/);
+    assert.match(await page.locator('.toast').last().innerText(), /Confirmação por e-mail/);
     for (const width of [390, 320]) {
       await page.setViewportSize({ width, height: 844 });
       await page.locator('.barra-lote').scrollIntoViewIfNeeded();
@@ -110,7 +118,7 @@ try {
     await todos.check();
     await page.locator('[data-acao="lote-cobranca"]').click();
     assert.match(await page.locator('.modal-sub').innerText(), /^3 peças/);
-    assert.match(await page.locator('#cob-form small').innerText(), /3 peças/);
+    assert.match(await page.locator('#cob-form small').innerText(), /resposta por e-mail/);
     for (const el of await page.locator('.modal .btn:visible').all()) await estados(el, `${tema}/cobrança/${await el.innerText()}`);
     await page.locator('.modal [data-acao="editar-tecnico"]').click();
     assert.equal(await page.locator('.modal').count(), 2);

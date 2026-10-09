@@ -4,7 +4,7 @@ const FOCOS_COBRANCA = {
   sem_contato: 'Técnicos sem telefone ou e-mail válido',
 };
 function pecaCobradaSemPrevisao(i, hoje) {
-  return i.cobrar && !i.previsao && i.ultimaCobranca && diffDias(i.ultimaCobranca.slice(0, 10), hoje) >= 2;
+  return !E.contatos.some(c=>c.detalhes?.some(d=>d.k===i.k)) && i.cobrar && !i.previsao && i.ultimaCobranca && diffDias(i.ultimaCobranca.slice(0, 10), hoje) >= 2;
 }
 function tecnicoNoFocoCobranca(t, foco, hoje) {
   if (!foco) return true;
@@ -13,9 +13,18 @@ function tecnicoNoFocoCobranca(t, foco, hoje) {
   if (foco === 'sem_contato') return !emailValido(t.email.trim()) && !/^\d{10,15}$/.test(String(t.telefone).replace(/\D/g, ''));
   return true;
 }
+function registroDoUsuario(autor) { return Boolean(autor?.uid && autor.uid === identidadeAtual().uid); }
+function respostaDoUsuario(i) {
+  return registroDoUsuario(['confirmada','vencida'].includes(i.estadoResposta) ? i.agendadoPor : i.contato);
+}
 function alertasOperacionais(D = derivar()) {
+  if (Acesso.modo === 'firebase' && (!Acesso.usuario?.uid || !Acesso.perfil?.ativo)) return [];
+  const admin = podeAdministrar();
   const alertas = [];
   const adicionar = (a, fatos) => {
+    const pagina = a.destino === 'importar' ? 'importar' : a.destino === 'estoque' ? 'estoque' : 'cobrancas';
+    if (!PAGINAS[pagina] || (PAGINAS[pagina].admin && !admin)) return;
+    a.pessoal = !admin && pagina === 'cobrancas';
     a.versao = hash36(JSON.stringify(fatos.map(f => JSON.stringify(f)).sort()));
     alertas.push(a);
   };
@@ -27,20 +36,20 @@ function alertasOperacionais(D = derivar()) {
     acao: podeAdministrar() ? 'Importar planilhas' : '', destino: 'importar',
     orientacao: podeAdministrar() ? '' : 'Peça a atualização das planilhas a um administrador.',
   }, antigas.map(f => [f.regiao, f.tipo, f.em, D.hoje]));
-  const vencidas = D.itens.filter(i => i.status === 'previsao_vencida');
+  const vencidas = itensAgendaCompleta(D).filter(i => i.previsao < D.hoje && (admin || registroDoUsuario(i.agendadoPor)));
   if (vencidas.length) adicionar({
     id: 'previsoes', nivel: 'critico', icone: 'calendario', titulo: 'Previsões de devolução vencidas',
     texto: `${plural(somar(vencidas, i => i.qtd), 'peça continua', 'peças continuam')} no último relatório após a data combinada, com ${plural(new Set(vencidas.map(i => i.tid)).size, 'responsável', 'responsáveis')}.`,
     acao: 'Rever previsões', destino: 'vencidas',
   }, vencidas.map(i => [i.k, i.qtd, i.previsao]));
-  const paradas = D.tecnicos.filter(t => tecnicoNoFocoCobranca(t, 'sem_previsao', D.hoje));
+  const paradas = admin ? D.tecnicos.filter(t => tecnicoNoFocoCobranca(t, 'sem_previsao', D.hoje)) : [];
   if (paradas.length) adicionar({
     id: 'sem_previsao', nivel: 'critico', icone: 'mensagem', titulo: 'Cobranças que precisam de retorno',
     texto: `${plural(paradas.length, 'técnico tem', 'técnicos têm')} peças cobradas há 2 dias corridos ou mais, ainda pendentes e sem previsão registrada.`,
     detalhes: paradas.map(t => `${t.nome} · ${t.regiao} · ${plural(somar(t.itensCobrar.filter(i => pecaCobradaSemPrevisao(i, D.hoje)), i => i.qtd), 'peça sem previsão', 'peças sem previsão')}`),
     acao: 'Retomar cobranças', destino: 'sem_previsao',
   }, paradas.flatMap(t => t.itensCobrar.filter(i => pecaCobradaSemPrevisao(i, D.hoje)).map(i => [i.k, i.qtd, i.ultimaCobranca])));
-  const semContato = D.tecnicos.filter(t => tecnicoNoFocoCobranca(t, 'sem_contato', D.hoje));
+  const semContato = admin ? D.tecnicos.filter(t => tecnicoNoFocoCobranca(t, 'sem_contato', D.hoje)) : [];
   if (semContato.length) adicionar({
     id: 'sem_contato', nivel: 'atencao', icone: 'pessoas', titulo: 'Faltam contatos para cobrar',
     texto: `${plural(semContato.length, 'técnico na fila está', 'técnicos na fila estão')} sem telefone ou e-mail válido no cadastro.`,
@@ -55,6 +64,19 @@ function alertasOperacionais(D = derivar()) {
     detalhes: excesso.map(t => `${t.nome} · ${fmtNum(t.novasQtd)} peças / limite ${fmtNum(t.meta)}`),
     acao: 'Analisar excesso', destino: 'estoque',
   }, excesso.map(t => [t.tid, t.novasQtd, t.meta]));
+  const respostas=acompanhamentoRespostas(D,'todas').filter(i => admin || respostaDoUsuario(i));
+  for(const [estado,id,titulo,nivel,destino] of [
+    ['aguardando','respostas_pendentes','Falta confirmação por e-mail','atencao','respostas_aguardando'],
+    ['formalizar','cobrancas_formais','Avisos sem cobrança formal por e-mail','atencao','respostas_formalizar'],
+    ['confirmada','respostas_confirmadas','Confirmações por e-mail registradas','atencao','respostas_confirmada'],
+  ]){
+    const linhas=respostas.filter(i=>i.estadoResposta===estado&&(estado!=='aguardando'||i.diasResposta>=1));
+    if(linhas.length)adicionar({id,nivel,icone:estado==='confirmada'?'calendario':'email',titulo,
+      texto:estado==='confirmada'?`${plural(somar(linhas,i=>i.qtd),'peça com previsão confirmada','peças com previsão confirmada')} por e-mail. Confira as datas e as condições informadas.`:estado==='formalizar'?`${plural(new Set(linhas.map(i=>i.tid)).size,'técnico recebeu','técnicos receberam')} aviso pelo WhatsApp, mas falta registrar o e-mail formal de cobrança.`:`${plural(somar(linhas,i=>i.qtd),'peça aguarda','peças aguardam')} confirmação por e-mail desde pelo menos ontem.`,
+      detalhes:[...agrupar(linhas,i=>i.tid)].map(([tid,its])=>`${nomeTecnico(tid)} · ${plural(somar(its,i=>i.qtd),'peça','peças')}${estado==='aguardando'?` · há ${Math.max(...its.map(i=>i.diasResposta))} dia(s)`:''}`),
+      acao:estado==='confirmada'?'Conferir confirmações':'Acompanhar resposta',destino,
+    },linhas.map(i=>[i.k,i.qtd,i.previsao,i.agendadoEm,i.contato?.id,estado==='confirmada'?'':D.hoje]));
+  }
   // Qualidade da base primeiro: não apresentar saldos antigos como confirmação de atraso.
   return alertas;
 }
@@ -68,7 +90,7 @@ const Notificacoes = (() => {
     try {
       const dados = JSON.parse(localStorage.getItem(chave) || '{}');
       if (dados && typeof dados === 'object' && !Array.isArray(dados)) {
-        for (const [id, versao] of Object.entries(dados)) if (['planilhas','previsoes','sem_previsao','sem_contato','estoque'].includes(id) && typeof versao === 'string') lidos[id] = versao;
+        for (const [id, versao] of Object.entries(dados)) if (['planilhas','previsoes','sem_previsao','sem_contato','estoque','respostas_pendentes','cobrancas_formais','respostas_confirmadas'].includes(id) && typeof versao === 'string') lidos[id] = versao;
       }
     } catch (_) { persistente = false; }
   }
@@ -108,6 +130,7 @@ const Notificacoes = (() => {
     if (!naoLidas.length && document.activeElement === todasLidas) el.querySelector('[data-notif-filtro="todas"]').focus({preventScroll:true});
     todasLidas.disabled = !naoLidas.length;
     el.querySelectorAll('[data-notif-filtro]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.notifFiltro === filtro)));
+    el.querySelector('[data-notif-escopo]').textContent = podeAdministrar() ? 'Administrador · todos os alertas da operação' : 'Suas cobranças e agendamentos · estoque das áreas permitidas';
     el.querySelector('[data-notif-local]').textContent = persistente ? 'A leitura é salva para sua conta neste navegador. Marcar como lido não resolve a pendência.' : 'O navegador não permitiu salvar a leitura. Ela será mantida apenas enquanto esta página estiver aberta.';
     const area = el.querySelector('[data-notif-lista]');
     const html = visiveis.map(a => `<article class="notif-item ${lida(a) ? 'lida' : 'nao-lida'}" data-notif-id="${a.id}">
@@ -128,10 +151,12 @@ const Notificacoes = (() => {
     el.querySelector('.modal-corpo').scrollTop = scroll;
   }
   function abrirDestino(a) {
+    UI.cob.somenteMeus = Boolean(a.pessoal);
     if (a.destino === 'importar') { if (podeAdministrar()) irPara('importar'); }
     else if (a.destino === 'estoque') { Object.assign(UI.es, {regiao:'',status:'acima',busca:'',bases:false}); irPara('estoque'); }
+    else if(a.destino.startsWith('respostas_')){Object.assign(UI.cob,{aba:'respostas',tipo:'todas',resposta:a.destino.slice(10),foco:'',regiao:'',busca:''});irPara('cobrancas');}
     else {
-      Object.assign(UI.cob, {aba:a.destino === 'vencidas' ? 'vencidas' : 'cobrar', foco:FOCOS_COBRANCA[a.destino] ? a.destino : '', regiao:'', busca:'', ordem:'dias'});
+      Object.assign(UI.cob, {tipo:a.destino==='vencidas'?'todas':'usadas',aba:a.destino === 'vencidas' ? 'vencidas' : 'cobrar', foco:FOCOS_COBRANCA[a.destino] ? a.destino : '', regiao:'', busca:'', ordem:'dias'});
       UI.cob.abertos.clear(); irPara('cobrancas');
     }
     const titulo = document.getElementById('titulo'); titulo.setAttribute('tabindex','-1'); titulo.focus({preventScroll:true});
@@ -141,7 +166,7 @@ const Notificacoes = (() => {
     if (!autorizado() || modal?.el.isConnected) return;
     filtro = 'todas';
     modal = abrirModal({titulo:'Notificações', subtitulo:'O que precisa da sua atenção', largura:'notificacoes',
-      corpo:`<div class="notif-resumo"><strong data-notif-resumo role="status"></strong><span>Atualizado com os dados disponíveis no painel</span></div><div class="notif-filtros" role="group" aria-label="Filtrar notificações"><button type="button" class="chip" data-notif-filtro="todas" aria-pressed="true">Todas</button><button type="button" class="chip" data-notif-filtro="nao-lidas" aria-pressed="false">Não lidas</button></div><div data-notif-lista></div>`,
+      corpo:`<div class="notif-resumo"><strong data-notif-resumo role="status"></strong><span data-notif-escopo></span></div><div class="notif-filtros" role="group" aria-label="Filtrar notificações"><button type="button" class="chip" data-notif-filtro="todas" aria-pressed="true">Todas</button><button type="button" class="chip" data-notif-filtro="nao-lidas" aria-pressed="false">Não lidas</button></div><div data-notif-lista></div>`,
       rodape:`<p class="nota" data-notif-local></p><button type="button" class="btn" data-notif-todas-lidas>${icone('ok')}Marcar todas como lidas</button>`,
       aoFechar:() => { modal = null; document.getElementById('botao-notificacoes').setAttribute('aria-expanded','false'); },
     });

@@ -6,7 +6,7 @@ const UI = {
   pagina: "painel",
   tid: null,
   posRender: null,
-  cob: { aba: "cobrar", foco: "", regiao: "", busca: "", ordem: "dias", abertos: new Set() },
+  cob: { tipo: "usadas", resposta: "aguardando", somenteMeus: false, aba: "cobrar", foco: "", regiao: "", busca: "", ordem: "dias", abertos: new Set() },
   us: { aba: "pendentes", status: "todas", regiao: "", tid: "", busca: "", faixa: null, ordem: { campo: "dias", dir: "desc" }, pagina: 1, paginaDev: 1, sel: new Set() },
   es: { regiao: "", status: "", busca: "", bases: false, ordem: { campo: "novasQtd", dir: "desc" }, abertos: new Set() },
   tc: { tipo: "tecnico", regiao: "", busca: "", mostrarSemDados: false, ordem: { campo: "nome", dir: "asc" } },
@@ -185,6 +185,7 @@ const ACOES = {
   "relatorios-periodo": el => periodoRapidoRelatorio(el.dataset.periodo),
   notificacoes: () => Notificacoes.abrir(),
   'limpar-foco-cobranca': () => { UI.cob.foco = ''; renderizar(true); },
+  'limpar-meus-registros': () => { UI.cob.somenteMeus = false; renderizar(true); },
   "navegar-secao": el => {
     const pagina = paginasVizinhas()[el.dataset.direcao];
     if (!pagina) return;
@@ -210,12 +211,14 @@ const ACOES = {
   },
   "painel-estoque": () => { Object.assign(UI.es, { regiao: "", status: "", busca: "", bases: false }); irPara("estoque"); },
   "painel-cobrancas": (el) => abrirCobrancasPainel(el.dataset.aba || "cobrar"),
+  "termometro-abrir": el => abrirFatorTermometro(el.dataset.fator),
   "painel-zoom": (el) => ajustarZoomMapa(Number(el.dataset.passo)),
   "painel-fila": (el) => atualizarFiltroPainel("fila", el.dataset.fila, `[data-acao="painel-fila"][data-fila="${el.dataset.fila}"]`),
   "painel-dia": (el) => navegarAgenda(el.dataset.dia),
   "agenda-semana": (el) => navegarAgenda(somaDias(UIpainel.dia || hojeISO(), Number(el.dataset.passo) * 7), { passo: Number(el.dataset.passo) }),
   "agenda-hoje": (el) => navegarAgenda(hojeISO(), { foco: `${el.closest('.agenda-navegar') ? '.agenda-navegar' : '.agenda-prioridades'} [data-acao="agenda-hoje"]` }),
   "agenda-proxima": (el) => navegarAgenda(el.dataset.dia),
+  "agenda-sem-previsao": () => { Object.assign(UI.cob,{tipo:"todas",aba:"sem_previsao",somenteMeus:false,foco:"",regiao:"",busca:""});irPara("cobrancas"); },
   "agenda-vencidas": () => navegarAgenda(UIpainel.dia || hojeISO(), { vencidas: !UIpainel.agendaVencidas, foco: '[data-acao="agenda-vencidas"]' }),
   "agenda-reagendar": (el) => agirCompromissoAgenda(el, 'reagendar'),
   "agenda-mensagem": (el) => agirCompromissoAgenda(el, 'mensagem'),
@@ -268,8 +271,17 @@ const ACOES = {
     if (!itens.length) itens = t.usadas;
     modalPrevisao(itens, `Previsão de ${t.nome}`);
   },
+  "tipo-cob": el => { UI.cob.tipo=el.dataset.tipo;UI.cob.foco='';UI.cob.abertos.clear();renderizar(true); },
+  "resposta-filtro": el => { UI.cob.resposta=el.dataset.v;renderizar(true); },
+  "confirmar-retorno": el => {
+    const D=derivar(),t=D.mapa.get(el.dataset.tid);if(!t)return;
+    const itens=UI.pagina==='cobrancas'&&UI.cob.aba==='respostas'?acompanhamentoRespostas(D,UI.cob.tipo).filter(i=>i.tid===t.tid&&(!UI.cob.somenteMeus||respostaDoUsuario(i))&&(UI.cob.resposta==='pendentes'?i.estadoResposta==='formalizar'||(i.estadoResposta==='aguardando'&&i.diasResposta>=1):i.estadoResposta===UI.cob.resposta)):itensDaAba(t,UI.cob.aba,D.hoje,UI.cob.tipo,UI.cob.somenteMeus);
+    modalConfirmacao(t.tid,itens.length?itens.map(i=>i.k):null);
+  },
+  "cobrar-filtrado": el => {const D=derivar(),t=D.mapa.get(el.dataset.tid);if(t)modalCobrar(t.tid,UI.cob.aba,itensDaAba(t,UI.cob.aba,D.hoje,UI.cob.tipo,UI.cob.somenteMeus));},
+  "email-formal": el => {const D=derivar(),t=D.mapa.get(el.dataset.tid);if(t)modalCobrar(t.tid,'todos',pecasCobranca(t,UI.cob.tipo),'email');},
   "abrir-cob": (el) => { const s = UI.cob.abertos; s.has(el.dataset.tid) ? s.delete(el.dataset.tid) : s.add(el.dataset.tid); renderizar(true); },
-  "aba-cob": (el) => { UI.cob.aba = el.dataset.aba; UI.cob.foco = ''; renderizar(true); },
+  "aba-cob": (el) => { UI.cob.aba = el.dataset.aba; UI.cob.foco = ''; UI.cob.somenteMeus = false; renderizar(true); },
   "regiao-cob": (el) => { UI.cob.regiao = el.dataset.regiao; renderizar(true); },
   "copiar-resumo": () => copiarTexto(resumoTexto()),
   "exportar-cobrancas": () => exportarCobrancas(),
@@ -344,14 +356,9 @@ const ACOES = {
 const MUDANCAS = {
   "ranking-regiao": (el) => { UIranking.regiao = el.value; renderizar(true); },
   "consulta-ordem": (el) => { UIconsulta.ordem = el.value; UIconsulta.pagina = 1; renderizar(true); },
-  "previsao-item": async (el) => {
-    const D = derivar();
-    const item = D.itens.find((i) => i.k === el.dataset.k && i.tid === el.dataset.tid);
-    if (!item) return;
-    try {
-      await definirPrevisao([item], el.value || "");
-      toast(el.value ? `Previsão ${fmtPrevisao(el.value)} salva.` : "Previsão removida.");
-    } catch (e) { toast(erroAmigavel(e).message, "erro"); }
+  "previsao-item": async el => {
+    const i=derivar().itens.find(i=>i.k===el.dataset.k);if(!i)return;
+    const data=el.value;el.value=i.previsao || '';modalConfirmacao(i.tid,[i.k],data);
   },
   "obs-item": async (el) => {
     const D = derivar();

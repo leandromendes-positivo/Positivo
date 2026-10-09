@@ -16,9 +16,24 @@ service cloud.firestore {
     function autor(d) { return d.uid == request.auth.uid && d.email == email(); }
     function porValido(p) { return p.keys().hasOnly(['uid','email']) && autor(p); }
     function dataValida(d) { return d is string && (d == '' || d.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')); }
+    function confirmacaoValida(c, tid) {
+      let contato = get(/databases/$(database)/documents/contatos/$(c.contatoId)).data;
+      return c.keys().hasAll(['tipo','mat','regiao','quantidade','qtdRmdf','contatoId','referenciaEmail','observacao','dataReferencia','lotesReferencia'])
+        && c.keys().hasOnly(['tipo','mat','regiao','quantidade','qtdRmdf','contatoId','referenciaEmail','observacao','dataReferencia','lotesReferencia'])
+        && c.tipo in ['novas','usadas'] && c.mat is string && c.mat.size() > 0 && c.mat.size() <= 100
+        && c.regiao is string && c.regiao.size() <= 20
+        && c.quantidade is int && c.quantidade > 0 && c.quantidade <= 1000000
+        && c.qtdRmdf is int && c.qtdRmdf >= 0 && c.qtdRmdf <= c.quantidade && (c.tipo == 'novas' || c.qtdRmdf == 0)
+        && c.referenciaEmail is string && c.referenciaEmail.size() > 0 && c.referenciaEmail.size() <= 200
+        && c.observacao is string && c.observacao.size() <= 300
+        && dataValida(c.dataReferencia) && c.dataReferencia != ''
+        && c.lotesReferencia is list && c.lotesReferencia.size() <= 500
+        && contato.canal == 'email' && contato.tid == tid;
+    }
     function agendaValida(d, id) {
       return d.keys().hasAll(['tid','peca','previsao','anterior','versao','evento','uid','email','em'])
-        && d.keys().hasOnly(['tid','peca','previsao','anterior','versao','evento','uid','email','em'])
+        && d.keys().hasOnly(['tid','peca','previsao','anterior','versao','evento','uid','email','em','confirmacao'])
+        && ((d.previsao == '' && !('confirmacao' in d)) || (d.previsao != '' && confirmacaoValida(d.confirmacao, d.tid)))
         && d.tid is string && d.tid.size() > 0 && d.tid.size() <= 200 && d.peca == id
         && d.evento is string && d.evento.matches('^[a-zA-Z0-9-]{20,80}$')
         && d.versao is int && dataValida(d.previsao) && dataValida(d.anterior)
@@ -68,8 +83,11 @@ service cloud.firestore {
     match /contatos/{id} {
       allow read: if autorizado();
       allow create: if autorizado() && request.resource.data.keys().hasAll(['tid','canal','previsao','obs','pecas','itens','uid','email','em'])
-        && request.resource.data.keys().hasOnly(['tid','canal','previsao','obs','pecas','itens','uid','email','em','tipo'])
-        && (!('tipo' in request.resource.data) || request.resource.data.tipo in ['novas','usadas'])
+        && request.resource.data.keys().hasOnly(['tid','canal','previsao','obs','pecas','itens','uid','email','em','tipo','detalhes','referencia','ordem'])
+        && (!('ordem' in request.resource.data) || request.resource.data.ordem is int)
+        && (!('detalhes' in request.resource.data) || (request.resource.data.detalhes is list && request.resource.data.detalhes.size() <= 500))
+        && (!('referencia' in request.resource.data) || (request.resource.data.referencia is map && request.resource.data.referencia.keys().hasOnly(['dataReferencia','lotesReferencia']) && dataValida(request.resource.data.referencia.dataReferencia) && request.resource.data.referencia.lotesReferencia is list && request.resource.data.referencia.lotesReferencia.size() <= 500))
+        && (!('tipo' in request.resource.data) || request.resource.data.tipo in ['novas','usadas','mistas'])
         && autor(request.resource.data) && request.resource.data.em == request.time
         && request.resource.data.tid is string && request.resource.data.tid.size() <= 200
         && request.resource.data.canal in ['whatsapp','ligacao','email','pessoalmente','outro']

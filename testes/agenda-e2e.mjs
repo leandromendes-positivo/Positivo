@@ -1,3 +1,4 @@
+import { instalarAgendaTeste, preencherConfirmacaoTeste } from './confirmacao-ajudante.mjs';
 // Compromissos por técnico/data, retorno após importação e interação do calendário.
 // Dados fictícios, exclusivamente na versão local em memória.
 import { createRequire } from 'node:module';
@@ -16,6 +17,7 @@ try {
   await page.addInitScript(() => { window.__CP_AGORA = '2026-10-08T09:00:00'; });
   await page.goto(process.env.URL_PAINEL_TESTE || 'http://127.0.0.1:8000/pagina-completa.html');
   await page.waitForFunction(() => E.status === 'pronto');
+  await instalarAgendaTeste(page);
   assert.equal(await page.evaluate(() => Acesso.modo), 'memoria');
   const arquivos = fs.readdirSync('exemplos').filter(f => f.endsWith('.csv')).map(f => path.resolve('exemplos', f));
   await page.setInputFiles('#entrada-topo', arquivos);
@@ -27,9 +29,9 @@ try {
       || [...agrupar(D.itens, i => i.tid).values()].find(itens => itens.length >= 2);
     const [a, b] = grupo;
     const c = D.itens.find(i => i.tid !== a.tid);
-    await definirPrevisao([a], '2026-10-06');
-    await definirPrevisao([b], '2026-10-08');
-    await definirPrevisao([c], '2026-10-20');
+    await agendarComEmailTeste([a], '2026-10-06');
+    await agendarComEmailTeste([b], '2026-10-08');
+    await agendarComEmailTeste([c], '2026-10-20');
     irPara('painel');
     document.getElementById('toasts').innerHTML = '';
     return { a, b, c, total: D.kpi.usadas };
@@ -53,8 +55,7 @@ try {
 
   // Reagendar esta data não altera o segundo compromisso do mesmo técnico.
   await agenda.locator('[data-acao="agenda-reagendar"]').click();
-  await preencherData(page.locator('#prev-data'), '2026-10-22');
-  await page.locator('[data-salvar]').click();
+  await preencherConfirmacaoTeste(page,'2026-10-22');
   await page.waitForFunction(() => !document.querySelector('.modal'));
   assert.deepEqual(await page.evaluate(({ a, b }) => [derivar().itens.find(i => i.k === a.k).previsao, derivar().itens.find(i => i.k === b.k).previsao], dados), ['2026-10-22', '2026-10-08']);
   assert.match(await agenda.locator('.agenda-vazia').innerText(), /Nenhuma previsão vencida/);
@@ -93,10 +94,10 @@ try {
   // Filtro de peças sem previsão corresponde exatamente ao contador da agenda.
   const semData = await page.evaluate(() => resumoAgenda(derivar()).semData.length);
   await agenda.locator('.agenda-prioridades [data-status="sem_previsao"]').click();
-  assert.equal(await page.evaluate(() => UI.us.status), 'sem_previsao');
-  assert.equal(await page.evaluate(() => filtrarUsadas(derivar()).length), semData);
+  assert.equal(await page.evaluate(() => UI.cob.aba), 'sem_previsao');
+  assert.equal(await page.evaluate(() => filtrarCobrancas(derivar()).flatMap(t=>itensDaAba(t,'sem_previsao',hojeISO(),'todas')).length), semData);
   await page.evaluate(() => irPara('painel'));
-  await page.evaluate(async ({ a }) => { await definirPrevisao([derivar().itens.find(i => i.k === a.k)], '2026-10-06'); navegarAgenda('2026-10-08'); }, dados);
+  await page.evaluate(async ({ a }) => { await agendarComEmailTeste([derivar().itens.find(i => i.k === a.k)], '2026-10-06'); navegarAgenda('2026-10-08'); }, dados);
 
   // Aparência, textos completos e ações acessíveis em desktop, tablet e celular.
   for (const tema of ['light', 'dark']) {

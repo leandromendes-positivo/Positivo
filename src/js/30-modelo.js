@@ -16,6 +16,8 @@
    ========================================================================== */
 
 const ORIENTACAO_RMDF = 'Se alguma peça nova estiver com defeito, informe o código e a quantidade e avise se será aplicado RMDF ou se ele já foi aplicado.';
+const ORIENTACAO_RESPOSTA_EMAIL = 'Formalize a previsão por e-mail, informando a data, os códigos e as quantidades que irá devolver. O WhatsApp serve apenas como aviso; a confirmação deve ser enviada por e-mail.';
+const MENSAGEM_MISTA = '{saudacao}, {nome}!\n\nPrecisamos combinar a devolução das peças abaixo:\n\n{lista}';
 const MENSAGEM_NOVAS = '{saudacao}, {nome}!\n\nPrecisamos combinar a devolução das seguintes peças novas sob sua responsabilidade:\n\n{lista}\n\nPrazo de devolução: {prazo} dias. Por favor, informe a data prevista para devolução.\n\nObrigado!';
 const PADROES = {
   prazo: 7,          // dias máximos com peça usada
@@ -104,7 +106,7 @@ async function carregarFotos() {
 }
 
 async function carregarHistoricos() {
-  const corte = somaDias(hojeISO(), -120);
+  const corte = corteHistoricoAcompanhamento();
   const [hist, devs, imps, movs] = await Promise.all([
     Armazem.consultar("historico", { onde: [["data", ">=", corte]] }),
     Armazem.consultar("devolucoes", { onde: [["data", ">=", corte]] }),
@@ -203,7 +205,7 @@ function assinarMudancas() {
   E.ouvintes.push(Armazem.ouvirColecao("movimentos", (docs) => {
     E.movimentos = docs.flatMap((d) => (d.itens || []).map((m) => ({ ...m, doc: d.id })));
     mudou();
-  }, (q) => q.where('data', '>=', somaDias(hojeISO(), -120))));
+  }, (q) => q.where('data', '>=', corteHistoricoAcompanhamento())));
 }
 
 // ============================================================ regras
@@ -293,12 +295,12 @@ function derivar() {
     const an = (E.acomp[u.tid] && E.acomp[u.tid].itens && E.acomp[u.tid].itens[u.k]) || {};
     const base = (u.dataFT || u.desde || hoje).slice(0, 10);
     const dias = Math.max(0, diffDias(base, hoje));
-    const previsao = an.p || "";
+    const agenda = previsaoDaPeca({...u,tipo:'usadas'}), previsao = agenda.previsao;
     const t = tec(u.tid, u.regiao);
-    const status = statusUsada(dias, previsao, t, hoje);
+    const status = statusUsada(dias, agenda.qtdPrevista === u.qtd ? previsao : '', t, hoje);
     t.regioes.add(u.regiao);
     const item = {
-      ...u, desc: E.catalogo[u.mat] || "", dias, previsao, obs: an.o || "",
+      ...u, tipo: 'usadas', ...agenda, desc: E.catalogo[u.mat] || "", dias, previsao, obs: an.o || "",
       nCobrancas: an.c || 0, ultimaCobranca: an.uc || "", agendadoPor: an.agendadoPor || null, agendadoEm: an.agendadoEm || "",
       status, cobrar: status === "atrasada" || status === "previsao_vencida",
       prazo: t.prazo, alerta: t.alerta,
@@ -339,18 +341,18 @@ function derivar() {
     const u = t.usadas;
     u.sort((a, b) => b.dias - a.dias || comparar(a.chamado, b.chamado));
     t.nUsadas = somar(u, (i) => i.qtd);
-    t.itensCobrar = u.filter((i) => i.cobrar);
-    t.itensVencendo = u.filter((i) => i.status === "vencendo");
-    t.itensAguardando = u.filter((i) => i.status === "aguardando");
+    t.itensCobrar = selecionarAbaCobranca(u,'cobrar',hoje);
+    t.itensVencendo = selecionarAbaCobranca(u,'vencendo',hoje);
+    t.itensAguardando = selecionarAbaCobranca(u,'aguardando',hoje);
     t.nCobrar = somar(t.itensCobrar, (i) => i.qtd);
     t.nAtrasadas = somar(u.filter((i) => i.atrasada), (i) => i.qtd);
     t.nVencendo = somar(t.itensVencendo, (i) => i.qtd);
     t.nAguardando = somar(t.itensAguardando, (i) => i.qtd);
-    t.nPrevVencida = somar(u.filter((i) => i.status === "previsao_vencida"), (i) => i.qtd);
+    t.nPrevVencida = somar(selecionarAbaCobranca(u,'vencidas',hoje),i=>i.qtd);
     t.maxDias = u.length ? u[0].dias : 0;
     const futuras = u.map((i) => i.previsao).filter((p) => p && p >= hoje).sort();
     t.proxPrevisao = futuras[0] || "";
-    t.previsoesHoje = u.filter((i) => i.previsao === hoje);
+    t.previsoesHoje = selecionarAbaCobranca(pecasCobranca(t,'todas'),'previsoes',hoje);
 
     const contam = t.novasLinhas.filter((n) => n.conta);
     t.novasQtd = somar(contam, (n) => n.qtd);
@@ -390,12 +392,12 @@ function derivar() {
     usadasTecnicos: lista.filter((t) => t.nUsadas > 0).length,
     atrasadas: somar(itens.filter((i) => i.atrasada), (i) => i.qtd),
     cobrarTecnicos: cobrarTec.length,
-    cobrarPecas: somar(itens.filter((i) => i.cobrar), (i) => i.qtd),
-    prevVencida: somar(itens.filter((i) => i.status === "previsao_vencida"), (i) => i.qtd),
+    cobrarPecas: somar(lista,t=>t.nCobrar),
+    prevVencida: somar(lista,t=>t.nPrevVencida),
     vencendo: somar(itens.filter((i) => i.status === "vencendo"), (i) => i.qtd),
-    aguardando: somar(itens.filter((i) => i.status === "aguardando"), (i) => i.qtd),
+    aguardando: somar(lista,t=>t.nAguardando),
     maisAntiga: itens.reduce((m, i) => Math.max(m, i.dias), 0),
-    previsoesHoje: itens.filter((i) => i.previsao === hoje),
+    previsoesHoje: lista.flatMap(t=>selecionarAbaCobranca(pecasCobranca(t,'todas'),'previsoes',hoje)),
     devolvidas7: somar(dev7, (d) => d.qtd),
     devolvidas7NoPrazo: somar(dev7.filter((d) => d.dias <= prazoDaDevolucao(d)), (d) => d.qtd),
     temHistoricoDev: E.importacoes.filter((i) => !i.desfeito).length > 1 || E.devolucoes.length > 0,
@@ -468,14 +470,14 @@ function montarMensagem(t, itens, modelo, tipo = 'usadas') {
   const max = 15;
   const ordenados = [...itens].sort((a, b) => b.dias - a.dias);
   let lista = ordenados.slice(0, max).map((i) =>
-    `• ${i.desc || "Material"}\n  Código: ${i.mat} | Quantidade: ${fmtNum(i.qtd)}\n  ${i.chamado ? `Chamado: ${i.chamado} | ` : ''}${plural(i.dias, 'dia', 'dias')} com o técnico`
+    `• ${i.desc || "Material"}${tipo==='mistas'?` (${i.tipo==='novas'?'nova':'usada'})`:''}\n  Código: ${i.mat} | Quantidade: ${fmtNum(i.qtd)}\n  ${i.chamado ? `Chamado: ${i.chamado} | ` : ''}${plural(i.dias, 'dia', 'dias')} com o técnico`
   ).join("\n\n");
   if (ordenados.length > max) lista += `\n\n+ ${plural(somar(ordenados.slice(max), i => i.qtd), 'peça', 'peças')} em ${plural(ordenados.length - max, 'registro adicional', 'registros adicionais')}.`;
   const valores = {
     saudacao: saudacao(), nome: primeiroNome(t.nome), nome_completo: t.nome,
     qtd: somar(itens, (i) => i.qtd), lista, prazo: prazoDoTecnico(t.tid, tipo), regiao: t.regiao,
   };
-  return String(modelo || "").replace(/\{(\w+)\}/g, (m, k) => (k in valores ? valores[k] : m)) + (tipo === 'novas' ? `\n\n*Peças novas com defeito · RMDF*\n${ORIENTACAO_RMDF}` : '');
+  return String(modelo || "").replace(/\{(\w+)\}/g, (m, k) => (k in valores ? valores[k] : m)) + (tipo !== 'usadas' ? `\n\n*Peças novas com defeito · RMDF*\n${ORIENTACAO_RMDF}` : '') + `\n\n*Confirmação por e-mail*\n${ORIENTACAO_RESPOSTA_EMAIL}`;
 }
 
 // ============================================================ resumo diário
@@ -500,9 +502,10 @@ function montarResumo() {
         pend += i.qtd;
         if (d > t.prazo) atr += i.qtd;
         const prevVencida = i.previsao && i.previsao < dia;
-        if ((d > t.prazo && !(i.previsao && i.previsao >= dia)) || prevVencida) {
-          pecas += i.qtd;
-          if (prevVencida) vencidas += i.qtd;
+        const paraCobrar = (prevVencida ? i.qtdPrevista : 0) + (d>t.prazo ? i.qtd-i.qtdPrevista : 0);
+        if (paraCobrar>0) {
+          pecas += paraCobrar;
+          if (prevVencida) vencidas += i.qtdPrevista;
           maxDias = Math.max(maxDias, d);
         }
       }
@@ -518,7 +521,7 @@ function montarResumo() {
     cobrar.sort((a, b) => b.maxDias - a.maxDias || b.pecas - a.pecas);
     const previsoes = [];
     for (const t of D.tecnicos) {
-      const pecas = somar(t.usadas.filter((i) => i.previsao === dia), (i) => i.qtd);
+      const pecas = somar(pecasCobranca(t,'todas').filter(i=>i.previsao===dia),i=>i.qtdPrevista);
       if (pecas) previsoes.push({ nome: t.nome, regiao: t.regiao, pecas });
     }
     dias[dia] = {
@@ -585,11 +588,12 @@ async function definirObs(item, texto) {
 }
 
 async function registrarCobranca(tid, { canal, previsao, obs, itens, tipo = 'usadas' }) {
-  if (!['novas','usadas'].includes(tipo)) throw new Error('Tipo de cobrança inválido.');
-  if (tipo === 'novas') previsao = ''; // Não cria agendamentos de usadas com chaves de novas.
-  const contato = { tid, tipo, canal: canal || 'whatsapp', previsao: previsao || '', obs: String(obs || '').slice(0,300), pecas: somar(itens,i=>i.qtd), itens: itens.map(i=>tipo === 'novas' ? `nova-${hash36(tid + '|' + i.mat + '|' + (i.tipoEnvio || ''))}` : i.k) };
-  if (contato.itens.length > 500) throw new Error('Registre até 500 peças por cobrança.');
-  await gravarAgendamentos(previsao ? itens : [], previsao || '', contato);
+  if (!['novas','usadas','mistas'].includes(tipo)) throw new Error('Tipo de cobrança inválido.');
+  if (previsao) throw Object.assign(new Error('Registre a resposta por e-mail em Confirmar previsão, selecionando as peças.'), {amigavel:true});
+  const detalhes=itens.map(i=>({k:i.k || chaveNovaCobranca(i),tipo:i.tipo==='novas'||tipo==='novas'?'novas':'usadas',mat:String(i.mat),qtd:i.qtd}));
+  const contato = { tid, tipo, ordem:Date.now(), canal: canal || 'whatsapp', previsao: '', obs: String(obs || '').slice(0,300), pecas: somar(itens,i=>i.qtd), itens: detalhes.map(i=>i.k), detalhes, referencia: referenciaSaidas() };
+  if (contato.itens.length > 500) throw new Error('Registre até 500 materiais por cobrança.');
+  await gravarAgendamentos([], '', contato);
 }
 
 async function salvarTecnico(tid, campos) {

@@ -23,7 +23,7 @@ export async function recalcularResumo(db, dia) {
     },
   };
   const contexto=vm.createContext({ window:{__CP_AGORA:`${dia}T09:00:00`}, Armazem:armazem, Acesso:{modo:'servidor'}, console, setTimeout, clearTimeout });
-  const arquivos=['00-util.js','26-identidade.js','30-modelo.js'];
+  const arquivos=['00-util.js','26-identidade.js','30-modelo.js','33-confirmacoes.js'];
   const codigo=(await Promise.all(arquivos.map(n=>readFile(new URL(`../src/js/${n}`,import.meta.url),'utf8')))).join('\n');
   vm.runInContext(codigo,contexto);
   return await vm.runInContext('(async()=>{await carregarTudo();if(E.status!=="pronto")throw new Error("Não foi possível calcular o resumo atualizado.");return montarResumo();})()',contexto);

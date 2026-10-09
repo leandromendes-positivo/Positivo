@@ -3,7 +3,7 @@ const MAPA_BRASIL = /*__MAPA_BRASIL__*/;
 
 function filaDoPainel(D, tipo = UIpainel.fila) {
   return D.tecnicos.map((t) => {
-    const itens = tipo === "vencidas" ? t.usadas.filter((i) => i.status === "previsao_vencida")
+    const itens = tipo === "vencidas" ? selecionarAbaCobranca(t.usadas, 'vencidas', D.hoje)
       : tipo === "hoje" ? t.previsoesHoje : t.itensCobrar;
     return { t, itens, qtd: somar(itens, (i) => i.qtd), dias: Math.max(0, ...itens.map((i) => i.dias)) };
   }).filter((r) => r.itens.length)
@@ -129,7 +129,7 @@ function atualizarFiltroPainel(chave, valor, seletor) {
 }
 
 function abrirCobrancasPainel(aba = "cobrar") {
-  Object.assign(UI.cob, { aba, foco: "", regiao: "", busca: "", ordem: "dias" });
+  Object.assign(UI.cob, { tipo: aba==='previsoes'?'todas':'usadas', aba, somenteMeus: false, foco: "", regiao: "", busca: "", ordem: "dias" });
   irPara("cobrancas");
 }
 

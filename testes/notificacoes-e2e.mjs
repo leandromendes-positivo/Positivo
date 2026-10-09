@@ -163,15 +163,17 @@ try {
   await page.evaluate(()=>{E.cadastro.ana.email='invalido';E.cadastro.ana.apelido='<img src=x onerror="window.__xss=1">';mudou();});
   assert.equal(await page.locator('[data-notif-lista] img').count(),0);
   assert.equal(await page.evaluate(()=>window.__xss || null),null);
-  // Sem acesso administrativo, importação só orienta e não oferece ação privilegiada.
+  // Usuário padrão recebe alertas das áreas permitidas; registros sem autoria não são atribuídos a ele.
   await page.keyboard.press('Escape');
   await page.evaluate(()=>{Acesso.modo='firebase';Acesso.projeto='notificacoes-ficticias';Acesso.usuario={uid:'operador-a',email:'a@example.test',nome:'A'};Acesso.perfil={ativo:true,perfil:'usuario'};Notificacoes.atualizar();});
   await abrir();
   assert.equal(await page.locator('[data-notif-destino="planilhas"]').count(),0);
-  assert.match(await page.locator('[data-notif-id="planilhas"]').innerText(),/administrador/);
+  assert.equal(await page.locator('[data-notif-id="planilhas"]').count(),0);
+  assert.equal(await page.locator('[data-notif-id="sem_contato"]').count(),0);
+  assert.equal(await page.locator('[data-notif-id="previsoes"]').count(),0);
   await page.locator('[data-notif-todas-lidas]').click();await page.keyboard.press('Escape');
   await page.evaluate(()=>{Acesso.usuario={uid:'operador-b',email:'b@example.test',nome:'B'};Notificacoes.atualizar();});
-  assert.equal(await sino.locator('[data-notif-contador]').innerText(),'5','leituras isoladas por conta');
+  assert.equal(await sino.locator('[data-notif-contador]').innerText(),'1','leituras isoladas por conta e limitadas aos alertas permitidos');
   await page.evaluate(()=>{Acesso.usuario={uid:'operador-a',email:'a@example.test',nome:'A'};Notificacoes.atualizar();});
   assert.equal(await sino.locator('[data-notif-contador]').isVisible(),false,'leitura anterior carregada do armazenamento');
   // Evento entre abas atualiza a leitura da mesma conta.
@@ -179,7 +181,7 @@ try {
     const k=Object.keys(localStorage).find(k=>k.startsWith('cp-notificacoes-v1-')&&k!==original);
     localStorage.removeItem(k);window.dispatchEvent(new StorageEvent('storage',{key:k}));
   },chave);
-  assert.equal(await sino.locator('[data-notif-contador]').innerText(),'5','outra aba atualiza a leitura');
+  assert.equal(await sino.locator('[data-notif-contador]').innerText(),'1','outra aba atualiza a leitura');
   // Armazenamento bloqueado mantém a operação e informa a limitação.
   await abrir();
   await page.evaluate(()=>{window.__setItem=Storage.prototype.setItem;Storage.prototype.setItem=function(){throw new DOMException('Teste','QuotaExceededError');};});

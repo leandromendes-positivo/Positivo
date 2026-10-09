@@ -77,7 +77,7 @@ const UIpainel = { tabelas: new Set(), fila: "cobrar", dia: "", agendaVencidas: 
 
 function renderPainel() {
   const D = derivar();
-  if (!E.usadas.length && !E.novas.length && !E.devolucoes.length && !E.movimentos.length) return leituraOperacional(D) + boasVindas();
+  if (!E.usadas.length && !E.novas.length && !E.devolucoes.length && !E.movimentos.length && !D.frescor.some(f => f.em)) return leituraOperacional(D) + termometroOperacao(D) + boasVindas();
   const k = D.kpi, cfg = D.cfg;
   const ant = historicoAnterior(), at = ant && ant.tot;
   const previstas = somar(k.previsoesHoje, (i) => i.qtd);
@@ -98,7 +98,7 @@ function renderPainel() {
   return `<div class="painel-operacao">
     ${leituraOperacional(D)}
     <div class="kpis kpis-4 indicadores-operacao">${indicadores.join("")}</div>
-    ${faixaGestao(D)}${barraPrioridade(D)}${avisoAtualizacao(D)}
+    ${termometroOperacao(D)}${faixaGestao(D)}${barraPrioridade(D)}${avisoAtualizacao(D)}
     <div class="grade-operacao">${filaHoje(D)}${mapaOperacao(D)}</div>
     ${agendaDevolucoes(D)}
     ${renderRankings(D)}

@@ -1,3 +1,4 @@
+import { instalarAgendaTeste, preencherConfirmacaoTeste } from './confirmacao-ajudante.mjs';
 // Fluxo local da central de operações. Nunca importa dados no Firebase real.
 // python3 build.py; python3 -m http.server 8000 --directory dist
 // PW_PATH=/caminho/playwright CHROMIUM=/usr/bin/chromium node testes/operacao-e2e.mjs
@@ -19,6 +20,7 @@ try {
   await page.addInitScript(() => { window.__CP_AGORA = "2026-10-05T09:00:00"; });
   await page.goto(process.env.URL_PAINEL_TESTE || "http://127.0.0.1:8000/pagina-completa.html");
   await page.waitForFunction(() => E.status === "pronto");
+  await instalarAgendaTeste(page);
   assert.equal(await page.evaluate(() => Acesso.modo), "memoria", "teste exige o HTML local sem Firebase");
   assert.equal(await page.locator(".boas-vindas").count(), 1);
 
@@ -75,8 +77,9 @@ try {
 
   // Cobrança real pela interface atualiza a fila e a agenda, mas não dá baixa.
   await page.locator('.fila-operacao [data-acao="cobrar"]').first().click();
-  await preencherData(page.locator('input[name="previsao"]'), "2026-10-08");
-  await page.locator("[data-registrar]").click();
+  await page.locator('#cob-form [name="canal"]').selectOption('email');
+  await page.locator('[data-registrar-confirmar]').click();
+  await preencherConfirmacaoTeste(page, '2026-10-08');
   await page.waitForFunction(() => !document.querySelector(".modal") && derivar().kpi.cobrarTecnicos === 2);
   await page.locator('[data-acao="painel-dia"][data-dia="2026-10-08"]').click();
   assert.equal(await page.locator(".agenda-resumo > strong").innerText(), "2 peças previstas");
@@ -84,7 +87,7 @@ try {
   assert.equal(await page.evaluate(() => E.devolucoes.length), 0);
 
   // Uma previsão de hoje deve virar cobrança no dia seguinte.
-  await page.evaluate(async () => { await definirPrevisao([derivar().cobrarTec[0].itensCobrar[0]], "2026-10-05"); });
+  await page.evaluate(async () => { await agendarComEmailTeste([derivar().cobrarTec[0].itensCobrar[0]], "2026-10-05"); });
   await page.locator('[data-acao="painel-fila"][data-fila="hoje"]').click();
   assert.equal(await page.locator(".fila-operacao li").count(), 1);
   await page.evaluate(() => { window.__CP_AGORA = "2026-10-06T09:00:00"; mudou(); });
@@ -96,9 +99,9 @@ try {
 
   // A quantidade vem de Qtd, não do número de linhas ou de técnicos.
   assert.deepEqual(await page.evaluate(() => {
-    const [hoje] = agendaDoPainel({ hoje: "2026-10-06", itens: [
-      { tid: "A", previsao: "2026-10-06", qtd: 3 }, { tid: "A", previsao: "2026-10-06", qtd: 2 },
-    ] });
+    const [hoje] = agendaDoPainel({ hoje: "2026-10-06", tecnicos: [{ novasLinhas: [], usadas: [
+      { tid: "A", previsao: "2026-10-06", qtd: 3, qtdPrevista: 3 }, { tid: "A", previsao: "2026-10-06", qtd: 2, qtdPrevista: 2 },
+    ] }] });
     return [hoje.qtd, hoje.tecnicos.size];
   }), [5, 1]);
 

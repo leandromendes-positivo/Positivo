@@ -6,10 +6,11 @@ const EDITORES_EMAIL = {
 };
 function montarEmailCobranca(t, itens, lembrete = false, tipo = 'usadas') {
   const prazo = prazoDoTecnico(t.tid, tipo), qtd = somar(itens, i => i.qtd);
-  const atrasadas = somar(itens.filter(i => i.dias > prazo), i => i.qtd);
+  const atrasadas = somar(itens.filter(i => i.dias > prazoDoTecnico(t.tid,i.tipo||tipo)), i => i.qtd);
   const lista = [...itens].sort((a,b) => b.dias - a.dias).map((i,n) => [
     `${n + 1}. ${i.desc || 'Material sem descrição'}`,
     `Código: ${i.mat}`,
+    tipo==='mistas'?`Tipo: ${i.tipo==='novas'?'Nova':'Usada'} | Prazo: ${prazoDoTecnico(t.tid,i.tipo)} dias`:'',
     `Quantidade: ${fmtNum(i.qtd)} | Tempo com o técnico: ${plural(i.dias, 'dia', 'dias')}`,
     `Chamado: ${i.chamado || 'Não informado'}`,
     i.previsao ? `Previsão informada: ${fmtData(i.previsao)}` : '',
@@ -19,11 +20,11 @@ function montarEmailCobranca(t, itens, lembrete = false, tipo = 'usadas') {
     assunto: 'Devolução de peças',
     corpo: [
       `${saudacao()}, ${primeiroNome(t.nome)}!`,
-      tipo === 'novas' ? 'Precisamos combinar a devolução das peças novas abaixo, sob sua responsabilidade. Segue a relação para conferência.' : lembrete ? 'Vamos programar a devolução das peças usadas abaixo para manter seu inventário em dia?' : 'Identificamos peças usadas pendentes de devolução sob sua responsabilidade. Segue a relação para conferência.',
-      `RESUMO DA SOLICITAÇÃO\nTécnico: ${t.nome}${t.regiao ? `\nRegião: ${t.regiao}` : ''}\nData da consulta: ${fmtData(hojeISO())}\nTotal: ${plural(qtd, 'peça', 'peças')}\nAcima do prazo: ${plural(atrasadas, 'peça', 'peças')}\nPrazo de devolução: ${plural(prazo, 'dia', 'dias')}`,
+      tipo === 'mistas' ? 'Precisamos combinar a devolução das peças novas e usadas relacionadas abaixo. Confira os códigos, quantidades e o tipo de cada peça.' : tipo === 'novas' ? 'Precisamos combinar a devolução das peças novas abaixo, sob sua responsabilidade. Segue a relação para conferência.' : lembrete ? 'Vamos programar a devolução das peças usadas abaixo para manter seu inventário em dia?' : 'Identificamos peças usadas pendentes de devolução sob sua responsabilidade. Segue a relação para conferência.',
+      `RESUMO DA SOLICITAÇÃO\nTécnico: ${t.nome}${t.regiao ? `\nRegião: ${t.regiao}` : ''}\nData da consulta: ${fmtData(hojeISO())}\nTotal: ${plural(qtd, 'peça', 'peças')}\nAcima do prazo: ${plural(atrasadas, 'peça', 'peças')}\nPrazo de devolução: ${tipo==='mistas'?`usadas ${prazoDoTecnico(t.tid,'usadas')} dias / novas ${prazoDoTecnico(t.tid,'novas')} dias`:plural(prazo, 'dia', 'dias')}`,
       `PEÇAS PARA DEVOLUÇÃO\n\n${lista}`,
-      ...(tipo === 'novas' ? [`PEÇAS NOVAS COM DEFEITO · RMDF\n${ORIENTACAO_RMDF}`] : []),
-      'PRÓXIMO PASSO\nPor favor, responda este e-mail com a data prevista para devolução.',
+      ...(tipo !== 'usadas' ? [`PEÇAS NOVAS COM DEFEITO · RMDF\n${ORIENTACAO_RMDF}`] : []),
+      'PRÓXIMO PASSO\nPor favor, responda este e-mail confirmando a data prevista, os códigos e as quantidades que irá devolver. A confirmação precisa ser formalizada por e-mail.',
       'Obrigado pela colaboração!',
     ].join('\n\n'),
   };

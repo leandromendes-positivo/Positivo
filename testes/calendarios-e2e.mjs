@@ -1,3 +1,4 @@
+import { instalarAgendaTeste, preencherConfirmacaoTeste } from './confirmacao-ajudante.mjs';
 // Calendários reais nos filtros e agendamentos; fixtures apenas na versão em memória.
 import { createRequire } from 'node:module';
 import assert from 'node:assert/strict';
@@ -16,6 +17,7 @@ try {
   await page.addInitScript(() => { window.__CP_AGORA = '2026-10-08T12:00:00-03:00'; });
   await page.goto(process.env.URL_PAINEL_TESTE || 'http://127.0.0.1:8000/pagina-completa.html');
   await page.waitForFunction(() => E.status === 'pronto');
+  await instalarAgendaTeste(page);
   assert.equal(await page.evaluate(() => Acesso.modo), 'memoria', 'nunca gravar fixtures no Firebase');
   await page.evaluate(() => { Acesso.usuario = { uid: 'calendario-teste', email: 'teste.calendario@example.test' }; });
   await page.setInputFiles('#entrada-topo', fs.readdirSync('exemplos').filter(f => f.endsWith('.csv')).map(f => path.resolve('exemplos', f)));
@@ -69,8 +71,8 @@ try {
   assert.equal(await inicio.inputValue(), '2026-10-08');
 
   // Agendamento em um diálogo existente: min, atalhos, foco e isolamento do fundo.
-  await page.evaluate(() => { irPara('cobrancas'); modalCobrar(derivar().cobrarTec[0].tid); });
-  const cobranca = page.locator('#cob-prev');
+  await page.evaluate(async()=>{const tid=derivar().cobrarTec[0].tid;await garantirEmailTeste(tid);irPara('cobrancas');modalConfirmacao(tid,derivar().mapa.get(tid).usadas.map(i=>i.k));});
+  const cobranca = page.locator('#confirmacao-data');
   await abrir(cobranca); await page.locator('[data-mes="-1"]').click();
   assert.equal(await mes.innerText(), 'Setembro de 2026');
   assert.equal(await page.locator('[data-mes="-1"]').isDisabled(), true);
@@ -81,7 +83,7 @@ try {
   await page.keyboard.press('Escape');
   assert.equal(await page.locator('.modal-fundo').first().evaluate(e => e.inert), false);
   assert.equal(await cobranca.locator('..').locator('button').evaluate(e => e === document.activeElement), true);
-  await page.locator('[data-alvo="#cob-prev"][data-data="2026-10-09"]').first().click();
+  await page.locator('[data-alvo="#confirmacao-data"][data-data="2026-10-09"]').first().click();
   assert.match(await cobranca.locator('..').innerText(), /09\/10\/2026/, 'atalho mantém a data visível sincronizada');
   await page.keyboard.press('Escape');
 
@@ -111,12 +113,13 @@ try {
   await page.evaluate(() => irPara('usadas'));
   const linha = page.locator('[data-mudar="previsao-item"]').first();
   const chave = await linha.getAttribute('data-k');
+  await page.evaluate(async k=>garantirEmailTeste(derivar().itens.find(i=>i.k===k).tid),chave);
   await abrir(linha); await page.locator('[data-cal-dia="2026-10-10"]').click();
+  await preencherConfirmacaoTeste(page,'2026-10-10');
   await page.waitForFunction(k => derivar().itens.find(i => i.k === k)?.previsao === '2026-10-10', chave);
   assert.equal(await page.evaluate(k => derivar().itens.find(i => i.k === k).agendadoPor?.email, chave), 'teste.calendario@example.test');
   await page.evaluate(k => modalPrevisao([derivar().itens.find(i => i.k === k)]), chave);
-  await preencherData(page.locator('#prev-data'), '2026-10-12');
-  await page.locator('[data-salvar]').click();
+  await preencherConfirmacaoTeste(page,'2026-10-12');
   await page.waitForFunction(k => derivar().itens.find(i => i.k === k)?.previsao === '2026-10-12', chave);
   await page.waitForFunction(() => !document.querySelector('.modal-fundo'));
 

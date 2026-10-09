@@ -211,7 +211,7 @@ const ACOES = {
   },
   "painel-estoque": () => { Object.assign(UI.es, { regiao: "", status: "", busca: "", bases: false }); irPara("estoque"); },
   "painel-cobrancas": (el) => abrirCobrancasPainel(el.dataset.aba || "cobrar"),
-  "termometro-abrir": el => abrirFatorTermometro(el.dataset.fator),
+  "termometro-abrir": el => abrirFatorTermometro(el.dataset.fator || el.dataset.prioridade),
   "painel-zoom": (el) => ajustarZoomMapa(Number(el.dataset.passo)),
   "painel-fila": (el) => atualizarFiltroPainel("fila", el.dataset.fila, `[data-acao="painel-fila"][data-fila="${el.dataset.fila}"]`),
   "painel-dia": (el) => navegarAgenda(el.dataset.dia),

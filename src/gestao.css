@@ -625,50 +625,172 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 
 .confirmacao-peca legend { position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0; }
 
-/* Termômetro: resumo de risco com faixa, motivo e acesso aos dados. */
-.termometro-operacao { --term-cor: var(--good-ink); --term-fundo: var(--good-soft); display: grid; grid-template-columns: minmax(280px, 1.05fr) minmax(340px, 1fr); border: 1px solid var(--line); border-radius: var(--raio); background: var(--surface); margin-bottom: 20px; overflow: clip; }
+/* Termômetro operacional: medidor de faixas e composição dos fatores reais. */
+.termometro-operacao { --term-cor: var(--good-ink); --term-fundo: var(--good-soft); border: 1px solid var(--line); border-radius: 12px; background: var(--surface); margin-bottom: 22px; overflow: clip; }
 .termometro-operacao.nivel-atencao { --term-cor: var(--warn-ink); --term-fundo: var(--warn-soft); }
 .termometro-operacao.nivel-critica { --term-cor: var(--crit-ink); --term-fundo: var(--crit-soft); }
 .termometro-operacao.nivel-incompleta { --term-cor: var(--muted); --term-fundo: var(--surface-2); }
-.termometro-visao { padding: 24px 28px; background: linear-gradient(115deg, var(--term-fundo), var(--surface) 85%); border-inline-start: 3px solid var(--term-cor); min-width: 0; }
-.termometro-cab { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
-.termometro-cab .sobretitulo { margin: 0; color: var(--muted); font-size: 10px; letter-spacing: .09em; }
-.termometro-data { color: var(--muted); font: 11px var(--f-mono); }
-.termometro-visao h2 { display: flex; align-items: center; gap: 10px; font-size: clamp(22px, 2.2vw, 28px); letter-spacing: -.035em; line-height: 1.2; margin: 18px 0 10px; }
-.termometro-visao h2 i { flex: none; width: 9px; height: 9px; background: var(--term-cor); border-radius: 50%; box-shadow: 0 0 0 4px var(--term-fundo); }
-.termometro-visao p { font-size: 13px; line-height: 1.6; color: var(--ink-2); margin: 0; max-width: 58ch; }
-.termometro-escala { margin-top: 24px; }
-.termometro-trilho { display: flex; gap: 4px; height: 12px; position: relative; }
-.termometro-trilho > span { flex: 1; border-radius: 2px; }
-.termometro-trilho .faixa-controlada { background: var(--good); }
-.termometro-trilho .faixa-atencao { background: var(--warn); }
-.termometro-trilho .faixa-critica { background: var(--crit); }
-.termometro-marcador { position: absolute; left: var(--posicao); top: -5px; width: 7px; height: 22px; border: 2px solid var(--surface); border-radius: 5px; background: var(--ink); box-shadow: 0 1px 4px #0004; transform: translateX(-50%); }
-.termometro-rotulos { display: flex; gap: 4px; margin-top: 10px; font-size: 11px; color: var(--muted); }
-.termometro-rotulos span { flex: 1; text-align: center; }
+.termometro-cab { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; padding: 22px 26px; border-bottom: 1px solid var(--line); background: var(--surface-2); }
+.termometro-identificador { display: flex; align-items: center; gap: 6px; color: var(--muted); font: 500 9px var(--f-mono); letter-spacing: .12em; }
+.termometro-identificador .ic { width: 13px; height: 13px; }
+.termometro-cab h2 { font: 600 20px/1.25 var(--f-ui); letter-spacing: -.035em; margin: 7px 0 4px; }
+.termometro-cab p { color: var(--muted); font-size: 12px; margin: 0; }
+.termometro-data { display: flex; align-items: center; gap: 10px; color: var(--muted); padding: 9px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); font-size: 10px; }
+.termometro-data .ic { width: 16px; height: 16px; }
+.termometro-data strong { display: block; margin-top: 3px; color: var(--ink-2); font: 500 12px var(--f-mono); }
+.termometro-corpo { display: grid; grid-template-columns: minmax(250px, .82fr) minmax(0, 2fr); }
+.termometro-visao { min-width: 0; display: flex; flex-direction: column; justify-content: center; padding: 30px 24px 24px; text-align: center; border-right: 1px solid var(--line); background: radial-gradient(ellipse at 50% 35%, var(--term-fundo), transparent 72%); }
+.termometro-selo { display: inline-flex; align-items: center; gap: 7px; color: var(--term-cor); font: 500 9px var(--f-mono); letter-spacing: .09em; }
+.termometro-selo i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; box-shadow: 0 0 0 3px var(--term-fundo); }
+.termometro-situacao h3 { margin: 12px 0 7px; font: 600 clamp(28px, 3vw, 40px)/1.05 var(--f-ui); letter-spacing: -.045em; }
+.termometro-situacao p { margin: 0; color: var(--muted); font-size: 12px; }
+.termometro-escala { margin: 24px auto 22px; width: 100%; max-width: 330px; }
+.termometro-mostrador { width: 100%; height: auto; display: block; overflow: visible; }
+.termometro-graduacao { stroke: var(--line-2); stroke-width: 1; }
+.termometro-graduacao .marco-maior { stroke: var(--muted); stroke-width: 1.5; }
+.termometro-arco-fundo { fill: none; stroke: var(--surface-3); stroke-width: 15; }
+.termometro-faixas { fill: none; stroke-width: 15; }
+.termometro-faixas .faixa-controlada { stroke: var(--good); }
+.termometro-faixas .faixa-atencao { stroke: var(--warn); }
+.termometro-faixas .faixa-critica { stroke: var(--crit); }
+.termometro-arco-interno { fill: none; stroke: var(--line); stroke-width: 1; stroke-dasharray: 2 5; }
+.termometro-eixo { stroke: var(--line); stroke-width: 1; }
+.termometro-marcador { transform-origin: 160px 156px; transform: rotate(var(--angulo)); fill: var(--ink); }
+.termometro-marcador circle { fill: var(--term-cor); stroke: var(--surface); stroke-width: 2; }
+.termometro-pivo { fill: var(--surface); stroke: var(--ink); stroke-width: 2; }
+.termometro-pivo-centro { fill: var(--ink); }
+.termometro-rotulos { display: flex; justify-content: space-between; gap: 6px; font-size: 10px; color: var(--muted); margin: 1px 7px 0; }
+.termometro-rotulos span { display: inline-flex; align-items: center; gap: 5px; }
+.termometro-rotulos i, .termometro-regras i { width: 5px; height: 5px; border-radius: 50%; display: inline-block; flex: none; }
 .termometro-rotulos .atual { color: var(--ink); font-weight: 600; }
-.nivel-incompleta .termometro-trilho { opacity: .35; filter: grayscale(1); }
-.termometro-fatores { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 14px; gap: 8px; align-content: center; }
-.termometro-fator { display: flex; gap: 12px; align-items: flex-start; text-align: left; border: 1px solid transparent; padding: 14px; border-radius: 6px; min-width: 0; background: var(--surface-2); color: var(--ink); cursor: pointer; transition: border-color .18s, background .18s, transform .18s; }
-.termometro-fator > span:nth-child(2) { flex: 1; min-width: 0; }
-.termometro-fator > .ic { width: 14px; height: 14px; color: var(--muted); flex: none; margin-top: 4px; }
-.termometro-fator span span { display: block; font-size: 12px; line-height: 1.3; color: var(--ink-2); }
-.termometro-fator strong { display: block; font: 500 29px/1.4 var(--f-mono); letter-spacing: -.06em; }
-.termometro-fator small { display: block; font-size: 10px; color: var(--muted); line-height: 1.4; }
-.termometro-fator-icone { color: var(--muted); margin-top: 2px; }
-.termometro-fator.com-pendencia .termometro-fator-icone { color: var(--warn-ink); }
-.termometro-fator[data-fator="vencidas"].com-pendencia .termometro-fator-icone, .termometro-fator[data-fator="usadas"].com-pendencia .termometro-fator-icone { color: var(--crit-ink); }
+.termometro-operacao .faixa-controlada:not(path) { background: var(--good); }
+.termometro-operacao .faixa-atencao:not(path) { background: var(--warn); }
+.termometro-operacao .faixa-critica:not(path) { background: var(--crit); }
+.nivel-incompleta .termometro-faixas { opacity: .3; filter: grayscale(1); }
+.termometro-frentes { display: flex; gap: 13px; justify-content: center; align-items: center; text-align: left; padding-top: 18px; border-top: 1px solid var(--line); }
+.termometro-frentes > strong { font: 500 29px/1 var(--f-mono); color: var(--term-cor); white-space: nowrap; }
+.termometro-frentes strong small { font-size: 14px; color: var(--muted); }
+.termometro-frentes > span { font-size: 12px; color: var(--ink-2); }
+.termometro-frentes span small { display: block; color: var(--muted); font-size: 10px; line-height: 1.5; margin-top: 4px; max-width: 24ch; }
+.termometro-fatores { min-width: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 18px; background: var(--surface-2); }
+.termometro-fator { --fator-cor: var(--good-ink); --fator-fundo: var(--good-soft); display: flex; flex-direction: column; gap: 9px; text-align: left; min-width: 0; padding: 16px 18px 12px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); color: var(--ink); cursor: pointer; box-shadow: var(--sombra); transition: border-color .18s, box-shadow .18s, transform .18s; }
+.termometro-fator.fator-atencao { --fator-cor: var(--warn-ink); --fator-fundo: var(--warn-soft); }
+.termometro-fator.fator-critica { --fator-cor: var(--crit-ink); --fator-fundo: var(--crit-soft); }
+.termometro-fator.fator-incompleta { --fator-cor: var(--muted); --fator-fundo: var(--surface-2); }
+.termometro-fator-topo { display: flex; gap: 8px; align-items: center; min-width: 0; }
+.termometro-fator-icone { display: grid; place-items: center; width: 25px; height: 25px; border-radius: 6px; color: var(--fator-cor); background: var(--fator-fundo); flex: none; }
+.termometro-fator-icone .ic { width: 14px; height: 14px; }
+.termometro-fator-nome { font-size: 12px; font-weight: 500; line-height: 1.4; }
+.termometro-numero { margin-left: auto; padding-left: 4px; font: 10px var(--f-mono); color: var(--muted); }
+.termometro-medida { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.termometro-medida > span:first-child { display: flex; gap: 7px; align-items: baseline; min-width: 0; flex-wrap: wrap; }
+.termometro-medida strong { font: 600 36px/1.15 var(--f-ui); letter-spacing: -.045em; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.termometro-medida small { font-size: 11px; color: var(--muted); }
+.termometro-estado { display: inline-flex; gap: 5px; align-items: center; color: var(--fator-cor); background: var(--fator-fundo); font-size: 10px; padding: 4px 7px; border-radius: 4px; line-height: 1.2; }
+.termometro-estado i { width: 4px; height: 4px; flex: none; border-radius: 50%; background: currentColor; }
+.termometro-leitura { font-size: 11px; color: var(--muted); line-height: 1.4; }
+.termometro-microbarra { display: flex; height: 5px; border-radius: 3px; overflow: hidden; background: var(--surface-3); margin: 2px 0 3px; }
+.termometro-microbarra > i { display: block; width: var(--parcela); height: 100%; transform-origin: left; }
+.termometro-operacao .cor-good { background: var(--good); }
+.termometro-operacao .cor-warn { background: var(--warn); }
+.termometro-operacao .cor-crit { background: var(--crit); }
+.termometro-detalhes { display: flex; justify-content: space-between; gap: 10px; margin-top: auto; }
+.termometro-detalhes > span { min-width: 0; }
+.termometro-detalhes small { display: block; font-size: 10px; line-height: 1.4; color: var(--muted); }
+.termometro-detalhes small i { display: inline-block; width: 5px; height: 5px; border-radius: 50%; margin-right: 4px; vertical-align: 1px; }
+.termometro-detalhes b { display: block; margin-top: 3px; font: 500 13px var(--f-mono); }
+.termometro-espera { display: flex; align-items: center; gap: 5px; color: var(--fator-cor); font-size: 10px; line-height: 1.4; }
+.termometro-espera .ic { width: 12px; height: 12px; flex: none; }
+.termometro-sem-base { color: var(--muted); display: grid; place-items: center; border: 1px dashed var(--line); border-radius: 4px; padding: 12px; font-size: 11px; margin-block: auto; }
+.termometro-fator-rodape { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 10px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 9px; margin-top: 1px; line-height: 1.4; }
+.termometro-fator-rodape .ic { width: 14px; height: 14px; flex: none; transition: transform .18s; }
 .termometro-fator:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.termometro-rodape { grid-column: 1 / -1; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px 24px; border-top: 1px solid var(--line); padding: 12px 24px; font-size: 11px; color: var(--muted); }
-.termometro-rodape > span { display: flex; align-items: center; gap: 8px; }
-.termometro-rodape .ic { width: 15px; height: 15px; flex: none; }
-.termometro-rodape details { min-width: 0; }
-.termometro-rodape details[open] { flex-basis: 100%; }
-.termometro-rodape summary { cursor: pointer; color: var(--ink-2); }
-.termometro-rodape p { max-width: 110ch; line-height: 1.7; }
-@keyframes termometro-entrada { from { left: 0; opacity: 0; } to { left: var(--posicao); opacity: 1; } }
-@media (prefers-reduced-motion: no-preference) { .termometro-marcador { animation: termometro-entrada .65s cubic-bezier(.2,.7,.2,1) both; } }
-@media (hover: hover) and (pointer: fine) { .termometro-fator:hover { background: var(--surface); border-color: var(--line-2); transform: translateY(-2px); } }
-@media (max-width: 1050px) { .termometro-operacao { grid-template-columns: 1fr; } .termometro-fatores { grid-template-columns: repeat(4, minmax(0, 1fr)); } .termometro-fator { padding: 12px; gap: 8px; } .termometro-fator > .ic { display: none; } }
-@media (max-width: 700px) { .termometro-fatores { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 10px; } .termometro-visao { padding: 20px; } .termometro-rodape { padding: 12px 20px; } }
-@media (prefers-reduced-motion: reduce) { .termometro-fator { transition: none; } .termometro-fator:hover { transform: none; } }
+.termometro-prioridade { display: flex; align-items: center; gap: 15px; padding: 18px 26px; border-top: 1px solid var(--line); background: linear-gradient(90deg, var(--term-fundo), var(--surface) 80%); }
+.termometro-prioridade-icone { display: grid; place-items: center; width: 38px; height: 38px; flex: none; border: 1px solid color-mix(in srgb, var(--term-cor) 30%, transparent); border-radius: 9px; color: var(--term-cor); }
+.termometro-prioridade-icone .ic { width: 18px; height: 18px; }
+.termometro-prioridade > div { min-width: 0; flex: 1; }
+.termometro-prioridade-rotulo { font: 500 9px var(--f-mono); letter-spacing: .09em; color: var(--term-cor); }
+.termometro-prioridade h3 { font-size: 14px; font-weight: 600; margin: 4px 0; }
+.termometro-prioridade p { margin: 0; font-size: 12px; color: var(--muted); line-height: 1.5; }
+.termometro-prioridade .btn { flex: none; font-size: 12px; }
+.termometro-rodape { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; padding: 15px 26px; border-top: 1px solid var(--line); font-size: 11px; color: var(--muted); }
+.termometro-base { display: flex; align-items: center; flex-wrap: wrap; gap: 12px 20px; }
+.termometro-base > span { display: flex; align-items: center; gap: 6px; }
+.termometro-base > span > .ic { width: 14px; height: 14px; }
+.termometro-base > div { display: flex; flex-wrap: wrap; gap: 8px; }
+.termometro-frescor { display: inline-flex; align-items: center; gap: 5px; font-size: 10px; }
+.termometro-frescor > i { width: 4px; height: 4px; border-radius: 50%; background: var(--warn); }
+.termometro-frescor.completa > i { background: var(--good); }
+.termometro-frescor b { font: 500 10px var(--f-mono); color: var(--ink-2); }
+.termometro-criterios { min-width: 0; }
+.termometro-criterios summary { display: flex; align-items: center; gap: 6px; list-style: none; cursor: pointer; color: var(--ink-2); }
+.termometro-criterios summary::-webkit-details-marker { display: none; }
+.termometro-criterios summary .ic { width: 13px; height: 13px; }
+.termometro-criterios[open] { flex-basis: 100%; }
+.termometro-criterios[open] summary > .ic:last-child { transform: rotate(180deg); }
+.termometro-regras { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin: 17px 0; }
+.termometro-regras > div { background: var(--surface-2); padding: 14px; border-radius: 6px; }
+.termometro-regras strong { display: flex; align-items: center; gap: 6px; color: var(--ink-2); font-size: 12px; }
+.termometro-criterios p { line-height: 1.7; max-width: 125ch; }
+.termometro-regras p { margin-bottom: 0; }
+@keyframes termometro-ponteiro { from { transform: rotate(-90deg); opacity: .3; } to { transform: rotate(var(--angulo)); opacity: 1; } }
+@keyframes termometro-barra { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@media (prefers-reduced-motion: no-preference) {
+  .termometro-marcador { animation: termometro-ponteiro .85s cubic-bezier(.22,.8,.2,1) both; }
+  .termometro-microbarra > i { animation: termometro-barra .65s cubic-bezier(.22,.8,.2,1) both; }
+}
+@media (hover: hover) and (pointer: fine) {
+  .termometro-fator:hover { border-color: var(--fator-cor); box-shadow: 0 5px 18px #0000000c; transform: translateY(-2px); }
+  .termometro-fator:hover .termometro-fator-rodape > .ic { transform: translateX(3px); color: var(--fator-cor); }
+}
+@media (max-width: 1150px) {
+  .termometro-corpo { grid-template-columns: 1fr; }
+  .termometro-visao { display: grid; grid-template-columns: minmax(0, 1fr) minmax(200px, 1.2fr) minmax(0, .8fr); gap: 24px; padding: 24px; align-items: center; border-right: 0; border-bottom: 1px solid var(--line); }
+  .termometro-situacao h3 { font-size: 30px; }
+  .termometro-escala { margin: 0; }
+  .termometro-frentes { border: 0; padding: 0; flex-direction: column; text-align: center; }
+  .termometro-fatores { padding: 16px; }
+}
+@media (max-width: 700px) {
+  .termometro-cab { padding: 18px; gap: 12px; }
+  .termometro-cab h2 { font-size: 20px; }
+  .termometro-data { padding: 5px 8px; }
+  .termometro-data > span { font-size: 0; }
+  .termometro-data strong { margin: 0; font-size: 11px; }
+  .termometro-visao { grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 20px 12px; padding: 22px 18px 16px; }
+  .termometro-situacao h3 { font-size: 28px; }
+  .termometro-selo { font-size: 8px; letter-spacing: .03em; }
+  .termometro-situacao p { font-size: 11px; line-height: 1.4; }
+  .termometro-rotulos { font-size: 8px; margin-inline: 0; gap: 3px; }
+  .termometro-rotulos span { gap: 3px; }
+  .termometro-rotulos i { width: 3px; height: 3px; }
+  .termometro-frentes { grid-column: 1 / -1; flex-direction: row; text-align: left; border-top: 1px solid var(--line); padding-top: 14px; gap: 12px; }
+  .termometro-frentes span small { max-width: none; }
+  .termometro-frentes > strong { font-size: 23px; }
+  .termometro-fatores { gap: 9px; padding: 10px; }
+  .termometro-fator { padding: 13px 11px 10px; gap: 8px; }
+  .termometro-fator-topo { gap: 6px; align-items: flex-start; }
+  .termometro-fator-icone { width: 22px; height: 22px; }
+  .termometro-fator-nome { font-size: 11px; }
+  .termometro-numero { display: none; }
+  .termometro-medida { gap: 6px; }
+  .termometro-medida strong { font-size: 30px; }
+  .termometro-medida small, .termometro-estado { font-size: 10px; }
+  .termometro-medida > span:first-child { gap: 4px; }
+  .termometro-leitura { font-size: 10px; min-height: 28px; }
+  .termometro-detalhes { gap: 8px; }
+  .termometro-detalhes small { font-size: 9px; }
+  .termometro-detalhes b { font-size: 12px; }
+  .termometro-fator-rodape > span { display: none; }
+  .termometro-fator-rodape::before { content: 'Ver detalhes'; }
+  .termometro-prioridade { padding: 18px; gap: 12px; flex-wrap: wrap; align-items: flex-start; }
+  .termometro-prioridade-icone { width: 28px; height: 28px; border-radius: 6px; }
+  .termometro-prioridade-icone .ic { width: 15px; height: 15px; }
+  .termometro-prioridade .btn { width: 100%; justify-content: center; }
+  .termometro-rodape { padding: 15px 18px; }
+  .termometro-regras { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .termometro-fator, .termometro-fator-rodape .ic { transition: none; }
+  .termometro-fator:hover, .termometro-fator:hover .termometro-fator-rodape .ic { transform: none; }
+}

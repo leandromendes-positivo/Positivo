@@ -21,6 +21,16 @@ try {
   await page.waitForFunction(() => UI.im.resultado);
   await page.evaluate(() => { window.__estoqueTermometro = JSON.stringify(E); irPara('painel'); });
   assert.equal(await page.evaluate(() => situacaoOperacao().nivel), 'critica');
+  assert.deepEqual(await page.locator('[data-fator="usadas"] .termometro-detalhes b').allTextContents(), ['5','3','2'], 'o detalhamento separa prazo, atraso comum e crítico');
+  assert.equal(await page.locator('.termometro-frentes > strong').innerText(), '2 / 4');
+  await page.locator('.termometro-criterios summary').focus();
+  await page.keyboard.press('Enter');
+  assert.equal(await page.locator('.termometro-criterios').getAttribute('open'), '');
+  assert.match(await page.locator('.termometro-regras').innerText(), /25%/);
+  await page.keyboard.press('Enter');
+  await page.locator('[data-prioridade="usadas"]').click();
+  assert.equal(await page.evaluate(() => UI.pagina), 'consulta', 'a ação prioritária abre o recorte correspondente');
+  await page.evaluate(() => irPara('painel'));
   const atrasadas = await page.evaluate(() => situacaoOperacao().atrasadas);
   await page.locator('[data-fator="usadas"]').click();
   assert.equal(await page.evaluate(() => UI.pagina), 'consulta');
@@ -83,6 +93,8 @@ try {
   });
   assert.equal(await page.evaluate(() => situacaoOperacao().nivel), 'critica');
   assert.equal(await page.evaluate(() => situacaoOperacao().vencidas), 1);
+  assert.deepEqual(await page.locator('[data-fator="vencidas"] .termometro-detalhes b').allTextContents(), ['0','1'], 'previsões vencidas distinguem usadas e novas');
+  assert.equal(await page.locator('[data-prioridade="vencidas"]').count(), 1);
   await page.locator('[data-fator="vencidas"]').click();
   assert.deepEqual(await page.evaluate(() => [UI.cob.tipo, UI.cob.aba]), ['todas','vencidas']);
   assert.equal(await page.locator('.cob').count(), 1);
@@ -91,11 +103,13 @@ try {
   assert.equal(await page.evaluate(() => situacaoOperacao().nivel), 'incompleta', 'base antiga nunca aparece verde');
   await page.evaluate(() => { baseSaudavel(); delete E.indice.arquivos['novas:PR']; mudou(); });
   assert.equal(await page.evaluate(() => situacaoOperacao().nivel), 'incompleta', 'planilha ausente não representa saldo zero');
+  await page.evaluate(() => { delete E.indice.arquivos['novas:SC']; mudou(); renderizar(true); });
+  assert.equal(await page.locator('[data-fator="excesso"] .termometro-medida strong').innerText(), '—', 'sem planilha de novas, o cartão não mostra estoque zerado');
   await page.evaluate(() => { baseSaudavel(); E.usadas = []; E.novas = []; mudou(); renderizar(true); });
   assert.equal(await page.evaluate(() => situacaoOperacao().nivel), 'controlada', 'inventário vazio importado é conhecido');
   assert.equal(await page.locator('.boas-vindas').count(), 0);
 
-  await page.evaluate(() => { baseSaudavel(); E.usadas = JSON.parse(__estoqueTermometro).usadas; mudou(); renderizar(true); });
+  await page.evaluate(() => { baseSaudavel(); E.usadas = JSON.parse(__estoqueTermometro).usadas; document.getElementById('toasts').innerHTML = ''; mudou(); renderizar(true); });
   await page.waitForTimeout(120); // permite concluir a atualização de tela agendada pelo modelo
   for (const theme of ['light','dark']) {
     await page.evaluate(t => document.documentElement.dataset.theme = t, theme);
@@ -105,6 +119,10 @@ try {
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
       assert.equal(await page.locator('.termometro-operacao').evaluate(e => e.scrollWidth > e.clientWidth), false);
       assert.equal(await page.locator('.termometro-marcador').evaluate(e => getComputedStyle(e).animationName), 'none');
+      assert.equal(await page.locator('.termometro-microbarra > i').first().evaluate(e => getComputedStyle(e).animationName), 'none');
+      await page.locator('.termometro-criterios summary').click();
+      assert.equal(await page.locator('.termometro-operacao').evaluate(e => e.scrollWidth > e.clientWidth), false, 'critérios abertos também cabem na tela');
+      await page.locator('.termometro-criterios summary').click();
       await page.locator('.termometro-operacao').screenshot({ path: `capturas/termometro/${theme}-${width}.png` });
     }
   }

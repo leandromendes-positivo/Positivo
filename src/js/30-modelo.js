@@ -200,7 +200,15 @@ function assinarMudancas() {
   for (const colecao of ['agendamentos','contatos','anotacoes']) E.ouvintes.push(Armazem.ouvirColecao(colecao, docs => {
     E[colecao] = docs; combinarAcompanhamento(); mudou();
   }));
-  if (podeAdministrar() && Acesso.modo === 'firebase') E.ouvintes.push(Armazem.ouvirColecao('usuarios', docs => { E.usuarios = docs; mudou(); }));
+  if (podeAdministrar() && Acesso.modo === 'firebase') {
+    let vigente = true;
+    const parar = Armazem.ouvirColecao('usuarios', docs => {
+      // Uma resposta já enfileirada não pode repor os cadastros após perder a permissão.
+      if (!vigente || !podeAdministrar() || E.status !== 'pronto') return;
+      E.usuarios = docs; mudou();
+    });
+    E.ouvintes.push(() => { vigente = false; parar(); });
+  }
   E.ouvintes.push(Armazem.ouvirColecao("movimentos", (docs) => {
     E.movimentos = docs.flatMap((d) => (d.itens || []).map((m) => ({ ...m, doc: d.id })));
     mudou();

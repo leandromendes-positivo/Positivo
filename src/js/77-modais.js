@@ -242,6 +242,7 @@ function modalTecnico(tid, focarPrazos = false) {
   const nomeRelatorio = c.nome || tid;
   const m = abrirModal({
     titulo: "Cadastro do técnico",
+    administrativo: true,
     subtitulo: `No relatório: ${nomeRelatorio}`,
     corpo: `<form class="form" id="tec-form">
       <label class="campo"><span>Nome para exibir</span><input type="text" name="apelido" maxlength="80" placeholder="${esc(nomeBonito(nomeRelatorio))}"><small>Deixe em branco para usar o nome do relatório. Útil para códigos numéricos.</small></label>

@@ -246,10 +246,16 @@ async function iniciarFirebase(cfg) {
       const mudouNome = Acesso.perfil?.nome !== s.data().nome;
       Acesso.perfil = decodificarFS(s.data());
       Acesso.usuario.nome = nomeDaConta().split(' ')[0];
-      if (mudouPerfil && E.status === 'pronto') { E.usuarios = []; assinarMudancas(); montarMoldura(); }
+      if (mudouPerfil && E.status === 'pronto') {
+        E.usuarios = [];
+        if (!podeAdministrar()) fecharModaisAdministrativos();
+        assinarMudancas(); montarMoldura();
+        // Mudanças de permissão não aguardam a pessoa sair de um campo em edição.
+        renderizar(true);
+      }
       if ((mudouPerfil || mudouNome) && E.status === 'pronto') mudou();
     }, () => bloquearSessao());
-    auth.onAuthStateChanged(u => { if (!u && Acesso.perfil) bloquearSessao('Sua sessão foi encerrada. Entre novamente.'); });
+    auth.onAuthStateChanged(u => { if (Acesso.perfil && (!u || u.uid !== Acesso.usuario?.uid)) bloquearSessao('Sua sessão foi alterada ou encerrada. Entre novamente.'); });
   } catch (e) {
     Acesso.perfil = null;
     Acesso.negado = !usuario.emailVerified ? 'Confirme a propriedade deste e-mail antes de acessar.'

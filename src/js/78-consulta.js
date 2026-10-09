@@ -67,7 +67,7 @@ async function exportarConsulta() {
 function modalClassificarSaida(k) {
   exigirAdministrador();
   const i = E.movimentos.find(m => m.k === k) || UIinventario.movimentos.find(m => m.k === k); if (!i) return;
-  const m = abrirModal({ titulo: 'Classificar saída de peças novas', subtitulo: `${nomeTecnico(i.tid)} · ${plural(i.qtd,'peça','peças')}`,
+  const m = abrirModal({ administrativo: true, titulo: 'Classificar saída de peças novas', subtitulo: `${nomeTecnico(i.tid)} · ${plural(i.qtd,'peça','peças')}`,
     corpo: `<p class="texto-modal"><strong>${esc(i.mat)}</strong> · ${esc(E.catalogo[i.mat] || '')}</p>
       <p class="nota">Saída observada na planilha de ${fmtData(i.em)}. Confirme o destino conforme a informação recebida do técnico.</p>
       <form id="classificar-saida" class="form">

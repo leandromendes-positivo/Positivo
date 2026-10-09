@@ -5,11 +5,13 @@ import assert from 'node:assert/strict';
 const require=createRequire(`${process.env.PW_PATH || '/workspace/positivo-tools/node_modules/playwright'}/package.json`);
 const { initializeTestEnvironment,assertSucceeds,assertFails }=require('@firebase/rules-unit-testing');
 const firebase=require('firebase/compat/app');require('firebase/compat/firestore');
+const {getCountFromServer}=require('firebase/firestore');
 const stamp=()=>firebase.firestore.FieldValue.serverTimestamp();
 const env=await initializeTestEnvironment({projectId:'demo-controle-seguranca',firestore:{host:'127.0.0.1',port:8080,rules:fs.readFileSync('firestore.rules','utf8')}});
 const conta=(uid,email,provider='google.com',verified=true)=>env.authenticatedContext(uid,{email,email_verified:verified,firebase:{sign_in_provider:provider}}).firestore();
 const dono=conta('dono','dono@empresa.com'),operador=conta('ana','ana.silva@empresa.com','microsoft.com');
 const outro=conta('rui','rui@outlook.com');
+const administradorSecundario=conta('gestor','gestor@empresa.com');
 const por={uid:'dono',email:'dono@empresa.com'};
 const usuario=(email,perfil='usuario',principal=false)=>({email,perfil,ativo:true,principal,criadoEm:stamp(),atualizadoEm:stamp(),criadoPor:por,atualizadoPor:por});
 try {
@@ -18,6 +20,7 @@ try {
   const db=c.firestore();
   await db.doc('usuarios/dono@empresa.com').set(usuario('dono@empresa.com','administrador',true));
   await db.doc('usuarios/ana.silva@empresa.com').set(usuario('ana.silva@empresa.com'));
+  await db.doc('usuarios/gestor@empresa.com').set(usuario('gestor@empresa.com','administrador'));
   await db.doc('dados/indice').set({arquivos:{}});
  });
  for(const db of [env.unauthenticatedContext().firestore(),outro,conta('ana','ana.silva@empresa.com','microsoft.com',false),conta('ana','ana.silva@empresa.com','password')]) {
@@ -37,6 +40,33 @@ try {
  await assertSucceeds(operador.doc('usuarios/ana.silva@empresa.com').get());
  await assertFails(operador.collection('usuarios').get());
  await assertFails(operador.doc('usuarios/dono@empresa.com').get());
+ // Consultas filtradas, agregações e IDs conhecidos também não revelam cadastros a usuários comuns.
+ for(const db of [operador,outro,env.unauthenticatedContext().firestore()]) {
+  await assertFails(db.collection('usuarios').where('ativo','==',true).limit(1).get());
+  await assertFails(db.collection('usuarios').where('email','==','dono@empresa.com').get());
+  await assertFails(getCountFromServer(db.collection('usuarios')._delegate));
+  await assertFails(db.doc('usuarios/gestor@empresa.com').get());
+ }
+ await assertSucceeds(administradorSecundario.collection('usuarios').get());
+ const principal=administradorSecundario.doc('usuarios/dono@empresa.com');
+ const cadastroPrincipal=(await assertSucceeds(principal.get())).data();
+ const gestor={uid:'gestor',email:'gestor@empresa.com'};
+ for(const alteracao of [
+  {ativo:false},{perfil:'usuario'},{principal:false},{email:'troca@empresa.com'},
+  {nome:'Outro nome'},{criadoEm:stamp()},{}
+ ]) await assertFails(principal.update({...alteracao,atualizadoEm:stamp(),atualizadoPor:gestor}));
+ await assertFails(principal.delete());
+ await assertFails(principal.set({...cadastroPrincipal,ativo:false,atualizadoEm:stamp(),atualizadoPor:gestor}));
+ await assertFails(principal.set({ativo:false,atualizadoEm:stamp(),atualizadoPor:gestor},{merge:true}));
+ const loteProtegido=administradorSecundario.batch();
+ loteProtegido.delete(principal);loteProtegido.set(principal,{...cadastroPrincipal,principal:false,atualizadoEm:stamp(),atualizadoPor:gestor});
+ await assertFails(loteProtegido.commit());
+ assert.deepEqual((await principal.get()).data(),cadastroPrincipal,'tentativas não alteram o cadastro principal');
+ await assertFails(administradorSecundario.doc('usuarios/falso-principal@empresa.com').set({...usuario('falso-principal@empresa.com','administrador',true),criadoPor:gestor,atualizadoPor:gestor}));
+ await assertFails(administradorSecundario.doc('usuarios/gestor@empresa.com').update({principal:true,atualizadoEm:stamp(),atualizadoPor:gestor}));
+ await assertFails(administradorSecundario.doc('usuarios/gestor@empresa.com').update({perfil:'usuario',atualizadoEm:stamp(),atualizadoPor:gestor}));
+ await assertFails(administradorSecundario.doc('usuarios/gestor@empresa.com').update({ativo:false,atualizadoEm:stamp(),atualizadoPor:gestor}));
+ await assertFails(administradorSecundario.doc('seguranca/controle').set({versao:2,administradorPrincipal:'gestor@empresa.com'}));
  await assertFails(operador.doc('usuarios/ana.silva@empresa.com').update({perfil:'administrador',atualizadoEm:stamp(),atualizadoPor:{uid:'ana',email:'ana.silva@empresa.com'}}));
  // Minha conta permite apenas o próprio nome; os demais campos são protegidos no banco.
  const cadastroAntes=(await operador.doc('usuarios/ana.silva@empresa.com').get()).data();
@@ -111,6 +141,13 @@ try {
  await assertSucceeds(dono.doc('usuarios/ana.silva@empresa.com').update({ativo:false,atualizadoEm:stamp(),atualizadoPor:por}));
  await assertFails(operador.doc('dados/indice').get({source:'server'}));
  await assertFails(minhaConta.update(nomeAtualizado('Conta desativada')));
+ // Remover o perfil administrativo ou desativá-lo bloqueia imediatamente a gestão no servidor.
+ await assertSucceeds(dono.doc('usuarios/gestor@empresa.com').update({perfil:'usuario',atualizadoEm:stamp(),atualizadoPor:por}));
+ await assertFails(administradorSecundario.collection('usuarios').get({source:'server'}));
+ await assertFails(administradorSecundario.doc('usuarios/rui@outlook.com').update({ativo:false,atualizadoEm:stamp(),atualizadoPor:gestor}));
+ await assertSucceeds(dono.doc('usuarios/gestor@empresa.com').update({perfil:'administrador',ativo:false,atualizadoEm:stamp(),atualizadoPor:por}));
+ await assertFails(administradorSecundario.collection('usuarios').get({source:'server'}));
+ await assertFails(administradorSecundario.doc('usuarios/rui@outlook.com').update({ativo:false,atualizadoEm:stamp(),atualizadoPor:gestor}));
  await assertFails(gravar(operador,agenda('bloqueada')));
  console.log('PASSOU: edição exclusiva do próprio nome, cadastro e permissões protegidos, contatos de técnicos não autorizam acesso nem criam usuários, Google/Microsoft, verificação de e-mail, acesso individual, perfis, antiescalação, revogação, autor e horário autenticados, auditoria imutável, concorrência e lotes.');
 } finally {await env.cleanup();}

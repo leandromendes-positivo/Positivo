@@ -63,8 +63,9 @@ service cloud.firestore {
         && request.resource.data.principal == resource.data.principal
         && ((id == email() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nome','atualizadoEm','atualizadoPor'])
             && 'nome' in request.resource.data)
-          || (administrador() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['perfil','ativo','atualizadoEm','atualizadoPor'])
-            && (!(resource.data.principal || id == email()) || (request.resource.data.ativo == true && request.resource.data.perfil == 'administrador'))));
+          // O principal é imutável para terceiros; nenhum administrador gerencia a própria permissão.
+          || (administrador() && resource.data.principal == false && id != email()
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['perfil','ativo','atualizadoEm','atualizadoPor'])));
       allow delete: if false;
     }
     match /seguranca/{id} { allow read: if autorizado(); allow write: if false; }

@@ -128,8 +128,8 @@ async function salvarUsuario(email, perfil, ativo) {
   const ref = Acesso.fs.doc(`usuarios/${email}`);
   await Acesso.fs.runTransaction(async tx => {
     const atual = await tx.get(ref);
-    if (email === Acesso.usuario.email.toLowerCase() && (perfil !== 'administrador' || !ativo)) throw new Error('Você não pode remover seu próprio acesso administrativo.');
-    if (atual.data()?.principal && (perfil !== 'administrador' || !ativo)) throw new Error('O administrador principal deve permanecer ativo.');
+    if (atual.data()?.principal) throw new Error('O acesso do administrador principal é protegido e não pode ser alterado pelo painel.');
+    if (email === Acesso.usuario.email.toLowerCase()) throw new Error('Você não pode alterar suas próprias permissões. Para editar seu nome, use Minha conta.');
     const por = identidadeAtual(), em = carimboServidor();
     const d = { email, perfil, ativo, principal: atual.data()?.principal || false, atualizadoEm: em, atualizadoPor: por,
       criadoEm: atual.exists ? atual.data().criadoEm : em, criadoPor: atual.exists ? atual.data().criadoPor : por };
@@ -143,6 +143,7 @@ function bloquearSessao(mensagem = 'Seu acesso foi desativado. Procure o adminis
   OutlookCobranca.desconectar();
   MenuLateral.fechar({ restaurarFoco: false });
   Acesso.perfil = null;
+  fecharModaisAdministrativos();
   limparHistoricoRanking();
   limparHistoricoRelatorio();
   Object.assign(UIinventario,{devolucoes:[],movimentos:[],chave:null,carregando:false,erro:''});

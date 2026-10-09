@@ -22,8 +22,13 @@ function toast(msg, tipo = "ok", { acao, aoAgir, duracao = 4200 } = {}) {
 }
 
 let sequenciaModal = 0;
+const modaisAdministrativos = new Set();
+function fecharModaisAdministrativos() {
+  for (const fechar of [...modaisAdministrativos]) fechar();
+}
 /** Janela modal. Devolve {el, fechar}. */
-function abrirModal({ titulo, subtitulo = "", corpo = "", rodape = "", largura = "", aoFechar }) {
+function abrirModal({ titulo, subtitulo = "", corpo = "", rodape = "", largura = "", aoFechar, administrativo = false }) {
+  if (administrativo) exigirAdministrador();
   Pesquisas.fechar();
   const fundo = document.createElement("div");
   const idTitulo = `modal-titulo-${++sequenciaModal}`;
@@ -39,6 +44,7 @@ function abrirModal({ titulo, subtitulo = "", corpo = "", rodape = "", largura =
   const anterior = document.activeElement;
   const janelaAtual = () => [...document.querySelectorAll(".modal-fundo")].at(-1);
   const fechar = () => {
+    modaisAdministrativos.delete(fechar);
     if (!fundo.isConnected) return;
     Pesquisas.fechar(fundo);
     fundo.remove();
@@ -65,6 +71,7 @@ function abrirModal({ titulo, subtitulo = "", corpo = "", rodape = "", largura =
   fundo.addEventListener("mousedown", (e) => { if (e.target === fundo) fechar(); });
   fundo.querySelectorAll("[data-fechar]").forEach((b) => b.addEventListener("click", fechar));
   document.body.appendChild(fundo);
+  if (administrativo) modaisAdministrativos.add(fechar);
   Camadas.atualizar();
   Calendarios.preparar(fundo);
   Pesquisas.preparar(fundo);

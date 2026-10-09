@@ -72,12 +72,45 @@ try {
   await admin.locator('[data-acao="novo-usuario"]').click();await admin.locator('.modal').screenshot({path:`${saida}/cadastro-${tema}.png`});await admin.keyboard.press('Escape');
   await normal.evaluate(()=>irPara('conta'));await normal.setViewportSize({width:390,height:844});assert.equal(await normal.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
  }
+ // Captura uma entrega atrasada para comprovar que ela não repõe cadastros após o rebaixamento.
+ await normal.evaluate(()=>{
+  const ouvir=Armazem.ouvirColecao.bind(Armazem);
+  Armazem.ouvirColecao=(colecao,cb,montar)=>{if(colecao==='usuarios')window.__cadastrosAtrasados=cb;return ouvir(colecao,cb,montar);};
+ });
  await admin.evaluate(()=>salvarUsuario('maria.silva@empresa.com','administrador',true));
  await normal.waitForFunction(()=>Acesso.perfil?.perfil==='administrador');await normal.locator('[data-nav="usuarios"]').waitFor({state:'attached'});
+ await normal.waitForFunction(()=>E.usuarios.some(u=>u.email==='teste@exemplo.com'));
+ await normal.evaluate(()=>{irPara('usuarios');modalUsuario('teste@exemplo.com');});
+ assert.equal(await normal.locator('.modal [data-salvar]').count(),0,'principal é somente leitura para outro administrador');
+ assert.equal(await normal.locator('.modal [name="perfil"]').isDisabled(),true);
+ assert.equal(await normal.locator('.modal [name="ativo"]').isDisabled(),true);
+ assert.match(await normal.locator('.modal').innerText(),/não pode ser removido, desativado ou rebaixado/);
+ assert.match(await normal.evaluate(async()=>{try{await salvarUsuario('teste@exemplo.com','administrador',true);return '';}catch(e){return e.message;}}),/protegido/);
+ await normal.keyboard.press('Escape');
+ await normal.evaluate(()=>modalUsuario());
+ await normal.locator('.modal [name="email"]').fill('cadastro-pendente@empresa.com');
  await admin.evaluate(()=>salvarUsuario('maria.silva@empresa.com','usuario',true));await normal.waitForFunction(()=>Acesso.perfil?.perfil==='usuario');
+ assert.equal(await normal.locator('.modal').count(),0,'perder administração fecha imediatamente a gestão aberta');
+ assert.equal(await normal.evaluate(()=>E.usuarios.length),0,'cadastros administrativos são descartados da sessão');
+ assert.equal(await normal.evaluate(()=>UI.pagina),'painel');
+ await normal.evaluate(()=>window.__cadastrosAtrasados([{email:'cadastro-que-nao-deve-voltar@empresa.com'}]));
+ assert.equal(await normal.evaluate(()=>E.usuarios.length),0,'resposta atrasada não devolve os cadastros à memória');
+ assert.equal(await normal.evaluate(()=>modaisAdministrativos.size),0);
+ assert.match(await normal.evaluate(()=>{try{modalUsuario();return '';}catch(e){return e.message;}}),/exclusiva de administradores/);
  assert.equal(await normal.locator('[data-nav="usuarios"]').count(),0);
+ await admin.evaluate(()=>salvarUsuario('maria.silva@empresa.com','administrador',true));
+ await normal.waitForFunction(()=>Acesso.perfil?.perfil==='administrador');
+ await normal.evaluate(()=>{irPara('config');document.querySelector('#conteudo input').focus();});
+ assert.equal(await normal.evaluate(()=>document.activeElement.tagName),'INPUT');
+ await admin.evaluate(()=>salvarUsuario('maria.silva@empresa.com','usuario',true));
+ await normal.waitForFunction(()=>Acesso.perfil?.perfil==='usuario');
+ assert.equal(await normal.evaluate(()=>UI.pagina),'painel','rebaixamento não espera o campo de configuração perder foco');
+ await admin.evaluate(()=>salvarUsuario('maria.silva@empresa.com','administrador',true));
+ await normal.waitForFunction(()=>Acesso.perfil?.perfil==='administrador');
+ await normal.evaluate(()=>modalUsuario());
  await admin.evaluate(()=>salvarUsuario('maria.silva@empresa.com','usuario',false));await normal.waitForFunction(()=>E.status==='erro');
  assert.equal(await normal.evaluate(()=>E.usadas.length),0);assert.match(await normal.locator('#conteudo').innerText(),/desativado/);
+ assert.equal(await normal.locator('.modal').count(),0);assert.equal(await normal.evaluate(()=>E.usuarios.length),0);
  const login=await abrir('');
  for(const tema of ['dark','light']) {
   if(await login.evaluate(()=>document.documentElement.dataset.theme)!==tema)await login.locator('.acesso-tema [data-acao="tema"]').click();
@@ -98,5 +131,13 @@ try {
  await login.locator('#entrar-google').click();await login.locator('#entrar-microsoft').click();
  assert.deepEqual(await login.evaluate(()=>window.__provedores.map(p=>p[0])),['google.com','microsoft.com']);
  assert.equal(await login.evaluate(()=>window.__provedores[1][1].tenant),'common');
- assert.deepEqual(erros,[]);console.log('PASSOU: cadastro de usuários, papéis, sessão revogada, capital/interior, autoria e auditoria, sincronização, resumo diário, dois provedores, temas e celular.');
+ // Trocar a identidade de autenticação invalida os dados carregados da conta anterior.
+ await admin.evaluate(async()=>{
+  const email='outra.identidade@empresa.com';
+  await Acesso.auth.signInWithCredential(firebase.auth.GoogleAuthProvider.credential(JSON.stringify({sub:'uid-'+email,email,email_verified:true})));
+ });
+ await admin.waitForFunction(()=>E.status==='erro');
+ assert.equal(await admin.evaluate(()=>Acesso.perfil),null);assert.equal(await admin.evaluate(()=>E.usuarios.length),0);
+ assert.match(await admin.locator('#conteudo').innerText(),/sessão foi alterada ou encerrada/);
+ assert.deepEqual(erros,[]);console.log('PASSOU: gestão somente por administradores, principal protegido, rebaixamento e revogação com limpeza imediata, troca de identidade, cadastro de usuários, capital/interior, autoria e auditoria, sincronização, resumo diário, dois provedores, temas e celular.');
 } finally {await browser.close();}

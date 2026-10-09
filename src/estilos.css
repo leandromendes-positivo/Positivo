@@ -84,7 +84,8 @@ a { color: var(--accent); }
 .marca-identidade { min-width: 0; flex: 1; }
 .logo-positivo {
   display: block; width: 100%; aspect-ratio: 1938 / 811;
-  background: var(--logo-positivo) center / contain no-repeat;
+  /* Centraliza o nome após a retirada do símbolo lateral, sem mudar a altura do cabeçalho. */
+  background: var(--logo-positivo) 85% 68% / 133% auto no-repeat;
 }
 .marca-produto { padding: 12px 4px 0; }
 .marca-produto strong { display: block; font-family: var(--f-titulo); font-size: 19px; font-weight: 700; line-height: 1.2; }

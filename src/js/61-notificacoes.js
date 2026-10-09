@@ -83,14 +83,49 @@ function alertasOperacionais(D = derivar()) {
 
 const Notificacoes = (() => {
   let chave = '', lidos = {}, lista = [], modal = null, filtro = 'todas', persistente = true;
+  let recebidos = {}, recebimentoPersistente = true;
+  const ids = ['planilhas','previsoes','sem_previsao','sem_contato','estoque','respostas_pendentes','cobrancas_formais','respostas_confirmadas'];
   const autorizado = () => E.status === 'pronto' && (Acesso.modo !== 'firebase' || Boolean(Acesso.usuario?.uid && Acesso.perfil?.ativo));
   const chaveConta = () => `cp-notificacoes-v1-${hash36(`${Acesso.projeto || configFirebase()?.projectId || Acesso.modo}:${Acesso.usuario?.uid || E.usuario.id || 'local'}`)}`;
+  const chaveRecebimentos = () => chave.replace('cp-notificacoes-v1-', 'cp-notificacoes-recebidas-v1-');
+  const formatarRecebimento = em => {
+    const local = dataHoraBrasilia(new Date(em));
+    return `${fmtData(local)} às ${local.slice(11,16)}`;
+  };
+  function lerRecebimentos() {
+    const registros = {};
+    try {
+      const dados = JSON.parse(localStorage.getItem(chaveRecebimentos()) || '{}');
+      for (const id of ids) {
+        const r = dados?.[id];
+        if (typeof r?.versao === 'string' && typeof r.em === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(r.em)
+          && Number.isFinite(Date.parse(r.em)) && new Date(r.em).toISOString() === r.em) registros[id] = { versao: r.versao, em: r.em };
+      }
+    } catch (_) { recebimentoPersistente = false; }
+    return registros;
+  }
+  function registrarRecebimentos() {
+    const salvos = lerRecebimentos(), anteriores = JSON.stringify(recebidos), atuais = {};
+    const em = agora().toISOString();
+    for (const a of lista) {
+      // Recebimento é a primeira detecção desta versão, não a abertura do sino.
+      const candidatos = [recebidos[a.id], salvos[a.id]].filter(r => r?.versao === a.versao).sort((a,b) => comparar(a.em,b.em));
+      atuais[a.id] = candidatos[0] || { versao: a.versao, em };
+      a.recebidaEm = atuais[a.id].em;
+    }
+    recebidos = atuais;
+    // Resolvidas perdem o carimbo: uma reincidência tem um novo recebimento.
+    if (anteriores !== JSON.stringify(atuais) || JSON.stringify(salvos) !== JSON.stringify(atuais)) {
+      try { localStorage.setItem(chaveRecebimentos(), JSON.stringify(atuais)); recebimentoPersistente = true; }
+      catch (_) { recebimentoPersistente = false; }
+    }
+  }
   function carregarLeitura() {
     lidos = {}; persistente = true;
     try {
       const dados = JSON.parse(localStorage.getItem(chave) || '{}');
       if (dados && typeof dados === 'object' && !Array.isArray(dados)) {
-        for (const [id, versao] of Object.entries(dados)) if (['planilhas','previsoes','sem_previsao','sem_contato','estoque','respostas_pendentes','cobrancas_formais','respostas_confirmadas'].includes(id) && typeof versao === 'string') lidos[id] = versao;
+        for (const [id, versao] of Object.entries(dados)) if (ids.includes(id) && typeof versao === 'string') lidos[id] = versao;
       }
     } catch (_) { persistente = false; }
   }
@@ -104,14 +139,18 @@ const Notificacoes = (() => {
     if (!botao) return;
     botao.hidden = !autorizado();
     if (!autorizado()) {
-      lista = []; modal?.fechar(); modal = null; chave = ''; lidos = {};
+      lista = []; modal?.fechar(); modal = null; chave = ''; lidos = {}; recebidos = {};
       botao.querySelector('[data-notif-contador]').hidden = true;
       botao.setAttribute('aria-expanded', 'false');
       botao.setAttribute('aria-label', 'Notificações'); return;
     }
     const novaChave = chaveConta();
-    if (novaChave !== chave) { modal?.fechar(); chave = novaChave; carregarLeitura(); }
+    if (novaChave !== chave) {
+      modal?.fechar(); chave = novaChave; carregarLeitura();
+      recebimentoPersistente = true; recebidos = lerRecebimentos();
+    }
     lista = alertasOperacionais();
+    registrarRecebimentos();
     // Resolvidas somem; se voltarem a ocorrer serão notificadas novamente.
     const ativos = new Set(lista.map(a => a.id));
     let alterou = false;
@@ -131,11 +170,12 @@ const Notificacoes = (() => {
     todasLidas.disabled = !naoLidas.length;
     el.querySelectorAll('[data-notif-filtro]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.notifFiltro === filtro)));
     el.querySelector('[data-notif-escopo]').textContent = podeAdministrar() ? 'Administrador · todos os alertas da operação' : 'Suas cobranças e agendamentos · estoque das áreas permitidas';
-    el.querySelector('[data-notif-local]').textContent = persistente ? 'A leitura é salva para sua conta neste navegador. Marcar como lido não resolve a pendência.' : 'O navegador não permitiu salvar a leitura. Ela será mantida apenas enquanto esta página estiver aberta.';
+    el.querySelector('[data-notif-local]').textContent = persistente && recebimentoPersistente ? 'Recebimento e leitura são salvos para sua conta neste navegador. Horário de Brasília. Marcar como lido não resolve a pendência.' : 'O navegador não permitiu salvar todos os registros de recebimento e leitura. Eles serão mantidos apenas enquanto esta página estiver aberta. Horário de Brasília.';
     const area = el.querySelector('[data-notif-lista]');
     const html = visiveis.map(a => `<article class="notif-item ${lida(a) ? 'lida' : 'nao-lida'}" data-notif-id="${a.id}">
       <span class="notif-icone ${a.nivel}" aria-hidden="true">${icone(a.icone)}</span><div class="notif-conteudo">
       <div class="notif-meta"><span class="${a.nivel}">${a.nivel === 'critico' ? 'Prioridade' : 'Atenção'}</span><span>${lida(a) ? 'Lida' : 'Não lida'}</span></div>
+      <div class="notif-recebimento">${icone('relogio')}<time datetime="${a.recebidaEm}" title="Primeiro recebimento desta atualização, no horário de Brasília">Recebida em ${formatarRecebimento(a.recebidaEm)}</time></div>
       <h3>${esc(a.titulo)}</h3><p>${esc(a.texto)}</p>
       ${a.detalhes?.length ? `<details data-notif-detalhes="${a.id}"><summary>Ver detalhes (${a.detalhes.length})</summary><ul>${a.detalhes.map(d => `<li>${esc(d)}</li>`).join('')}</ul></details>` : ''}
       ${a.orientacao ? `<p class="nota">${esc(a.orientacao)}</p>` : ''}
@@ -185,7 +225,20 @@ const Notificacoes = (() => {
   }
   function iniciar() {
     aoMudar.add(atualizar);
-    window.addEventListener('storage', e => { if (chave && (e.key === chave || e.key === null)) { carregarLeitura(); atualizar(); } });
+    window.addEventListener('storage', e => {
+      if (!chave) return;
+      if (e.key === chave || e.key === null) { carregarLeitura(); atualizar(); }
+      else if (e.key === chaveRecebimentos()) {
+        // Sincronize somente versões já recebidas. Uma aba com dados antigos
+        // não deve regravar carimbos em resposta à atualização de outra aba.
+        const salvos = lerRecebimentos();
+        for (const a of lista) {
+          const r = salvos[a.id];
+          if (r?.versao === a.versao && r.em < a.recebidaEm) { recebidos[a.id] = r; a.recebidaEm = r.em; }
+        }
+        desenhar();
+      }
+    });
     atualizar();
   }
   return { iniciar, atualizar, abrir };

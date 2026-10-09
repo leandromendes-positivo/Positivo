@@ -87,6 +87,8 @@ body { font-size: 14px; }
 .notif-meta { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 5px; font: 500 10px var(--f-mono); color: var(--muted); margin-bottom: 8px; }
 .notif-meta .critico { color: var(--crit-ink); }
 .notif-meta .atencao { color: var(--warn-ink); }
+.notif-recebimento { display: flex; align-items: baseline; gap: 6px; color: var(--muted); font-size: 11px; line-height: 1.6; margin-bottom: 9px; font-variant-numeric: tabular-nums; }
+.notif-recebimento .ic { width: 13px; height: 13px; flex: none; align-self: center; }
 .notif-conteudo { min-width: 0; overflow-wrap: anywhere; }
 .notif-conteudo h3 { font-size: 15px; font-weight: 600; line-height: 1.4; margin: 0 0 7px; }
 .notif-conteudo p { font-size: 12px; color: var(--ink-2); margin: 0 0 12px; line-height: 1.65; }

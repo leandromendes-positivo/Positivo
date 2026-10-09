@@ -46,6 +46,7 @@ O token da caixa fica apenas na memória da página por no máximo 45 minutos, s
 - E-mail verificado, provedor Google/Microsoft e cadastro ativo são exigidos em toda leitura ou gravação operacional. Não há liberação por domínio inteiro.
 - Usuário comum consulta, agenda, registra contatos e observações. Somente administrador altera cadastros, configurações, importações, classificações e acessos.
 - Ninguém pode promover o próprio usuário comum a administrador ou criar seu próprio acesso. Somente um administrador ativo cadastra usuários.
+- Em **Minha conta**, cada pessoa ativa pode alterar somente seu próprio nome de exibição (até 80 caracteres), com autor autenticado e horário do servidor. E-mail, perfil, situação, administrador principal e data/autoria do cadastro permanecem protegidos contra edição pessoal. A administração de permissões preserva o nome escolhido.
 - Não é possível desativar/rebaixar o próprio administrador nem o administrador principal. Cadastros são desativados, não apagados, para manter a identificação histórica.
 - Cada previsão grava a posição atual e um evento imutável na mesma transação. As regras conferem UID, e-mail, horário do servidor, versão e data anterior; nem administradores do painel podem reescrever/apagar eventos.
 - Uma nova previsão exige referência ao e-mail de resposta e vínculo com uma cobrança formal por e-mail do mesmo técnico. As regras validam tipo, quantidade e RMDF (somente novas); cancelamentos não preservam uma confirmação ativa. A transação também confere se o estoque mudou enquanto o formulário estava aberto. A referência e o ateste são registrados pelo operador: o painel não verifica automaticamente o conteúdo da caixa de e-mail.
@@ -56,7 +57,7 @@ O token da caixa fica apenas na memória da página por no máximo 45 minutos, s
 - A falha ao conectar ao Firebase não é convertida silenciosamente em gravação temporária.
 - Os totais do aviso diário são calculados no servidor a partir do banco atual, incluindo agendas de usuários comuns. Usuários comuns não podem substituir o resumo enviado pelo sistema.
 
-A autenticação federada pode criar um registro técnico em **Firebase Authentication** após um login sem autorização. Isso **não cria um usuário do painel nem dá acesso a dados**: a coleção `usuarios` só pode ser alterada por administradores. O cadastro de acesso não é público.
+A autenticação federada pode criar um registro técnico em **Firebase Authentication** após um login sem autorização. Isso **não cria um usuário do painel nem dá acesso a dados**: somente administradores ativos podem criar cadastros na coleção `usuarios` ou gerenciar permissões; a edição pessoal se limita ao nome de um cadastro já autorizado. O cadastro de acesso não é público.
 
 Administradores do projeto Firebase e contas de serviço continuam sendo autoridades externas às regras do aplicativo. Proteja essas contas com MFA no provedor, acesso restrito e rotação de segredos; a recuperação do administrador principal exige essa administração do projeto.
 
@@ -71,6 +72,7 @@ python3 -m http.server 8000 --directory dist
 # Em outro terminal:
 URL_SITE=http://127.0.0.1:8000/pagina-completa.html node testes/firebase-e2e.mjs
 node testes/usuarios-e2e.mjs
+node testes/minha-conta-e2e.mjs
 node testes/seguranca-regras.mjs
 node testes/inventario-e2e.mjs
 ```

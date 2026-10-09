@@ -49,7 +49,6 @@ const STATUS_NOVAS = {
   sem_meta: { rotulo: "Sem limite", classe: "neutro", icone: "info" },
   sem_dados: { rotulo: "Sem relatório", classe: "neutro", icone: "arquivo" },
 };
-const TIPOS_TEC = { tecnico: "Técnico", base: "Base / depósito", ignorar: "Ignorado" };
 
 const E = {
   status: "carregando",
@@ -239,7 +238,7 @@ function prazoDaDevolucao(item, tipo = 'usadas', cfg = E.config) {
 }
 function temPrazosPersonalizados(tipo = 'usadas') {
   const campo = tipo === 'novas' ? 'prazoNovas' : 'prazoUsadas';
-  return Object.values(E.cadastro).some((c) => c.tipo !== 'ignorar' && prazoValido(c[campo]) !== null);
+  return Object.values(E.cadastro).some((c) => prazoValido(c[campo]) !== null);
 }
 
 function statusUsada(dias, previsao, cfg, hoje) {
@@ -276,7 +275,8 @@ function derivar() {
       nome: limpar(c.apelido) || nomeBonito(c.nome) || tid,
       nomeOriginal: c.nome || tid, localidade: c.localidade || "",
       regiao: c.regiao || regiao || "",
-      tipo: c.tipo || "tecnico",
+      // Campo interno mantido por compatibilidade; todos são técnicos de campo.
+      tipo: "tecnico",
       telefone: c.telefone || "", email: c.email || "", obs: c.obs || "",
       metaPropria,
       meta: metaPropria != null ? metaPropria : Number(cfg.meta) || 0,
@@ -290,8 +290,6 @@ function derivar() {
   // ---- peças usadas
   const itens = [];
   for (const u of E.usadas) {
-    const c = E.cadastro[u.tid];
-    if (c && c.tipo === "ignorar") continue;
     const an = (E.acomp[u.tid] && E.acomp[u.tid].itens && E.acomp[u.tid].itens[u.k]) || {};
     const base = (u.dataFT || u.desde || hoje).slice(0, 10);
     const dias = Math.max(0, diffDias(base, hoje));
@@ -315,15 +313,13 @@ function derivar() {
   const ignorados = new Set(cfg.tiposIgnorados || []);
   const tiposEnvio = new Map();
   for (const n of E.novas) {
-    const c = E.cadastro[n.tid];
-    if (c && c.tipo === "ignorar") continue;
     const t = tec(n.tid, n.regiao);
     t.regioes.add(n.regiao);
     tiposEnvio.set(n.tipoEnvio, (tiposEnvio.get(n.tipoEnvio) || 0) + n.qtd);
     t.novasLinhas.push({ ...n, prazo: t.prazoNovas, desc: E.catalogo[n.mat] || "", conta: !ignorados.has(n.tipoEnvio), dias: Math.max(0, diffDias(n.desde, hoje)) });
   }
-  // técnicos cadastrados sem peças continuam aparecendo (exceto ignorados)
-  for (const [tid, c] of Object.entries(E.cadastro)) if (c.tipo !== "ignorar" && !tecs.has(tid)) tec(tid, c.regiao);
+  // Todos os cadastros continuam disponíveis, inclusive sem peças e com tipo legado.
+  for (const [tid, c] of Object.entries(E.cadastro)) if (!tecs.has(tid)) tec(tid, c.regiao);
 
   // ---- histórico de devoluções (90 dias)
   const corte90 = somaDias(hoje, -90);
@@ -362,7 +358,7 @@ function derivar() {
     for (const n of t.novasLinhas) t.porTipo[n.tipoEnvio] = (t.porTipo[n.tipoEnvio] || 0) + n.qtd;
     if (!t.regiao && t.regioes.size) t.regiao = [...t.regioes][0];
     t.estoqueConhecido = regioesEstoque.has(t.regiao);
-    t.statusNovas = !t.estoqueConhecido ? "sem_dados" : t.tipo === "tecnico" ? statusNovas(t.novasQtd, t.meta) : "sem_meta";
+    t.statusNovas = !t.estoqueConhecido ? "sem_dados" : statusNovas(t.novasQtd, t.meta);
     t.excessoNovas = t.statusNovas === "acima" ? t.novasQtd - t.meta : 0;
 
     const cob = ultimaCob(t.tid);
@@ -380,7 +376,7 @@ function derivar() {
   lista.sort((a, b) => comparar(a.nome, b.nome));
 
   // ---- totais
-  const tecnicos = lista.filter((t) => t.tipo === "tecnico");
+  const tecnicos = lista;
   const estoqueTec = tecnicos.filter((t) => t.estoqueConhecido);
   const cobrarTec = lista.filter((t) => t.nCobrar > 0)
     .sort((a, b) => (b.nPrevVencida > 0) - (a.nPrevVencida > 0) || b.maxDias - a.maxDias || b.nCobrar - a.nCobrar);
@@ -406,7 +402,6 @@ function derivar() {
     ideal: estoqueTec.filter((t) => t.statusNovas === "ideal").length,
     acima: estoqueTec.filter((t) => t.statusNovas === "acima").length,
     excessoNovas: somar(estoqueTec, (t) => t.excessoNovas),
-    bases: lista.filter((t) => t.tipo === "base" && t.temDados).length,
   };
   kpi.mediaNovas = estoqueTec.length ? kpi.novas / estoqueTec.length : 0;
 
@@ -599,7 +594,7 @@ async function registrarCobranca(tid, { canal, previsao, obs, itens, tipo = 'usa
 async function salvarTecnico(tid, campos) {
   exigirAdministrador();
   if ("localidade" in campos && !Object.hasOwn(LOCALIDADES, campos.localidade)) throw new Error("Selecione capital ou interior.");
-  campos = { ...campos };
+  campos = { ...campos, tipo: "tecnico" };
   for (const campo of ['prazoUsadas', 'prazoNovas']) if (campo in campos) {
     if (campos[campo] === null || campos[campo] === '') campos[campo] = null;
     else {

@@ -45,7 +45,7 @@ Colunas (as duas planilhas têm as mesmas, mudando só a penúltima):
 
 | Coluna | Exemplo | Observação |
 |---|---|---|
-| Técnico | `MARIA EXEMPLO DA SILVA ` | Às vezes com espaço no fim. No PR alguns são **códigos numéricos** (`110301019`), que são bases/depósitos. |
+| Técnico | `MARIA EXEMPLO DA SILVA ` | Às vezes com espaço no fim. No PR alguns são **códigos numéricos** (`110301019`), que também são tratados como técnicos de campo. |
 | Nota Fiscal | `47908` ou `LT:732693` | |
 | Remessa | `8006097001` ou `0080604986` | |
 | Material Solicitado | `000000000011144611` | Código SAP de 18 dígitos com zeros à esquerda. |
@@ -59,7 +59,7 @@ Colunas (as duas planilhas têm as mesmas, mudando só a penúltima):
 
 Exemplos fictícios (mesmo formato) estão em `exemplos/` dentro do zip.
 
-Tamanho real das planilhas de 05/10/2026: PR Novas 8.871 linhas (122.505 peças, a maior parte em bases), PR Usadas 1.952, RS/SC/TO bem menores. Técnicos: ~90 (13 códigos numéricos no PR).
+Tamanho real das planilhas de 05/10/2026: PR Novas 8.871 linhas (122.505 peças, incluindo os identificadores numéricos), PR Usadas 1.952, RS/SC/TO bem menores. Técnicos: ~90 (13 códigos numéricos no PR).
 
 ---
 
@@ -93,15 +93,15 @@ cobrar = atrasada OU previsao_vencida
 
 ### 4.3 Peças novas
 
-- Soma de `Qtd` por técnico (só tipos que contam). Situação só para `tipo = "tecnico"`:
+- Soma de `Qtd` por técnico (só tipos que contam). Situação para todos os responsáveis:
   `qtd > meta` → **acima do limite** (excesso = qtd − meta) · de 0 até meta → **dentro do limite** · meta 0 → **sem limite**. Sem relatório de novas da região → **sem relatório**, não zero. Os identificadores internos `meta`, `ideal` e `sem_meta` são mantidos por compatibilidade.
 - Linhas de novas são agregadas por técnico + material + tipo de envio, guardando desde quando aparecem.
 
 ### 4.4 Técnicos
 
 - Identificador estável `tid`: nome sem acento, maiúsculo, espaços únicos, espaços viram `_` (`idSeguro(chaveTexto(nome))`), ex. `MARIA_EXEMPLO_DA_SILVA`.
-- Tipos: `tecnico`, `base` (base/depósito: fica fora do limite dos técnicos e aparece separado no estoque), `ignorar` (some de todas as contas). Nome só com dígitos entra como `base` na primeira vez.
-- Cadastro editável: nome de exibição (apelido), tipo, limite próprio, WhatsApp, e-mail, observações.
+- Todos são técnicos de campo, inclusive nomes numéricos. A classificação foi retirada da interface. `tipo` permanece internamente como `tecnico` por compatibilidade; valores antigos `base`/`ignorar` não excluem cadastros de nenhum acompanhamento. O cadastro e os históricos não são apagados quando o técnico some de uma próxima planilha.
+- Cadastro editável: nome de exibição (apelido), limite próprio, WhatsApp, e-mail, observações.
 
 ### 4.5 Identidade de cada peça usada (para guardar previsão e cobranças)
 
@@ -229,7 +229,7 @@ node testes/e2e.mjs "<pasta com os CSV>" capturas/ # teste ponta a ponta (Node +
 
 **Números esperados com as planilhas fictícias de `exemplos/`** (relógio em 05/10/2026): 10 peças usadas pendentes, 5 atrasadas, 3 técnicos para cobrar (José Exemplo Pereira 56 dias, Carlos Exemplo Souza 13, Ana Exemplo Costa 10), 46 peças novas com 4 técnicos (2 dentro do limite, 2 acima, 16 peças em excesso) e 1 base.
 
-**Números esperados com as planilhas reais de 05/10/2026:** 2.005 peças usadas pendentes, 758 atrasadas (mais antiga com 229 dias), 15 técnicos para cobrar, 3.878 peças novas com 67 técnicos (média 57,9), 13 bases. Os indicadores por limite precisam ser recalculados com os relatórios reais; as antigas faixas de tolerância não se aplicam.
+**Referência histórica anterior à unificação de todos os responsáveis como técnicos, não usar como expectativa de testes:** 2.005 peças usadas pendentes, 758 atrasadas (mais antiga com 229 dias), 15 técnicos para cobrar, 3.878 peças novas com 67 técnicos (média 57,9), 13 bases. Os indicadores precisam ser recalculados com os relatórios reais incluindo os identificadores numéricos como técnicos; as antigas faixas de tolerância e exclusões por classificação não se aplicam.
 
 ---
 

@@ -29,7 +29,7 @@ try {
   assert.equal(ordem, true);
   assert.deepEqual(await page.locator('.kpi-usadas .kpi-partes strong').allTextContents(), ['5', '5']);
   assert.deepEqual(await page.locator('.kpi-cobrancas .kpi-partes strong').allTextContents(), ['3', '0']);
-  assert.deepEqual(await page.locator('.kpi-estoque .kpi-partes strong').allTextContents(), ['2', '2', '0']);
+  assert.deepEqual(await page.locator('.kpi-estoque .kpi-partes strong').allTextContents(), ['2', '3', '0']);
 
   // O estado amplia sem alterar a cor de risco, o estado selecionado ou o alvo do clique.
   const estado = page.locator('.mapa-estado[data-uf="PR"]');

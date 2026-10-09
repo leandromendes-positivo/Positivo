@@ -47,14 +47,14 @@ try {
   });
   assert.deepEqual(calculos.semana,['2026-10-12','2026-10-18']);
   assert.deepEqual(calculos.mes,['2026-10-01','2026-10-18']);
-  assert.deepEqual(calculos.atraso,[['a',5,3,2,10]]);
+  assert.deepEqual(calculos.atraso,[['base',100,100,0,10],['a',5,3,2,10]]);
   assert.deepEqual(calculos.pontualidade,[['b',3,1]]);
   assert.deepEqual(calculos.usoSemana,[['b',2]]);
-  assert.deepEqual(calculos.usoMes,[['a',5],['b',5]]);
+  assert.deepEqual(calculos.usoMes,[['base',100],['a',5],['b',5]]);
   assert.deepEqual(calculos.novasAtraso,[['a',7]]);
   assert.deepEqual(calculos.novasUso,[['b',5]]);
   assert.deepEqual(calculos.novasPontualidade,[['b',2]]);
-  assert.equal(calculos.semData,1); assert.deepEqual(calculos.filtro,[['M1',3]]);
+  assert.equal(calculos.semData,1); assert.deepEqual(calculos.filtro,[['M1',3],['M1',100]]);
   assert.deepEqual(calculos.filtroOr,[['M2',2]]);
   assert.equal(calculos.vencimento,'vencendo'); assert.equal(calculos.fronteira,'2026-10-05'); assert.equal(calculos.ano,'2025-12-29');
   await modelo.evaluate(() => irPara('painel'));
@@ -85,17 +85,17 @@ try {
     mudou(); renderizar(true);
   });
   await modelo.locator('.ranking-atraso [data-acao="ranking-completo"]').click();
-  assert.equal(await modelo.locator('.modal .rank-item').count(),61);
+  assert.equal(await modelo.locator('.modal .rank-item').count(),62);
   await modelo.locator('.modal .rank-item').first().click();
   assert.equal(await modelo.locator('.modal').count(),2);
   await modelo.keyboard.press('Escape'); await modelo.keyboard.press('Escape');
   await modelo.locator('[data-nav="consulta"]').click();
   assert.equal(await modelo.locator('.tabela-consulta tbody tr').count(),50);
   await modelo.locator('[data-acao="pagina"][data-p="2"]').click();
-  assert.equal(await modelo.locator('.tabela-consulta tbody tr').count(),14);
+  assert.equal(await modelo.locator('.tabela-consulta tbody tr').count(),15);
   await modelo.evaluate(()=>{exportarExcel=async(nome,abas)=>{window.__linhasExportadas=abas[0].linhas.length;};});
   await modelo.locator('[data-acao="consulta-exportar"]').click();
-  assert.equal(await modelo.evaluate(()=>window.__linhasExportadas),64);
+  assert.equal(await modelo.evaluate(()=>window.__linhasExportadas),65);
   await modelo.close();
 
   const page = await abrir();

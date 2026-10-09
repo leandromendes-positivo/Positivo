@@ -8,8 +8,8 @@ const UI = {
   posRender: null,
   cob: { tipo: "usadas", resposta: "aguardando", somenteMeus: false, aba: "cobrar", foco: "", regiao: "", busca: "", ordem: "dias", abertos: new Set() },
   us: { aba: "pendentes", status: "todas", regiao: "", tid: "", busca: "", faixa: null, ordem: { campo: "dias", dir: "desc" }, pagina: 1, paginaDev: 1, sel: new Set() },
-  es: { regiao: "", status: "", busca: "", bases: false, ordem: { campo: "novasQtd", dir: "desc" }, abertos: new Set() },
-  tc: { tipo: "tecnico", regiao: "", busca: "", mostrarSemDados: false, ordem: { campo: "nome", dir: "asc" } },
+  es: { regiao: "", status: "", busca: "", ordem: { campo: "novasQtd", dir: "desc" }, abertos: new Set() },
+  tc: { regiao: "", busca: "", mostrarSemDados: false, ordem: { campo: "nome", dir: "asc" } },
   ficha: { tid: null, aba: "usadas", pagina: 1 },
   im: { fila: [], processando: false, progresso: "", resultado: null, erro: null },
 };
@@ -101,7 +101,6 @@ function renderizar(forcar = false) {
   Pesquisas.preparar(conteudo);
   if (!podeAdministrar()) {
     document.querySelectorAll('[data-acao="editar-tecnico"], [data-acao="editar-prazos"], [data-acao="consulta-classificar"], [data-acao="desfazer-importacao"]').forEach(el=>el.disabled=true);
-    document.querySelectorAll('[data-mudar="tipo-tecnico"]').forEach(el=>el.disabled=true);
   }
   if (p.depois) p.depois();
   if (UI.posRender) UI.posRender();
@@ -209,7 +208,7 @@ const ACOES = {
     Object.assign(UI.us, { aba: "pendentes", status: el.dataset.status || "todas", faixa: null, tid: "", regiao: "", busca: "", pagina: 1 });
     UI.us.sel.clear(); irPara("usadas");
   },
-  "painel-estoque": () => { Object.assign(UI.es, { regiao: "", status: "", busca: "", bases: false }); irPara("estoque"); },
+  "painel-estoque": () => { Object.assign(UI.es, { regiao: "", status: "", busca: "" }); irPara("estoque"); },
   "painel-cobrancas": (el) => abrirCobrancasPainel(el.dataset.aba || "cobrar"),
   "termometro-abrir": el => abrirFatorTermometro(el.dataset.fator || el.dataset.prioridade),
   "painel-zoom": (el) => ajustarZoomMapa(Number(el.dataset.passo)),
@@ -227,7 +226,7 @@ const ACOES = {
   "painel-periodo": (el) => atualizarFiltroPainel("periodo", Number(el.dataset.periodo), `[data-acao="painel-periodo"][data-periodo="${el.dataset.periodo}"]`),
   "painel-regiao-abrir": () => {
     if (UIpainel.mapaModo === "novas") {
-      Object.assign(UI.es, { regiao: UIpainel.regiao, status: "", busca: "", bases: false });
+      Object.assign(UI.es, { regiao: UIpainel.regiao, status: "", busca: "" });
       irPara("estoque");
     } else {
       Object.assign(UI.us, { regiao: UIpainel.regiao, status: "todas", busca: "", faixa: null, tid: "", pagina: 1, aba: "pendentes" });
@@ -235,7 +234,7 @@ const ACOES = {
     }
   },
   "painel-excesso": () => {
-    Object.assign(UI.es, { regiao: "", status: "acima", busca: "", bases: false });
+    Object.assign(UI.es, { regiao: "", status: "acima", busca: "" });
     irPara("estoque");
   },
   tema: () => Tema.alternar(),
@@ -316,11 +315,9 @@ const ACOES = {
     s.ordem = s.ordem.campo === campo ? { campo, dir: s.ordem.dir === "asc" ? "desc" : "asc" } : { campo, dir: ["dias", "novasQtd", "usadas", "atrasadas", "maxDias", "novas", "itens"].includes(campo) ? "desc" : "asc" };
     renderizar(true);
   },
-  "status-es": (el) => { UI.es.status = UI.es.status === el.dataset.status && el.dataset.status ? "" : el.dataset.status; UI.es.bases = false; if (UI.pagina !== "estoque") irPara("estoque"); else renderizar(true); },
-  "bases-es": (el) => { UI.es.bases = el.dataset.v === "1"; UI.es.status = ""; renderizar(true); },
+  "status-es": (el) => { UI.es.status = UI.es.status === el.dataset.status && el.dataset.status ? "" : el.dataset.status; if (UI.pagina !== "estoque") irPara("estoque"); else renderizar(true); },
   "abrir-es": (el) => { const s = UI.es.abertos; s.has(el.dataset.tid) ? s.delete(el.dataset.tid) : s.add(el.dataset.tid); renderizar(true); },
   "exportar-estoque": () => exportarEstoque(),
-  "tipo-tc": (el) => { UI.tc.tipo = el.dataset.tipo; renderizar(true); },
   "exportar-tecnicos": () => exportarTecnicos(),
   "aba-ficha": (el) => { UI.ficha.aba = el.dataset.aba; UI.ficha.pagina = 1; renderizar(true); },
   "tentar-importar": () => executarImportacao(),
@@ -378,9 +375,6 @@ const MUDANCAS = {
   "inventario-filtro": el => { UIinventario[el.dataset.campo]=el.value;UIinventario.pagina=1;renderizar(true); },
   "regiao-tc": (el) => { UI.tc.regiao = el.value; renderizar(true); },
   "sem-dados-tc": (el) => { UI.tc.mostrarSemDados = el.checked; renderizar(true); },
-  "tipo-tecnico": async (el) => {
-    try { await salvarTecnico(el.dataset.tid, { tipo: el.value }); toast(`Tipo alterado para ${TIPOS_TEC[el.value]}.`); } catch (e) { toast(erroAmigavel(e).message, "erro"); }
-  },
   "fila-regiao": (el) => { const it = UI.im.fila[+el.dataset.n]; if (it) { it.regiao = el.value; renderizar(true); } },
   "fila-tipo": (el) => { const it = UI.im.fila[+el.dataset.n]; if (it) { it.tipo = el.value; renderizar(true); } },
 };

@@ -74,11 +74,17 @@ try {
   await abrir();
   assert.equal(await page.locator('.notif-item').count(),5);
   assert.equal(await page.locator('.notif-item').first().getAttribute('data-notif-id'),'planilhas');
-  assert.match(await page.locator('[data-notif-id="sem_previsao"]').innerText(),/1 técnico tem/);
-  assert.match(await page.locator('[data-notif-id="sem_contato"]').innerText(),/1 técnico na fila/);
-  assert.match(await page.locator('[data-notif-id="estoque"]').innerText(),/4 peças excedentes/);
+  assert.match(await page.locator('[data-notif-id="sem_previsao"]').innerText(),/2 técnicos têm/);
+  assert.match(await page.locator('[data-notif-id="sem_contato"]').innerText(),/3 técnicos na fila/);
+  assert.match(await page.locator('[data-notif-id="estoque"]').innerText(),/84 peças excedentes/);
   assert.match(await page.locator('[data-notif-id="previsoes"]').innerText(),/3 peças continuam/);
-  assert.equal(await page.locator('[data-notif-id="sem_previsao"] li').textContent(),'Ana Exemplo · PR · 2 peças sem previsão');
+  assert.equal(await page.locator('[data-notif-id="sem_previsao"] li').first().textContent(),'Ana Exemplo · PR · 2 peças sem previsão');
+  // Os cadastros legados contam; resolver suas pendências remove apenas seus alertas.
+  assert.ok((await page.locator('[data-notif-id="sem_previsao"] li').allTextContents()).some(t => t.includes('Base Exemplo')));
+  await page.evaluate(() => {
+    E.acomp.base.itens.d1.p = '2026-10-08'; E.cadastro.ignorado.email = 'legado@example.test';
+    E.novas.filter(n => ['base', 'ignorado'].includes(n.tid)).forEach(n => n.qtd = 10); mudou();
+  });
   // Marcar leitura não registra contato nem modifica previsão/estoque.
   const antes=await page.evaluate(()=>JSON.stringify([E.acomp,E.usadas,E.novas,E.contatos,E.usuarios]));
   await page.locator('[data-notif-leitura="sem_previsao"]').click();
@@ -123,7 +129,7 @@ try {
   assert.doesNotMatch(await page.evaluate(()=>resumoTexto()),/Bruno|Caio|Base/);
   await page.evaluate(async()=>{
     const original=exportarExcel;
-    exportarExcel=async(nome,abas)=>{window.__exportacao=abas[0].linhas;};
+    exportarExcel=async(nome,abas)=>{window.__exportacao=abas[1].linhas;};
     try{await exportarCobrancas();}finally{exportarExcel=original;}
   });
   assert.equal(await page.evaluate(()=>window.__exportacao.every(l=>l[0]==='Ana Exemplo')),true);
@@ -136,7 +142,7 @@ try {
   assert.equal(await page.locator('.notif-item.nao-lida').count(),1);
   assert.equal(await page.locator('.notif-item.nao-lida').getAttribute('data-notif-id'),'estoque');
   await page.locator('[data-notif-destino="estoque"]').click();
-  assert.deepEqual(await page.evaluate(()=>[UI.pagina,UI.es.status,UI.es.busca,UI.es.bases]),['estoque','acima','',false]);
+  assert.deepEqual(await page.evaluate(()=>[UI.pagina,UI.es.status,UI.es.busca]),['estoque','acima','']);
   // Resolver a pendência remove o alerta, incluindo limite exato e estoque inferior.
   await page.evaluate(()=>{E.novas.find(n=>n.tid==='ana').qtd=7;mudou();});
   await abrir();assert.equal(await page.locator('[data-notif-id="estoque"]').count(),0);
@@ -150,7 +156,7 @@ try {
   await page.evaluate(()=>{E.novas.find(n=>n.tid==='ana').qtd=12;mudou();});
   assert.equal(await page.locator('[data-notif-detalhes="sem_previsao"]').getAttribute('open'),'');
   assert.equal(await page.locator('[data-notif-leitura="sem_previsao"]').evaluate(e=>e===document.activeElement),true);
-  // Prévia para amanhã remove o alerta de retorno; bases, ignorados e cobranças de ontem não entram.
+  // Prévia para amanhã remove o alerta de retorno; cobranças de ontem ainda não geram o alerta.
   await page.evaluate(()=>{E.acomp.ana.itens.a1.p='2026-10-08';mudou();});
   assert.equal(await page.locator('[data-notif-id="sem_previsao"]').count(),0);
   await page.evaluate(()=>{E.acomp.ana.itens.a1.p='';E.acomp.ana.itens.a1.uc='2026-10-06 10:00';mudou();});

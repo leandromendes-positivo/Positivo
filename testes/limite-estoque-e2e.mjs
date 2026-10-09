@@ -23,7 +23,8 @@ try {
     const tid = nome => Object.entries(E.cadastro).find(([, c]) => c.nome === nome)[0];
     await salvarTecnico(tid('Teste Próprio'), { meta: 7 });
     await salvarTecnico(tid('Teste Sem Limite'), { meta: 0 });
-    await salvarTecnico(tid('Teste Ignorado'), { tipo: 'ignorar' });
+    // Simula dados persistidos antes da remoção da classificação.
+    await Armazem.mesclar('cadastro/tecnicos', { t: { [tid('Teste Ignorado')]: { tipo: 'ignorar' }, [tid('110399001')]: { tipo: 'base' } } }, true);
     await salvarConfig({ tiposIgnorados: ['PP'] });
     // Desaparecer da nova planilha gera saldo zero, preservando o cadastro.
     await window.__importarLimite(window.__loteLimite.filter(n => n.tecNome !== 'Teste Limite 0'));
@@ -32,11 +33,11 @@ try {
   });
   const estados = await page.evaluate(() => derivar().tecnicos.filter(t => t.nomeOriginal.startsWith('Teste Limite ')).map(t => [Number(t.nomeOriginal.split(' ').at(-1)), t.novasQtd, t.statusNovas, t.excessoNovas]).sort((a,b) => a[0]-b[0]));
   assert.deepEqual(estados, [[0,0,'ideal',0],[1,1,'ideal',0],[9,9,'ideal',0],[10,10,'ideal',0],[11,11,'acima',1],[13,13,'acima',3],[14,14,'acima',4]]);
-  assert.deepEqual(await page.locator('.kpi-estoque .kpi-partes strong').allTextContents(), ['4','4','1']);
+  assert.deepEqual(await page.locator('.kpi-estoque .kpi-partes strong').allTextContents(), ['4','6','1']);
   const resumo = await page.evaluate(() => montarResumo());
-  assert.deepEqual(resumo.estoque, { regra: 'limite_maximo', excesso: 9, acima: 4, ideal: 4, totalNovas: 166 });
+  assert.deepEqual(resumo.estoque, { regra: 'limite_maximo', excesso: 989, acima: 6, ideal: 4, totalNovas: 1166 });
   const aviso = montarAviso(resumo, '2026-10-05');
-  assert.match(aviso.texto, /4 técnicos dentro do limite e 4 técnicos acima; 9 peças em excesso/);
+  assert.match(aviso.texto, /4 técnicos dentro do limite e 6 técnicos acima; 989 peças em excesso/);
   assert.doesNotMatch(aviso.html, /abaixo da meta|repor|reposição/);
   const legado = montarAviso({ ...resumo, estoque: { abaixo: [{ nome: 'Legado' }], ideal: 2, acima: 1 } }, '2026-10-05');
   assert.match(legado.texto, /consulte o painel atualizado/);
@@ -60,11 +61,11 @@ try {
   assert.deepEqual(JSON.parse(JSON.stringify(servidor.estoque)), resumo.estoque);
 
   await page.locator('[data-acao="painel-mapa-modo"][data-modo="novas"]').click();
-  assert.match(await page.locator('.mapa-numero').innerText(), /4\s+técnicos acima do limite/);
-  assert.match(await page.locator('.mapa-risco').innerText(), /50%/);
+  assert.match(await page.locator('.mapa-numero').innerText(), /6\s+técnicos acima do limite/);
+  assert.match(await page.locator('.mapa-risco').innerText(), /60%/);
   assert.equal(await page.locator('.excesso-lista li').count(), 4);
   await page.locator('[data-acao="painel-excesso"]').click();
-  assert.equal(await page.locator('.tabela-estoque tbody > tr').count(), 4);
+  assert.equal(await page.locator('.tabela-estoque tbody > tr').count(), 6);
   assert.doesNotMatch(await page.locator('.tabela-estoque').innerText(), /Teste Limite (0|1|9|10)\s/);
   await page.locator('.chip[data-status="ideal"]').click();
   assert.equal(await page.locator('.tabela-estoque tbody > tr').count(), 4);
@@ -92,11 +93,11 @@ try {
   for (const exportacao of exportacoes) assert.ok(exportacao.planilhas.some(p => p.linhas.some(l => l[0] === 'Teste Limite 0')), 'saldo zero continua nas exportações');
 
   await page.evaluate(async () => { await salvarConfig({ tolerancia: 100 }); await carregarTudo(); });
-  assert.equal(await page.evaluate(() => derivar().kpi.acima), 4, 'tolerância legada nunca aumenta o teto');
+  assert.equal(await page.evaluate(() => derivar().kpi.acima), 6, 'tolerância legada nunca aumenta o teto');
   // Todas as peças devolvidas: não pedir reposição nem ocultar técnicos com zero.
   await page.evaluate(async () => { await window.__importarLimite([]); await carregarTudo(); irPara('painel'); });
   assert.match(await page.locator('.cartao-excesso').innerText(), /Nenhum estoque acima do limite/);
-  assert.deepEqual(await page.locator('.kpi-estoque .kpi-partes strong').allTextContents(), ['8','0','1']);
+  assert.deepEqual(await page.locator('.kpi-estoque .kpi-partes strong').allTextContents(), ['10','0','1']);
   assert.deepEqual(erros, []);
   console.log('PASSOU: 0–10 regular, 11+ em excesso, tolerância legada ignorada, limites pessoais, filtros, mapa, saldo zero, exportações e aviso diário.');
 } finally { await browser.close(); }

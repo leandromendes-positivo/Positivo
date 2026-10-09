@@ -72,7 +72,7 @@ try {
   await page.locator('[data-nav="painel"]').click();
   await page.locator('[data-acao="painel-mapa-modo"][data-modo="novas"]').click();
   await page.locator('[data-acao="painel-regiao-abrir"]').click();
-  assert.deepEqual(await page.evaluate(() => [UI.pagina, UI.es.regiao, UI.es.bases]), ["estoque", "SC", false]);
+  assert.deepEqual(await page.evaluate(() => [UI.pagina, UI.es.regiao]), ["estoque", "SC"]);
   await page.locator('[data-nav="painel"]').click();
 
   // Cobrança real pela interface atualiza a fila e a agenda, mas não dá baixa.
@@ -133,7 +133,7 @@ try {
   assert.equal(await page.locator(".cartao-evolucao tbody tr").count(), 2);
   await page.locator('[data-acao="alternar-tabela"][data-grafico="evolucao"]').click();
   await page.locator('[data-acao="painel-excesso"]').click();
-  assert.deepEqual(await page.evaluate(() => [UI.pagina, UI.es.status, UI.es.regiao, UI.es.bases]), ["estoque", "acima", "", false]);
+  assert.deepEqual(await page.evaluate(() => [UI.pagina, UI.es.status, UI.es.regiao]), ["estoque", "acima", ""]);
   await page.locator('[data-nav="painel"]').click();
   await page.locator('[data-acao="painel-fila"][data-fila="cobrar"]').click();
   await page.locator('[data-acao="painel-mapa-modo"][data-modo="usadas"]').click();

@@ -73,7 +73,7 @@ function saudePrazos(D) {
 
 function estoqueConhecidoPainel(D) {
   const conhecidas = new Set(D.frescor.filter((f) => f.tipo === "novas" && f.em).map((f) => f.regiao));
-  const tecnicos = D.tecnicos.filter((t) => t.tipo === "tecnico" && conhecidas.has(t.regiao));
+  const tecnicos = D.tecnicos.filter((t) => conhecidas.has(t.regiao));
   return { temRelatorio: conhecidas.size > 0, tecnicos, total: somar(tecnicos, (t) => t.novasQtd), dentro: tecnicos.filter((t) => t.statusNovas === "ideal"), acima: tecnicos.filter((t) => t.statusNovas === "acima"), semLimite: tecnicos.filter((t) => t.statusNovas === "sem_meta") };
 }
 

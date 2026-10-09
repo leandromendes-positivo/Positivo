@@ -30,8 +30,8 @@ try {
     E.cadastro = {
       ana: { nome: 'Ana Exemplo', regiao: 'PR', localidade: 'capital', prazoUsadas: 3 },
       bruno: { nome: 'Bruno Exemplo', regiao: 'SC', localidade: 'interior', meta: 5, prazoNovas: 10 },
-      base: { nome: 'BASE EXCLUIR', regiao: 'PR', tipo: 'base' },
-      ignorado: { nome: 'IGNORADO EXCLUIR', regiao: 'PR', tipo: 'ignorar' },
+      base: { nome: 'Técnico com tipo base legado', regiao: 'PR', tipo: 'base' },
+      ignorado: { nome: 'Técnico com tipo ignorado legado', regiao: 'PR', tipo: 'ignorar' },
     };
     for (let n = 0; n < 25; n++) E.cadastro['zero' + n] = { nome: 'Técnico sem peças ' + String(n).padStart(2, '0'), regiao: 'PR' };
     E.catalogo = { '000123': 'Memória RAM 8 GB', '000456': 'SSD NVMe 512 GB', '000789': '=HYPERLINK("https://example.test", "Texto literal")', '000999': 'Placa principal' };
@@ -52,19 +52,19 @@ try {
   const resumo = await page.evaluate(() => {
     const r = calcularRelatorio(); return { k: r.k, ana: r.tecnicos.find(t => t.tid === 'ana'), bruno: r.tecnicos.find(t => t.tid === 'bruno'), total: r.tecnicos.length };
   });
-  assert.equal(resumo.k.estoque, 33); assert.equal(resumo.k.atrasadas, 8, 'previsão futura não apaga a idade acima do prazo individual');
-  assert.equal(resumo.k.devolvidas, 12); assert.equal(resumo.k.noPrazo, 4); assert.equal(resumo.k.pontualidade, 1 / 3);
+  assert.equal(resumo.k.estoque, 223); assert.equal(resumo.k.atrasadas, 108, 'previsão futura não apaga a idade acima do prazo individual');
+  assert.equal(resumo.k.devolvidas, 82); assert.equal(resumo.k.noPrazo, 74); assert.equal(resumo.k.pontualidade, 74 / 82);
   assert.equal(resumo.k.uso, 2); assert.equal(resumo.k.classificar, 9); assert.equal(resumo.k.transferidas, 1);
-  assert.equal(resumo.k.excesso, 3); assert.equal(resumo.ana.excesso, 2, 'envio ignorado fora do cálculo do limite'); assert.equal(resumo.bruno.excesso, 1);
-  assert.equal(resumo.total, 27); assert.equal(await page.locator('.rel-tabela tbody tr').count(), 20);
-  await page.locator('[data-alvo="relatorios"][data-p="2"]').click(); assert.equal(await page.locator('.rel-tabela tbody tr').count(), 7);
+  assert.equal(resumo.k.excesso, 83); assert.equal(resumo.ana.excesso, 2, 'envio ignorado fora do cálculo do limite'); assert.equal(resumo.bruno.excesso, 1);
+  assert.equal(resumo.total, 29); assert.equal(await page.locator('.rel-tabela tbody tr').count(), 20);
+  await page.locator('[data-alvo="relatorios"][data-p="2"]').click(); assert.equal(await page.locator('.rel-tabela tbody tr').count(), 9);
   await baixar('indicadores', 'relatorio-indicadores.xlsx'); await baixar('simples', 'relatorio-simples.xlsx'); await baixar('pdf', 'relatorio.pdf');
   // Filtros reais pelo formulário, incluindo histórico anterior a 120 dias.
   const formulario = page.locator('[data-form="relatorios"]');
   await preencherData(formulario.locator('[name="inicio"]'), '2026-05-01'); await preencherData(formulario.locator('[name="fim"]'), '2026-05-31');
   await formulario.locator('[type="submit"]').click();
   assert.equal(await page.evaluate(() => calcularRelatorio().k.devolvidas), 2);
-  assert.equal(await page.evaluate(() => calcularRelatorio().k.estoque), 33, 'datas não escondem estoque atual');
+  assert.equal(await page.evaluate(() => calcularRelatorio().k.estoque), 223, 'datas não escondem estoque atual');
   await preencherData(formulario.locator('[name="inicio"]'), '2026-10-07'); await preencherData(formulario.locator('[name="fim"]'), '2026-10-01');
   await formulario.locator('[type="submit"]').click(); assert.match(await formulario.locator('[role="alert"]').innerText(), /posterior/);
   assert.equal(await page.evaluate(() => UIrelatorios.filtros.inicio), '2026-05-01', 'intervalo inválido não substitui o aplicado');
@@ -84,11 +84,11 @@ try {
   // Gráficos e consulta das peças por código, sem misturar códigos diferentes.
   assert.equal(await page.locator('.rel-cartao').count(), 4);
   assert.equal(await page.locator('.rel-pecas-top li').count(), 3);
-  assert.deepEqual(await page.evaluate(() => { const p = calcularRelatorio().porPeca.find(p => p.codigo === '000123'); return [p.usadas, p.novas, p.valor]; }), [11, 6, 17]);
+  assert.deepEqual(await page.evaluate(() => { const p = calcularRelatorio().porPeca.find(p => p.codigo === '000123'); return [p.usadas, p.novas, p.valor]; }), [111, 6, 117]);
   await page.locator('[data-acao="relatorios-pecas"]').click();
   await page.locator('[data-rel-peca-busca]').fill('000123');
   assert.equal(await page.locator('[data-rel-pecas-lista] tbody tr').count(), 1);
-  assert.match(await page.locator('[data-rel-pecas-lista]').innerText(), /17 peças/);
+  assert.match(await page.locator('[data-rel-pecas-lista]').innerText(), /117 peças/);
   await page.locator('[data-rel-peca-busca]').fill('NVMe');
   assert.match(await page.locator('[data-rel-pecas-lista]').innerText(), /000456/);
   await page.keyboard.press('Escape');

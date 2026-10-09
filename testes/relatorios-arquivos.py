@@ -73,16 +73,16 @@ for nome in ('vazio', 'relatorio', 'filtrado', 'volume'):
         for info in pagina.get_image_info():
             assert info['bbox'][3] < pagina.rect.height - 50, 'gráficos não invadem notas ou rodapé'
     if nome == 'relatorio':
-        assert [visual['Visão geral'][c].value for c in ['A6', 'E6', 'I6', 'A10', 'E10', 'I10']] == [33, 8, 12, 1 / 3, 2, 3]
+        assert [visual['Visão geral'][c].value for c in ['A6', 'E6', 'I6', 'A10', 'E10', 'I10']] == [223, 108, 82, 74 / 82, 2, 83]
         assert simples['Inventário atual']['E2'].value == '000123'
         assert simples['Inventário atual']['E2'].data_type == 's'
         assert any(c.data_type == 's' and str(c.value).startswith('=HYPERLINK') for row in simples['Inventário atual'] for c in row)
         assert simples['Inventário atual']['G2'].data_type == 'n'
         assert simples['Movimentações']['A2'].data_type == 'd'
-        assert simples['Inventário atual'].max_row == 6
-        assert simples['Movimentações'].max_row == 7
+        assert simples['Inventário atual'].max_row == 9
+        assert simples['Movimentações'].max_row == 8
         assert 'Técnico sem peças 24' not in texto, 'resumo omite técnicos sem prioridade'
-        assert 'BASE EXCLUIR' not in texto and 'IGNORADO EXCLUIR' not in texto
+        assert 'Técnico com tipo base legado' in texto and 'Técnico com tipo ignorado legado' in texto
         assert 'Ana Exemplo' in texto
     elif nome == 'filtrado':
         assert visual['Visão geral']['A6'].value == 6

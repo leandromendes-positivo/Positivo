@@ -794,3 +794,7 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
   .termometro-fator, .termometro-fator-rodape .ic { transition: none; }
   .termometro-fator:hover, .termometro-fator:hover .termometro-fator-rodape .ic { transform: none; }
 }
+
+/* Identificação do canal sem depender apenas da cor; ícones acompanham o texto. */
+.contato-whatsapp, .contato-canal { display: inline-flex; align-items: center; gap: 6px; vertical-align: middle; }
+.contato-whatsapp .ic-whatsapp, .contato-canal .ic-whatsapp { width: 16px; height: 16px; flex: none; color: var(--good-ink); }

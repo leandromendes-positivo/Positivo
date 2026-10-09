@@ -8,7 +8,7 @@ function pecaCobradaSemPrevisao(i, hoje) {
 }
 function tecnicoNoFocoCobranca(t, foco, hoje) {
   if (!foco) return true;
-  if (t.tipo !== 'tecnico' || !t.nCobrar) return false;
+  if (!t.nCobrar) return false;
   if (foco === 'sem_previsao') return t.itensCobrar.some(i => pecaCobradaSemPrevisao(i, hoje));
   if (foco === 'sem_contato') return !emailValido(t.email.trim()) && !/^\d{10,15}$/.test(String(t.telefone).replace(/\D/g, ''));
   return true;
@@ -57,7 +57,7 @@ function alertasOperacionais(D = derivar()) {
     acao: 'Ver técnicos da fila', destino: 'sem_contato',
     orientacao: podeAdministrar() ? 'Atualize o contato pela ficha do técnico.' : 'Um administrador pode corrigir os contatos na ficha do técnico.',
   }, semContato.map(t => [t.tid]));
-  const excesso = D.tecnicos.filter(t => t.tipo === 'tecnico' && t.estoqueConhecido && t.statusNovas === 'acima');
+  const excesso = D.tecnicos.filter(t => t.estoqueConhecido && t.statusNovas === 'acima');
   if (excesso.length) adicionar({
     id: 'estoque', nivel: 'atencao', icone: 'caixa', titulo: 'Estoque acima do limite',
     texto: `${plural(excesso.length, 'técnico ultrapassou', 'técnicos ultrapassaram')} o limite de peças novas. São ${plural(somar(excesso, t => t.excessoNovas), 'peça excedente', 'peças excedentes')} para avaliar recolhimento ou redistribuição.`,
@@ -153,7 +153,7 @@ const Notificacoes = (() => {
   function abrirDestino(a) {
     UI.cob.somenteMeus = Boolean(a.pessoal);
     if (a.destino === 'importar') { if (podeAdministrar()) irPara('importar'); }
-    else if (a.destino === 'estoque') { Object.assign(UI.es, {regiao:'',status:'acima',busca:'',bases:false}); irPara('estoque'); }
+    else if (a.destino === 'estoque') { Object.assign(UI.es, {regiao:'',status:'acima',busca:''}); irPara('estoque'); }
     else if(a.destino.startsWith('respostas_')){Object.assign(UI.cob,{aba:'respostas',tipo:'todas',resposta:a.destino.slice(10),foco:'',regiao:'',busca:''});irPara('cobrancas');}
     else {
       Object.assign(UI.cob, {tipo:a.destino==='vencidas'?'todas':'usadas',aba:a.destino === 'vencidas' ? 'vencidas' : 'cobrar', foco:FOCOS_COBRANCA[a.destino] ? a.destino : '', regiao:'', busca:'', ordem:'dias'});

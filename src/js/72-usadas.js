@@ -98,7 +98,7 @@ function tabelaUsadas(D) {
     </tr></thead>
     <tbody>${pagina.map((i) => `<tr class="${sel.has(i.k) ? "selecionada" : ""}">
       <td class="col-sel"><input type="checkbox" data-mudar="marcar" data-k="${esc(i.k)}" ${sel.has(i.k) ? "checked" : ""} aria-label="Selecionar"></td>
-      <td class="col-tec"><button class="link-forte" data-acao="tecnico" data-tid="${esc(i.tid)}">${esc(i.nome)}</button>${i.tipoTec === "base" ? ` <span class="tag">BASE</span>` : ""}</td>
+      <td class="col-tec"><button class="link-forte" data-acao="tecnico" data-tid="${esc(i.tid)}">${esc(i.nome)}</button></td>
       <td>${regiaoTag(i.regiao)}</td>
       <td class="mono">${esc(i.chamado || "—")}</td>
       <td><span class="mat"><span class="mono">${esc(i.mat)}</span>${esc(i.desc)}</span></td>

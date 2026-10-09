@@ -46,7 +46,7 @@ function periodoRapidoRelatorio(periodo) {
 const CORES_RELATORIO = ['#138573', '#D54B5D', '#3B79D1', '#B77919', '#8862C4', '#438995', '#7C8491'];
 const NOTAS_RELATORIO = [
   'Estoque e atrasos em aberto representam a última planilha disponível, avaliados na data de emissão. O intervalo filtra somente as movimentações e a pontualidade das devoluções.',
-  'Somente técnicos entram neste relatório. Bases e cadastros ignorados ficam fora. Quantidades são peças, não número de linhas.',
+  'Todos os responsáveis são técnicos de campo, inclusive identificadores numéricos. Quantidades são peças, não número de linhas.',
   'Usadas que saem da planilha são tratadas como devolvidas. Novas só entram em devoluções ou uso após classificação; saídas a classificar ficam separadas.',
   'Atrasos respeitam o prazo individual. Devoluções preservam o prazo registrado na saída. Nas novas, a idade conta da primeira observação no inventário.',
   'O limite de novas é um teto: ficar abaixo dele é adequado. Tipos de envio excluídos nas configurações não contam para o limite, mas aparecem no saldo físico. Limite zero significa sem limite.',
@@ -54,8 +54,7 @@ const NOTAS_RELATORIO = [
 ];
 function calcularRelatorio(f = UIrelatorios.filtros, H = relatorioHistorico, D = derivar()) {
   const intervalo = periodoDesempenho('intervalo', D.hoje, f);
-  const permitido = i => (E.cadastro[i.tid]?.tipo || 'tecnico') === 'tecnico'
-    && (!f.tid || i.tid === f.tid) && (!f.regiao || i.regiao === f.regiao)
+  const permitido = i => (!f.tid || i.tid === f.tid) && (!f.regiao || i.regiao === f.regiao)
     && (!f.tipo || i.tipo === f.tipo);
   const completar = i => ({ ...i, nome: nomeTecnico(i.tid), desc: E.catalogo[i.mat] || 'Sem descrição', localidade: LOCALIDADES[E.cadastro[i.tid]?.localidade || ''] || 'Não informada' });
   const estoque = linhasConsulta(D).filter(i => i.origem === 'atual' && permitido(i)).map(completar);
@@ -83,7 +82,7 @@ function calcularRelatorio(f = UIrelatorios.filtros, H = relatorioHistorico, D =
     return mapa.get(i.tid);
   };
   // Cadastrados com saldo zero continuam visíveis; ausência de planilha não vira zero conhecido.
-  D.tecnicos.filter(t => t.tipo === 'tecnico' && permitido({ ...t, tipo: f.tipo })).forEach(t => {
+  D.tecnicos.filter(t => permitido({ ...t, tipo: f.tipo })).forEach(t => {
     const r = tecnico(t);
     if (f.tipo !== 'usadas' && t.estoqueConhecido) r.limite = t.meta;
     r.semPlanilha = f.tipo !== 'usadas' && !t.estoqueConhecido;
@@ -208,7 +207,7 @@ function renderRelatorios() {
   if (relatorioHistorico.chave !== chaveHistoricoRelatorio()) UI.posRender = carregarHistoricoRelatorio;
   const pronto = relatorioPronto(), f = UIrelatorios.rascunho || UIrelatorios.filtros, D = derivar();
   const tids = [...new Set([...D.tecnicos, ...relatorioHistorico.devolucoes, ...relatorioHistorico.movimentos].map(i => i.tid))];
-  const tecnicos = tids.filter(tid => (E.cadastro[tid]?.tipo || 'tecnico') === 'tecnico').map(tid => ({ tid, nome: nomeTecnico(tid) })).sort((a, b) => comparar(a.nome, b.nome));
+  const tecnicos = tids.map(tid => ({ tid, nome: nomeTecnico(tid) })).sort((a, b) => comparar(a.nome, b.nome));
   const regioes = [...new Set([...D.regioes, ...relatorioHistorico.devolucoes.map(i => i.regiao), ...relatorioHistorico.movimentos.map(i => i.regiao)].filter(Boolean))].sort();
   const select = (campo, titulo, opcoes) => `<label class="campo"><span>${titulo}</span><select name="${campo}">${opcoes.map(([v, t]) => `<option value="${esc(v)}" ${f[campo] === v ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></label>`;
   const formatos = [

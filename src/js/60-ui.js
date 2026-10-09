@@ -112,8 +112,8 @@ function pillNovas(t) {
   if (t.statusNovas === "acima") texto = `Excesso de ${fmtNum(t.excessoNovas)}`;
   return pill(s.classe, texto, s.icone);
 }
-function avatar(nome, tipo) {
-  return `<span class="avatar${tipo === "base" ? " base" : ""}" aria-hidden="true">${tipo === "base" ? icone("base") : esc(iniciais(nome))}</span>`;
+function avatar(nome) {
+  return `<span class="avatar" aria-hidden="true">${esc(iniciais(nome))}</span>`;
 }
 function tagTipoEnvio(t) {
   return `<span class="tag">${esc(t)}</span>`;

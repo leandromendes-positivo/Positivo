@@ -179,7 +179,7 @@ async function importarLote(lidos, aoProgresso = () => {}) {
       if (!E.cadastro[tid] && !novosTecs[tid]) {
         novosTecs[tid] = {
           chave: it.tecChave, nome: it.tecNome, apelido: "", regiao: l.regiao,
-          tipo: /^\d+$/.test(it.tecChave) ? "base" : "tecnico",
+          tipo: "tecnico",
           meta: null, telefone: "", email: "", obs: "", criadoEm: agoraS,
         };
       } else if (E.cadastro[tid] && !E.cadastro[tid].regiao && !novosTecs[tid]) {

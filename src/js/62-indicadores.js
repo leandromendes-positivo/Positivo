@@ -54,7 +54,7 @@ function barraPrioridade(D) {
 function cabecalhoSecao(pagina, D) {
   if (pagina === "painel" || (pagina === "tecnicos" && UI.tid)) return "";
   const a = indicadoresOperacionais(D), k = D.kpi;
-  const tecs = D.tecnicos.filter((t) => t.tipo === "tecnico" && t.temDados);
+  const tecs = D.tecnicos.filter((t) => t.temDados);
   const textos = {
     cobrancas: ["Acompanhamento de devoluções", "Registre cada contato e acompanhe as datas combinadas.", [["Na fila", fmtNum(k.cobrarTecnicos), "técnicos"], ["Sem contato hoje", fmtNum(a.semContatoHoje), "na fila atual"], ["Previsões vencidas", fmtNum(k.prevVencida), "peças"]]],
     usadas: ["Rastreabilidade das peças", "Consulte chamados, idade, previsões e histórico de devoluções.", [["Em aberto", fmtNum(k.usadas), "peças"], ["Acima do prazo", fmtNum(k.atrasadas), "respeita prazos individuais"], ["Idade média", a.idadeMedia == null ? "—" : fmtNum1(a.idadeMedia), "dias por peça"]]],

@@ -32,9 +32,8 @@ function cartaoCobranca(t, aba, D) {
   if (proxima) infos.push(pill("info", `Próxima previsão: ${fmtPrevisao(proxima)}`, "calendario"));
   else if (aba === "cobrar" && !prevVencidas) infos.push(pill("alerta", "Sem previsão", "calendario"));
   infos.push(uc
-    ? pill("neutro", `Última cobrança ${fmtQuando(uc.em)} · ${CANAIS[uc.canal] || uc.canal}`, "mensagem")
+    ? pill("neutro", `Última cobrança ${fmtQuando(uc.em)} · ${CANAIS[uc.canal] || uc.canal}`, uc.canal === "whatsapp" ? "whatsapp" : uc.canal === "email" ? "email" : "mensagem")
     : pill("neutro", "Ainda não cobrado", "mensagem"));
-  if (t.tipo === "base") infos.push(pill("neutro", "Base / depósito", "base"));
   if (aba !== "todos" && totalTipo > qtd) infos.push(`<span class="nota">${fmtNum(totalTipo)} pendentes no total</span>`);
 
   const linhas = itens.slice(0, 25);
@@ -43,7 +42,7 @@ function cartaoCobranca(t, aba, D) {
       ${avatar(t.nome, t.tipo)}
       <div class="cob-id">
         <h3><button class="link-forte" data-acao="tecnico" data-tid="${esc(t.tid)}">${esc(t.nome)}</button></h3>
-        <div class="cob-meta">${regiaoTag(t.regiao)}${t.telefone ? `<span class="mono">${esc(fmtTelefone(t.telefone))}</span>` : `<button class="link" data-acao="editar-tecnico" data-tid="${esc(t.tid)}">${icone("telefone")}cadastrar WhatsApp</button>`}</div>
+        <div class="cob-meta">${regiaoTag(t.regiao)}${t.telefone ? `<span class="mono contato-whatsapp" aria-label="WhatsApp: ${esc(fmtTelefone(t.telefone))}">${icone("whatsapp")}${esc(fmtTelefone(t.telefone))}</span>` : `<button class="link" data-acao="editar-tecnico" data-tid="${esc(t.tid)}">${icone("whatsapp")}Cadastrar WhatsApp</button>`}</div>
       </div>
       <div class="cob-numeros">
         <div><strong>${fmtNum(qtd)}</strong><span>${palavra(qtd, "peça", "peças")} ${rotuloQtd}</span></div>
@@ -91,6 +90,29 @@ function filtrarCobrancas(D, s = UI.cob) {
     && (!busca || normBusca(t.nome + ' ' + t.nomeOriginal).includes(busca)));
 }
 
+/** Um único recorte e ordenação para a tela, o resumo e o Excel. */
+function dadosListaCobrancas(D = derivar(), s = UI.cob) {
+  const lista = filtrarCobrancas(D, s).map(t => {
+    const itens = itensDaAba(t, s.aba, D.hoje, s.tipo || 'usadas', s.somenteMeus);
+    return { tecnico: t, itens, qtd: somar(itens, i => i.qtd), maxDias: Math.max(0, ...itens.map(i => i.dias)),
+      vencidas: somar(itens.filter(i => i.previsao && i.previsao < D.hoje), i => i.qtdPrevista) };
+  });
+  if (s.ordem === 'pecas') return lista.sort((a, b) => b.qtd - a.qtd);
+  if (s.ordem === 'nome') return lista.sort((a, b) => comparar(a.tecnico.nome, b.tecnico.nome));
+  return lista.sort((a, b) => (s.aba === 'cobrar' ? (b.vencidas > 0) - (a.vencidas > 0) : 0) || b.maxDias - a.maxDias || b.qtd - a.qtd);
+}
+function contextoListaCobrancas(D = derivar(), s = UI.cob) {
+  const aba = ABAS_COB.find(a => a.id === s.aba) || ABAS_COB.find(a => a.id === 'cobrar');
+  const tipo = { usadas: 'Peças usadas', novas: 'Peças novas', todas: 'Peças novas e usadas' }[s.tipo || 'usadas'];
+  const campos = [['Lista', aba.rotulo], ['Tipo de peça', tipo], ['Data de referência', fmtData(D.hoje)],
+    ['Região', s.regiao || 'Todas as regiões'], ['Busca por técnico', limpar(s.busca) || 'Sem busca'],
+    ['Registros', s.somenteMeus ? 'Somente meus agendamentos' : 'Todos os registros permitidos'],
+    ['Filtro de notificação', FOCOS_COBRANCA[s.foco] || 'Sem filtro'],
+    ['Ordenação', { dias: 'Mais dias primeiro', pecas: 'Mais peças primeiro', nome: 'Nome (A–Z)' }[s.ordem] || 'Mais dias primeiro'],
+    ['Critério da lista', aba.dica]];
+  return { aba, tipo, campos };
+}
+
 function renderCobrancas() {
   const D = derivar();
   if (!E.usadas.length && !E.novas.length) return vazio("upload", "Sem peças importadas", "Importe as planilhas para ver quem precisa ser cobrado.", `<button class="btn prim" data-acao="ir" data-pagina="importar">Importar planilhas</button>`);
@@ -102,15 +124,10 @@ function renderCobrancas() {
     contagem[a.id] = porAba[a.id].length;
   }
   contagem.respostas = new Set(acompanhamentoRespostas(D,s.tipo||'usadas').filter(i=>!s.somenteMeus||respostaDoUsuario(i)).map(i=>i.tid)).size;
-  let lista = filtrarCobrancas(D, s);
-  const maxAba = (t) => Math.max(0, ...itensDaAba(t, s.aba, D.hoje, s.tipo||'usadas', s.somenteMeus).map((i) => i.dias));
-  const qtdAba = (t) => somar(itensDaAba(t, s.aba, D.hoje, s.tipo||'usadas', s.somenteMeus), (i) => i.qtd);
-  if (s.ordem === "pecas") lista = [...lista].sort((a, b) => qtdAba(b) - qtdAba(a));
-  else if (s.ordem === "nome") lista = [...lista].sort((a, b) => comparar(a.nome, b.nome));
-  else lista = [...lista].sort((a, b) => (s.aba === "cobrar" ? (b.nPrevVencida > 0) - (a.nPrevVencida > 0) : 0) || maxAba(b) - maxAba(a) || qtdAba(b) - qtdAba(a));
+  const recorte = dadosListaCobrancas(D, s), lista = recorte.map(r => r.tecnico);
   const aba = ABAS_COB.find((a) => a.id === s.aba);
   const dica = aba.dica.replace("{prazo}", D.cfg.prazo).replace("{alerta}", D.cfg.alerta);
-  const totalPecas = somar(lista, qtdAba);
+  const totalPecas = somar(recorte, r => r.qtd);
 
   return `
     ${s.somenteMeus ? `<div class="faixa info compacta notif-meus-registros">${icone('pessoa')}<div><strong>Seus registros</strong><span>Recorte da notificação: agendamentos e contatos registrados pela sua conta.</span></div><button type="button" class="btn pequeno" data-acao="limpar-meus-registros">Ver todos os registros permitidos</button></div>` : ''}
@@ -134,32 +151,37 @@ function renderCobrancas() {
     </div>`}`;
 }
 
-/** Texto curto do dia para colar no WhatsApp/e-mail do supervisor. */
+/** Texto compartilhável identifica a lista e usa apenas as peças do recorte. */
 function resumoTexto() {
-  const D = derivar();
-  const tecnicos = filtrarCobrancas(D).map(t=>({...t,nCobrar:somar(itensDaAba(t,UI.cob.aba,D.hoje,UI.cob.tipo,UI.cob.somenteMeus),i=>i.qtd)}));
-  const linhas = [`*Controle de peças — ${fmtDataExtensa(D.hoje)}*`, ""];
-  if (UI.cob.foco) linhas.push(FOCOS_COBRANCA[UI.cob.foco], '');
-  if (!tecnicos.length) linhas.push("Nenhum técnico com peças neste filtro.");
-  else {
-    linhas.push(`Técnicos para cobrar: ${tecnicos.length} (${plural(somar(tecnicos, t => t.nCobrar), "peça", "peças")})`, "");
-    for (const t of tecnicos.slice(0, 40)) {
-      linhas.push(`• ${t.nome} (${t.regiao}) — ${plural(t.nCobrar, "peça", "peças")}, mais antiga com ${t.maxDias} dias${t.nPrevVencida ? " — previsão vencida" : ""}`);
-    }
-    if (tecnicos.length > 40) linhas.push(`• ... e mais ${tecnicos.length - 40}`);
+  const D = derivar(), s = { ...UI.cob }, contexto = contextoListaCobrancas(D, s), lista = dadosListaCobrancas(D, s);
+  const linhas = [`*Controle de peças — ${contexto.aba.rotulo}*`, `${contexto.tipo} · ${fmtDataExtensa(D.hoje)}`, ''];
+  linhas.push(`Região: ${s.regiao || 'Todas as regiões'}`);
+  if (limpar(s.busca)) linhas.push(`Busca por técnico: ${limpar(s.busca)}`);
+  if (s.somenteMeus) linhas.push('Registros: somente meus agendamentos');
+  if (s.foco) linhas.push(`Filtro de notificação: ${FOCOS_COBRANCA[s.foco] || s.foco}`);
+  linhas.push(`Critério: ${contexto.aba.dica}.`, '', `Total desta lista: ${plural(lista.length, 'técnico', 'técnicos')} · ${plural(somar(lista, r => r.qtd), 'peça', 'peças')}`, '');
+  if (!lista.length) linhas.push('Nenhum técnico com peças neste filtro.');
+  for (const r of lista.slice(0, 40)) {
+    linhas.push(`• ${r.tecnico.nome} (${r.tecnico.regiao}) — ${plural(r.qtd, 'peça', 'peças')}, mais antiga nesta lista com ${r.maxDias} dias${r.vencidas ? ' — previsão vencida' : ''}`);
   }
-  linhas.push("", `Total da operação — Pendentes: ${fmtNum(D.kpi.usadas)} · Atrasadas: ${fmtNum(D.kpi.atrasadas)}`);
-  return linhas.join("\n");
+  if (lista.length > 40) linhas.push(`• ... e mais ${lista.length - 40} técnicos. Exporte a lista para consultar todos.`);
+  return linhas.join('\n');
 }
 
 async function exportarCobrancas() {
-  const D = derivar();
+  const D = derivar(), s = { ...UI.cob }, contexto = contextoListaCobrancas(D, s), lista = dadosListaCobrancas(D, s);
   const linhas = [];
-  for (const t of filtrarCobrancas(D)) for (const i of itensDaAba(t,UI.cob.aba,D.hoje,UI.cob.tipo,UI.cob.somenteMeus)) {
+  for (const { tecnico: t, itens } of lista) for (const i of itens) {
     linhas.push([t.nome, t.regiao, fmtTelefone(t.telefone), i.chamado, i.mat, i.desc, i.dataFT, i.dias, i.atraso, STATUS[i.status].rotulo, i.previsao, i.ultimaCobranca, i.nCobrancas, i.obs, i.nf, i.remessa, i.tipo==='novas'?'Nova':'Usada', i.qtd, i.confirmacao?.referenciaEmail||'', i.confirmacao?descricaoConfirmacao(i):'']);
   }
-  await exportarExcel(`cobrancas-${D.hoje}.xlsx`, [{
-    nome: "Cobranças filtradas",
+  const identificador = normBusca(contexto.aba.rotulo).replace(/[^a-z0-9]+/g, '-');
+  await exportarExcel(`cobrancas-${identificador}-${s.tipo || 'usadas'}-${D.hoje}.xlsx`, [{
+    nome: 'Resumo da lista',
+    colunas: [{ titulo: 'Informação', largura: 26 }, { titulo: 'Recorte exportado', largura: 90 }],
+    linhas: [...contexto.campos, ['Técnicos nesta lista', lista.length], ['Peças nesta lista', somar(lista, r => r.qtd)],
+      ['Leitura dos dados', 'Quantidades, idades e situações consideram apenas as peças da lista e dos filtros selecionados.']],
+  }, {
+    nome: contexto.aba.rotulo,
     colunas: [
       { titulo: "Técnico", largura: 30 }, { titulo: "UF", largura: 5 }, { titulo: "WhatsApp", largura: 16 },
       { titulo: "Chamado", largura: 14 }, { titulo: "Material", largura: 11 }, { titulo: "Descrição", largura: 40 },

@@ -124,7 +124,7 @@ Ao concluir uma nova importação, os relatórios abertos são recalculados com 
 saldo e as devoluções atualizados. Uma nova exportação usa esse novo estado.
 Arquivos já baixados não se alteram: gere outro Excel ou PDF após importar.
 
-Bases e cadastros ignorados não entram neste relatório. Novas sem destino
+Todos os responsáveis entram neste relatório como técnicos de campo, inclusive cadastros com classificação antiga ou nome numérico. Novas sem destino
 classificado ficam separadas de devoluções e uso. O limite é um teto, respeita as
 configurações individuais e exclui os tipos de envio desconsiderados; o saldo
 físico continua mostrando essas peças. A ausência de uma planilha de novas não
@@ -160,9 +160,9 @@ O sino **Notificações**, no topo de todas as páginas, reúne alertas ativos c
 - **Falta confirmação por e-mail:** a partir do dia seguinte à cobrança formal, indica peças novas/usadas ainda sem resposta registrada, inclusive quantidades não confirmadas de uma resposta parcial. Um contato sobre outro material não esconde a pendência.
 - **Avisos sem cobrança formal por e-mail:** técnicos avisados pelo WhatsApp cujas peças ainda precisam de cobrança formal registrada. **Confirmações por e-mail registradas** permite conferir as peças e datas já informadas. O operador registra a resposta recebida; o painel não presume leitura de mensagens externas.
 - **Cobranças que precisam de retorno (registros antigos):** preserva o acompanhamento de usadas cobradas há 2 dias ou mais sem previsão, evitando duplicar os alertas do novo fluxo.
-- **Faltam contatos para cobrar:** técnicos na fila sem e-mail em formato válido e sem telefone com 10 a 15 dígitos. Bases e cadastros ignorados não entram neste alerta. Telefones e e-mails continuam sendo somente contatos, sem permissão de acesso ao painel.
+- **Faltam contatos para cobrar:** técnicos na fila sem e-mail em formato válido e sem telefone com 10 a 15 dígitos. Todos os técnicos na fila são considerados, inclusive cadastros com classificação antiga. Telefones e e-mails continuam sendo somente contatos, sem permissão de acesso ao painel.
 - **Previsões vencidas:** a data combinada passou e as peças ainda constam no último relatório. O atalho abre a aba de previsões vencidas.
-- **Estoque acima do limite:** considera somente estoque conhecido de técnicos e respeita limites personalizados. Saldo igual ou inferior ao limite, inclusive zero, não gera alerta; bases e tipos de envio desconsiderados não são tratados como excesso de técnico.
+- **Estoque acima do limite:** considera somente estoque conhecido de técnicos e respeita limites personalizados. Saldo igual ou inferior ao limite, inclusive zero, não gera alerta; tipos de envio desconsiderados não são tratados como excesso de técnico.
 - **Planilhas não atualizadas hoje ou faltando:** aparece primeiro para lembrar que o saldo pode estar desatualizado antes de cobrar. Mostra a última importação de cada tipo/UF. Administradores podem abrir a importação; os demais recebem orientação para solicitar a atualização.
 
 Os atalhos de retorno e contato abrem **Cobranças** com um filtro identificado e removível, sem reaproveitar buscas ou regiões anteriores. Os cartões mostram todas as peças a cobrar dos técnicos selecionados; o resumo e a exportação respeitam esse filtro da central. Abrir outra aba de cobrança ou um atalho do dashboard limpa esse filtro.
@@ -243,7 +243,9 @@ Alertas, mensagens, resumo diário, mapa, consultas e rankings respeitam a regra
 | Limite máximo de peças novas por técnico | 10, sem tolerância adicional |
 | Tipos de envio que contam no estoque | todos (BACKUP, PP, REP. BACKUP) |
 
-Códigos numéricos no lugar do nome do técnico (ex.: `110301019`) são tratados como **base/depósito** e ficam fora do limite dos técnicos; dá para mudar em **Técnicos**.
+Todos os responsáveis são **técnicos de campo**, inclusive identificadores numéricos (ex.: `110301019`). Não há classificação Técnico/Base/Ignorado no cadastro ou nos filtros. Classificações antigas não excluem ninguém dos limites, consultas, rankings, alertas ou relatórios. Nomes e identificadores são preservados; se forem retirados de uma próxima planilha completa da mesma UF e tipo de peça, o saldo sai do inventário atual e o histórico permanece, seguindo as regras de devolução de usadas e classificação de saídas de novas.
+
+O ícone do WhatsApp identifica o canal nos botões de cobrança, cadastro, contatos e histórico. Os textos continuam visíveis e o WhatsApp permanece apenas um aviso: cobrança formal e confirmação da previsão continuam por e-mail.
 
 ---
 
@@ -326,3 +328,9 @@ O teste de e-mail intercepta os links sem abrir provedores ou enviar mensagens r
 ### Limite de peças novas
 
 Até **10 peças**, inclusive zero, está dentro do limite padrão. **11 peças já significam excesso de 1**; não existe alerta de reposição por estoque baixo nem tolerância adicional. O dashboard, mapa, filtros, ficha do técnico, exportações e aviso diário seguem essa regra. Limites personalizados já cadastrados continuam válidos; 0 na configuração significa sem limite. Sem relatório de novas, o estoque fica como desconhecido, nunca como zero.
+
+### Identificação dos resumos de cobrança
+
+**Copiar resumo** identifica a aba ativa (por exemplo, **Previsões vencidas** ou **Vencem em breve**), o tipo de peça, a data, a UF e os filtros usados. Quantidades e idade da peça mais antiga são calculadas somente sobre esse recorte, na mesma ordem da tela.
+
+**Exportar lista** inclui o nome da lista e o tipo de peça no nome do arquivo. A primeira aba, **Resumo da lista**, documenta os filtros, o critério e os totais; a segunda recebe o nome da lista selecionada e contém as peças completas. Mesmo um resultado vazio mantém o contexto da consulta.

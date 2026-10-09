@@ -1,3 +1,4 @@
+import { preencherConfirmacaoTeste } from './confirmacao-ajudante.mjs';
 // Teste do painel com o banco no Firebase, usando os emuladores oficiais (Auth + Firestore).
 //
 //   1. firebase emulators:start --only auth,firestore --project demo-controle-pecas
@@ -60,13 +61,14 @@ await page.waitForFunction(() => UI.im.resultado || UI.im.erro, null, { timeout:
 const erroImp = await page.evaluate(() => UI.im.erro);
 conferir(!erroImp, "importação sem erro" + (erroImp ? `: ${erroImp}` : ""));
 n = await numeros(page);
-conferir(n.usadas === 10 && n.atrasadas === 5 && n.cobrar === 3 && n.novas === 46, `números do dia 1: ${JSON.stringify(n)}`);
+conferir(n.usadas === 10 && n.atrasadas === 5 && n.cobrar === 3 && n.novas === 546, `números do dia 1: ${JSON.stringify(n)}`);
 // cobrança com previsão
 await page.evaluate(() => irPara("cobrancas"));
 await page.click(".cob .btn.prim");
 await page.waitForSelector(".modal");
-await page.fill('input[name="previsao"]', "2026-10-08");
-await page.click("[data-registrar]");
+await page.locator('#cob-form [name="canal"]').selectOption('email');
+await page.click('[data-registrar-confirmar]');
+await preencherConfirmacaoTeste(page, '2026-10-08');
 await page.waitForFunction(() => !document.querySelector(".modal"));
 await page.waitForTimeout(800);
 await page.screenshot({ path: `${saida}/fb-1-cobrancas.png`, fullPage: true });

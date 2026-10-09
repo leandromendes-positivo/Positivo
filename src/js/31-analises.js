@@ -32,9 +32,8 @@ function linhasConsulta(D = derivar()) {
   const linhas = [];
   const completar = (i) => {
     const t = D.mapa.get(i.tid), cad = E.cadastro[i.tid];
-    if (cad?.tipo === 'ignorar') return;
     const desc = E.catalogo[i.mat] || '';
-    linhas.push({ ...i, nome: t?.nome || nomeTecnico(i.tid), nomeOriginal: cad?.nome || '', localidade: cad?.localidade || '', tipoTec: t?.tipo || cad?.tipo || 'tecnico', desc, familia: familiaPeca(desc) });
+    linhas.push({ ...i, nome: t?.nome || nomeTecnico(i.tid), nomeOriginal: cad?.nome || '', localidade: cad?.localidade || '', tipoTec: 'tecnico', desc, familia: familiaPeca(desc) });
   };
   for (const i of D.itens) completar({ ...i, tipo: 'usadas', origem: 'atual', data: (i.dataFT || i.desde || '').slice(0, 10), referencia: i.dataFT ? 'Data FT' : 'Primeira observação', situacao: STATUS[i.status].rotulo });
   for (const t of D.tecnicos) for (const n of t.novasLinhas) {
@@ -45,12 +44,11 @@ function linhasConsulta(D = derivar()) {
   for (const m of E.movimentos) completar({ ...m, prazo: prazoDaDevolucao(m, 'novas', D.cfg), tipo: 'novas', origem: 'saida', data: m.em.slice(0, 10), referencia: 'Saída do relatório', status: m.destino, situacao: situacaoSaidaNova(m), atrasada: m.dias > prazoDaDevolucao(m, 'novas', D.cfg), atraso: Math.max(0, m.dias - prazoDaDevolucao(m, 'novas', D.cfg)) });
   return linhas;
 }
-const FILTROS_CONSULTA = { busca: '', correspondencia: 'termos', tecnico: '', tid: '', tipo: '', origem: 'atual', regiao: '', familia: '', situacao: '', envio: '', documento: '', inicio: '', fim: '', diasMin: '', diasMax: '', qtdMin: '', qtdMax: '', responsavel: 'tecnico' };
+const FILTROS_CONSULTA = { busca: '', correspondencia: 'termos', tecnico: '', tid: '', tipo: '', origem: 'atual', regiao: '', familia: '', situacao: '', envio: '', documento: '', inicio: '', fim: '', diasMin: '', diasMax: '', qtdMin: '', qtdMax: '' };
 function filtrarConsulta(linhas, f) {
   const opcoesBusca = limpar(f.busca).split(/[;,]+/).map((s) => limpar(s)).filter(Boolean);
   const nomes = normBusca(limpar(f.tecnico)).split(/\s+/).filter(Boolean);
   return linhas.filter((i) => {
-    if (f.responsavel && i.tipoTec !== f.responsavel) return false;
     if (f.tid && i.tid !== f.tid) return false;
     if (f.tipo && i.tipo !== f.tipo) return false;
     if (f.origem === 'atual' && i.origem !== 'atual') return false;
@@ -95,7 +93,7 @@ function calcularDesempenho({ tipo = 'usadas', periodo = 'semana', referencia = 
   const intervalo = periodoDesempenho(periodo, referencia, { inicio: de, fim: ate }), { inicio, fim } = intervalo;
   const devolvidas = historico?.devolucoes || E.devolucoes, movimentos = historico?.movimentos || E.movimentos;
   const mapa = new Map();
-  const permitido = (i) => (E.cadastro[i.tid]?.tipo || 'tecnico') === 'tecnico' && (!regiao || i.regiao === regiao);
+  const permitido = (i) => (!regiao || i.regiao === regiao);
   const tecnico = (i) => {
     if (!mapa.has(i.tid)) mapa.set(i.tid, { tid: i.tid, nome: nomeTecnico(i.tid), regiao: i.regiao, atrasadas: 0, abertas: 0, encerradas: 0, maiorAtraso: 0, noPrazo: 0, devolvidas: 0, uso: 0, materiais: new Map(), evidencias: { atraso: [], pontualidade: [], uso: [] } });
     return mapa.get(i.tid);

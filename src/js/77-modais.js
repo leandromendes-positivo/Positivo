@@ -44,10 +44,10 @@ function modalCobrar(tid, aba = "cobrar", itensEscolhidos = null, canalInicial =
     <div class="cobrar-grade">
       <section class="cobrar-msg" aria-label="Preparar mensagem">
         <div class="cobrar-etapa"><span>01</span><div><h3>Preparar mensagem</h3><p>WhatsApp avisa; e-mail formaliza a cobrança e a resposta.</p></div></div>
-        <div class="cobrar-canais" role="group" aria-label="Canal da mensagem"><button type="button" class="btn" data-cob-canal="whatsapp" aria-pressed="true" aria-controls="cob-painel-whatsapp">${icone('mensagem')}WhatsApp</button><button type="button" class="btn" data-cob-canal="email" aria-pressed="false" aria-controls="cob-painel-email">${icone('email')}E-mail / Outlook</button></div>
+        <div class="cobrar-canais" role="group" aria-label="Canal da mensagem"><button type="button" class="btn" data-cob-canal="whatsapp" aria-pressed="true" aria-controls="cob-painel-whatsapp">${icone('whatsapp')}WhatsApp</button><button type="button" class="btn" data-cob-canal="email" aria-pressed="false" aria-controls="cob-painel-email">${icone('email')}E-mail / Outlook</button></div>
         <div id="cob-painel-whatsapp">
-          <label class="campo"><span>Mensagem para o WhatsApp</span><textarea id="cob-texto" rows="12"></textarea></label>
-          <div class="linha-botoes"><a class="btn whats-btn" id="cob-link" href="#" target="_blank" rel="noopener noreferrer">${icone('mensagem')}Abrir no WhatsApp${icone('externo', 'ic-pequeno')}</a><button class="btn" type="button" data-copiar>${icone('copiar')}Copiar mensagem</button></div>
+          <label class="campo"><span class="contato-whatsapp">${icone("whatsapp")}Mensagem para o WhatsApp</span><textarea id="cob-texto" rows="12"></textarea></label>
+          <div class="linha-botoes"><a class="btn whats-btn" id="cob-link" href="#" target="_blank" rel="noopener noreferrer">${icone('whatsapp')}Abrir no WhatsApp${icone('externo', 'ic-pequeno')}</a><button class="btn" type="button" data-copiar>${icone('copiar')}Copiar mensagem</button></div>
           <p class="nota" data-nota-whatsapp></p>
         </div>
         <form id="cob-painel-email" class="form" hidden>
@@ -246,10 +246,9 @@ function modalTecnico(tid, focarPrazos = false) {
     corpo: `<form class="form" id="tec-form">
       <label class="campo"><span>Nome para exibir</span><input type="text" name="apelido" maxlength="80" placeholder="${esc(nomeBonito(nomeRelatorio))}"><small>Deixe em branco para usar o nome do relatório. Útil para códigos numéricos.</small></label>
       <div class="campos-2">
-        <label class="campo"><span>Tipo</span><select name="tipo">${Object.entries(TIPOS_TEC).map(([v, r]) => `<option value="${v}"${(c.tipo || "tecnico") === v ? " selected" : ""}>${r}</option>`).join("")}</select></label>
         <label class="campo"><span>Limite próprio de peças novas</span><input type="number" name="meta" min="0" max="10000" placeholder="Padrão: ${esc(E.config.meta)}"><small>Em branco = limite padrão. 0 = sem limite. Estoque menor não exige reposição.</small></label>
         <label class="campo"><span>Localidade do técnico</span><select name="localidade">${Object.entries(LOCALIDADES).map(([v,n])=>`<option value="${v}" ${(c.localidade||'')===v?'selected':''}>${n}</option>`).join('')}</select><small>Informe se atende na capital ou no interior.</small></label>
-        <label class="campo"><span>WhatsApp</span><input type="tel" name="telefone" maxlength="20" placeholder="(41) 99999-9999"></label>
+        <label class="campo"><span class="contato-whatsapp">${icone("whatsapp")}WhatsApp</span><input type="tel" name="telefone" maxlength="20" placeholder="(41) 99999-9999"></label>
         <label class="campo"><span>E-mail de contato</span><input type="email" name="email" maxlength="120" placeholder="nome@empresa.com.br"><small>Usado apenas para contato e cobranças. Não cria conta nem autoriza acesso ao painel.</small></label>
       </div>
       <fieldset class="prazos-personalizados"><legend>${icone('relogio')}Prazos de devolução deste técnico</legend>
@@ -281,7 +280,7 @@ function modalTecnico(tid, focarPrazos = false) {
     if (botaoSalvar.disabled || !f.reportValidity()) return;
     const metaTxt = String(f.meta.value).trim();
     const campos = {
-      apelido: limpar(f.apelido.value), tipo: f.tipo.value, localidade: f.localidade.value,
+      apelido: limpar(f.apelido.value), localidade: f.localidade.value,
       meta: metaTxt === "" ? null : Math.max(0, parseInt(metaTxt, 10) || 0),
       prazoUsadas: f.prazoUsadas.value === '' ? null : Number(f.prazoUsadas.value),
       prazoNovas: f.prazoNovas.value === '' ? null : Number(f.prazoNovas.value),

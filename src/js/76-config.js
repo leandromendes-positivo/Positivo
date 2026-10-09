@@ -26,7 +26,7 @@ function renderConfig() {
     </form>`)}
 
     ${cartao("Mensagens de cobrança", `<form class="form" data-form="mensagens">
-      ${D.tecnicos.some(t => t.tipo === 'tecnico' && t.usadas.length) ? `<div class="config-email"><div>${icone('email')}<strong>Cobrança por Outlook</strong></div><p>Prepare um e-mail com destinatário, assunto e peças preenchidos. O envio é confirmado por você no Outlook.</p><label class="campo"><span>Técnico destinatário</span><select data-email-tecnico>${D.tecnicos.filter(t => t.tipo === 'tecnico' && t.usadas.length).map(t => `<option value="${esc(t.tid)}">${esc(t.nome)}</option>`).join('')}</select></label><button type="button" class="btn prim" data-acao="preparar-email">${icone('email')}Preparar e-mail</button></div>` : ''}
+      ${D.tecnicos.some(t => t.usadas.length) ? `<div class="config-email"><div>${icone('email')}<strong>Cobrança por Outlook</strong></div><p>Prepare um e-mail com destinatário, assunto e peças preenchidos. O envio é confirmado por você no Outlook.</p><label class="campo"><span>Técnico destinatário</span><select data-email-tecnico>${D.tecnicos.filter(t => t.usadas.length).map(t => `<option value="${esc(t.tid)}">${esc(t.nome)}</option>`).join('')}</select></label><button type="button" class="btn prim" data-acao="preparar-email">${icone('email')}Preparar e-mail</button></div>` : ''}
       <p class="nota">Os modelos abaixo são usados no WhatsApp. O e-mail tem assunto, resumo e relação completa de peças; você pode revisar o texto antes de abrir o Outlook.</p>
       <label class="campo"><span>Cobrança (peças atrasadas)</span><textarea name="msgCobranca" rows="8">${esc(c.msgCobranca)}</textarea></label>
       <label class="campo"><span>Lembrete (peças que vencem em breve)</span><textarea name="msgLembrete" rows="5">${esc(c.msgLembrete)}</textarea></label>
@@ -49,7 +49,7 @@ function renderConfig() {
       <p>${Armazem.online ? `${icone("nuvem")} Os dados ficam salvos online, junto com este painel, e aparecem em qualquer dispositivo onde você abrir o link.` : `${icone("alerta")} Esta visualização não tem acesso ao banco de dados: nada do que você importar será salvo.`}</p>
       <ul class="lista-dados">
         <li><strong>${fmtNum(E.usadas.length)}</strong> linhas de peças usadas e <strong>${fmtNum(E.novas.length)}</strong> materiais em estoque de novas</li>
-        <li><strong>${fmtNum(Object.keys(E.cadastro).length)}</strong> técnicos e bases no cadastro</li>
+        <li><strong>${fmtNum(Object.keys(E.cadastro).length)}</strong> técnicos no cadastro</li>
         <li><strong>${fmtNum(E.devolucoes.length)}</strong> devoluções e <strong>${fmtNum(E.importacoes.length)}</strong> importações nos últimos meses</li>
       </ul>
       <div class="form-acoes"><button class="btn" data-acao="exportar-tudo">${icone("baixar")}Baixar tudo em Excel</button></div>
@@ -118,8 +118,8 @@ async function exportarTudo() {
     },
     {
       nome: "Estoque por técnico",
-      colunas: [{ titulo: "Técnico", largura: 30 }, { titulo: "Tipo", largura: 14 }, { titulo: "UF", largura: 5 }, { titulo: "Peças novas", largura: 10, tipo: "numero" }, { titulo: "Limite máximo", largura: 16, tipo: "numero" }, { titulo: "Situação", largura: 16 }],
-      linhas: D.tecnicos.filter((t) => t.estoqueConhecido || t.temDados).map((t) => [t.nome, TIPOS_TEC[t.tipo], t.regiao, t.estoqueConhecido ? t.novasQtd : "", t.tipo === "tecnico" && t.meta ? t.meta : "", t.tipo === "tecnico" ? STATUS_NOVAS[t.statusNovas].rotulo : ""]),
+      colunas: [{ titulo: "Técnico", largura: 30 }, { titulo: "UF", largura: 5 }, { titulo: "Peças novas", largura: 10, tipo: "numero" }, { titulo: "Limite máximo", largura: 16, tipo: "numero" }, { titulo: "Situação", largura: 16 }],
+      linhas: D.tecnicos.filter((t) => t.estoqueConhecido || t.temDados).map((t) => [t.nome, t.regiao, t.estoqueConhecido ? t.novasQtd : "", t.meta ? t.meta : "", STATUS_NOVAS[t.statusNovas].rotulo]),
     },
     {
       nome: "Devolvidas",

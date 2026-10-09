@@ -84,7 +84,7 @@ try {
   assert.equal(await page.evaluate(() => UI.tc.busca), 'nao-existe');
   await tecnico.fill('');
   await page.locator('.pesquisa-executar').click();
-  assert.equal(await page.locator('.tabela tbody tr').count(), 10);
+  assert.equal(await page.locator('.tabela tbody tr').count(), 11);
 
   // Mudança de página não é desfeita por uma pesquisa pendente.
   await tecnico.fill('bruno');
@@ -131,7 +131,7 @@ try {
   const form = page.locator('[data-form="consulta"]');
   const peca = form.locator('[name="busca"]');
   await form.locator('[name="regiao"]').selectOption('PR');
-  await sugerir(page, peca, 'tela'); assert.equal(await opcoes(page).count(), 0);
+  await sugerir(page, peca, 'tela'); assert.equal(await opcoes(page).count(), 1, 'inclui técnico com classificação legada');
   await sugerir(page, peca, '111; ssd'); await opcoes(page).first().click();
   assert.equal(await peca.inputValue(), '111; 222');
   assert.equal(await page.evaluate(() => UIconsulta.filtros.regiao), 'PR');

@@ -56,6 +56,29 @@
 .conta-perfil h2 { font-size: 32px; margin: 8px 0; font-weight: 500; }
 .conta-perfil p { color: var(--muted); overflow-wrap: anywhere; }
 .conta-acoes { display: flex; gap: 12px; margin-bottom: 20px; }
+.conta-perfil h2 { overflow-wrap: anywhere; }
+.conta-grade { display: grid; grid-template-columns: minmax(0,1.4fr) minmax(260px,1fr); gap: 20px; margin-bottom: 24px; align-items: start; }
+.conta-dados, .conta-informacoes { padding: 26px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); min-width: 0; }
+.conta-bloco-titulo { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 22px; }
+.conta-bloco-titulo > .ic { width: 18px; height: 18px; flex: none; color: var(--accent); margin-top: 2px; }
+.conta-bloco-titulo h3 { font-size: 16px; margin: 0 0 6px; }
+.conta-bloco-titulo p, .conta-acesso-nota { color: var(--muted); font-size: 12px; line-height: 1.7; margin: 0; }
+.conta-dados .campo { min-width: 0; }
+.conta-dados input { min-width: 0; width: 100%; }
+.conta-dados input[readonly] { background: var(--surface-2); color: var(--muted); border-style: dashed; cursor: text; }
+.conta-dados .campo > span { display: flex; flex-wrap: wrap; gap: 5px 12px; justify-content: space-between; }
+.conta-dados .campo > span small { color: var(--muted); font-size: 10px; font-weight: 400; }
+.conta-salvar { display: flex; justify-content: flex-end; padding-top: 16px; border-top: 1px solid var(--line); }
+.conta-informacoes dl { margin: 0 0 20px; display: grid; gap: 16px; }
+.conta-informacoes dl > div { padding-bottom: 16px; border-bottom: 1px solid var(--line); }
+.conta-informacoes dt { color: var(--muted); font-size: 11px; margin-bottom: 6px; }
+.conta-informacoes dd { margin: 0; font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.conta-informacoes .nota { margin: 16px 0 0; line-height: 1.7; }
+.conta-feedback { font-size: 12px; line-height: 1.6; margin: 0; }
+.conta-feedback.erro { color: var(--crit-ink); }
+.conta-feedback.sucesso { color: var(--good-ink); }
+@media (max-width: 800px) { .conta-grade { grid-template-columns: minmax(0,1fr); gap: 16px; }.conta-dados, .conta-informacoes { padding: 20px; } }
+@media (max-width: 400px) { .conta-dados, .conta-informacoes { padding: 16px; }.conta-salvar .btn { width: 100%; }.conta-perfil h2 { font-size: 24px; } }
 .autoria-previsao { font-size: 10px; color: var(--muted); }
 @media (max-width: 900px) { .acesso-layout { grid-template-columns: minmax(0,420px); justify-content: center; }.acesso-apresentacao { display: none; } }
 @media (max-width: 600px) { .acesso { padding: 16px; gap: 16px; }.acesso-cartao { padding: 28px 20px; }.perfis-grade { grid-template-columns: 1fr; }.usuarios-intro { align-items: stretch; flex-direction: column; }.usuarios-resumo { flex-wrap: wrap; gap: 16px; }.conta-perfil > div { min-width: 0; }.conta-acoes { flex-direction: column; } }

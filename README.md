@@ -65,7 +65,7 @@ Abra o site → **Entrar com Google** ou **Entrar com Microsoft** com o e-mail d
 ## Usuários, autoria e localidade
 
 - **Cadastro de usuários:** administradores autorizam endereços exatos de qualquer domínio, atribuem perfis e desativam acessos. E-mail verificado e permissão ativa são exigidos no banco, inclusive se alguém tentar ignorar os botões da interface.
-- **Minha conta:** mostra o primeiro nome extraído do início do e-mail, o endereço e o perfil. O mesmo nome aparece ao lado do e-mail no rodapé do menu.
+- **Minha conta:** permite editar somente o nome de exibição, salvo na própria conta. Mostra o e-mail autorizado, o perfil e a data original do cadastro de acesso, protegidos contra edição pessoal. O menu exibe o primeiro nome; até a primeira edição, ele é obtido do e-mail. Mudar o nome não altera a identificação dos responsáveis no histórico.
 - **Agendamentos:** nome do responsável nas previsões e na agenda; **Ficha do técnico → Histórico de agendamentos** mostra e-mail, horário e alterações. Registros anteriores sem autoria conhecida não recebem nomes inventados. Horários do servidor são exibidos em Brasília.
 - **Capital/interior:** **Técnicos → Editar cadastro → Localidade do técnico**. O campo começa como não informado e serve apenas para identificar o técnico no cadastro, nas consultas e nas exportações, sem filtro por capital/interior.
 - **Login:** vídeo de circuitos do banco Pexels, incorporado ao próprio painel, com reprodução automática, silenciosa, em loop e sem controle de pausa. Inclui versões WebM/MP4, imagem de abertura, botões Google/Microsoft e enquadramento para celular. [Origem e licença do vídeo](src/assets/VIDEO-LICENCA.md).

@@ -237,13 +237,17 @@ async function iniciarFirebase(cfg) {
     const versao = await fs.doc('seguranca/controle').get({ source: 'server' });
     if (versao.data()?.versao !== 2) throw new Error('seguranca_pendente');
     Acesso.perfil = decodificarFS(perfil.data());
+    Acesso.usuario.nome = nomeDaConta().split(' ')[0];
     Acesso.pararPerfil?.();
     Acesso.pararPerfil = ref.onSnapshot(s => {
       if (s.metadata.hasPendingWrites) return;
       if (!s.exists || !s.data().ativo || !PERFIS[s.data().perfil]) { bloquearSessao(); return; }
       const mudouPerfil = Acesso.perfil?.perfil !== s.data().perfil;
+      const mudouNome = Acesso.perfil?.nome !== s.data().nome;
       Acesso.perfil = decodificarFS(s.data());
-      if (mudouPerfil && E.status === 'pronto') { E.usuarios = []; assinarMudancas(); montarMoldura(); mudou(); }
+      Acesso.usuario.nome = nomeDaConta().split(' ')[0];
+      if (mudouPerfil && E.status === 'pronto') { E.usuarios = []; assinarMudancas(); montarMoldura(); }
+      if ((mudouPerfil || mudouNome) && E.status === 'pronto') mudou();
     }, () => bloquearSessao());
     auth.onAuthStateChanged(u => { if (!u && Acesso.perfil) bloquearSessao('Sua sessão foi encerrada. Entre novamente.'); });
   } catch (e) {

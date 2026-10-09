@@ -38,6 +38,36 @@ try {
  await assertFails(operador.collection('usuarios').get());
  await assertFails(operador.doc('usuarios/dono@empresa.com').get());
  await assertFails(operador.doc('usuarios/ana.silva@empresa.com').update({perfil:'administrador',atualizadoEm:stamp(),atualizadoPor:{uid:'ana',email:'ana.silva@empresa.com'}}));
+ // Minha conta permite apenas o próprio nome; os demais campos são protegidos no banco.
+ const cadastroAntes=(await operador.doc('usuarios/ana.silva@empresa.com').get()).data();
+ const minhaConta=operador.doc('usuarios/ana.silva@empresa.com');
+ const nomeAtualizado=nome=>({nome,atualizadoEm:stamp(),atualizadoPor:{uid:'ana',email:'ana.silva@empresa.com'}});
+ await assertSucceeds(minhaConta.update(nomeAtualizado('Ana Júlia D’Ávila')));
+ const cadastroDepois=(await minhaConta.get()).data();
+ assert.equal(cadastroDepois.nome,'Ana Júlia D’Ávila');
+ for(const chave of ['email','perfil','ativo','principal','criadoEm','criadoPor']) assert.deepEqual(cadastroDepois[chave],cadastroAntes[chave]);
+ await assertSucceeds(dono.doc('usuarios/dono@empresa.com').update({nome:'Leandro Mendes',atualizadoEm:stamp(),atualizadoPor:por}));
+ for(const nome of ['', ' ', ' Ana', 'Ana ', '<img src=x>', 'Ana\nSilva', 'Ana\u0000Silva', 'A'.repeat(81), 123, null]) {
+  await assertFails(minhaConta.update(nomeAtualizado(nome)));
+ }
+ for(const alteracao of [
+  {perfil:'administrador'}, {ativo:false}, {principal:true}, {email:'outra@empresa.com'},
+  {criadoEm:stamp()}, {criadoPor:{uid:'ana',email:'ana.silva@empresa.com'}}, {campoExtra:true},
+  {nome:firebase.firestore.FieldValue.delete()},
+  {atualizadoEm:firebase.firestore.Timestamp.fromDate(new Date('2000-01-01'))},
+  {atualizadoPor:por}
+ ]) await assertFails(minhaConta.update({...nomeAtualizado('Ana Silva'),...alteracao}));
+ await assertFails(minhaConta.update({nome:'Sem auditoria'}));
+ await assertFails(operador.doc('usuarios/dono@empresa.com').update(nomeAtualizado('Outro nome')));
+ await assertFails(dono.doc('usuarios/ana.silva@empresa.com').update({nome:'Outro nome',atualizadoEm:stamp(),atualizadoPor:por}));
+ for(const db of [outro,conta('ana','ana.silva@empresa.com','microsoft.com',false),conta('ana','ana.silva@empresa.com','password')]) {
+  await assertFails(db.doc('usuarios/ana.silva@empresa.com').update(nomeAtualizado('Sem permissão')));
+ }
+ // A administração continua gerenciando permissões sem apagar o nome ou a data original.
+ await assertSucceeds(dono.doc('usuarios/ana.silva@empresa.com').update({perfil:'administrador',atualizadoEm:stamp(),atualizadoPor:por}));
+ await assertSucceeds(dono.doc('usuarios/ana.silva@empresa.com').update({perfil:'usuario',atualizadoEm:stamp(),atualizadoPor:por}));
+ assert.equal((await minhaConta.get()).data().nome,'Ana Júlia D’Ávila');
+ assert.deepEqual((await minhaConta.get()).data().criadoEm,cadastroAntes.criadoEm);
  for(const path of ['cadastro/tecnicos','config/geral','dados/indice','importacoes/teste','movimentos/teste','resumo/atual','seguranca/controle','acompanhamento/t1']) await assertFails(operador.doc(path).set({teste:true}));
  await assertSucceeds(dono.doc('usuarios/rui@outlook.com').set(usuario('rui@outlook.com')));
  await assertFails(dono.doc('usuarios/dono@empresa.com').update({ativo:false,atualizadoEm:stamp(),atualizadoPor:por}));
@@ -80,6 +110,7 @@ try {
  await assertFails(operador.doc('contatos/c1').update({obs:'reescrever'}));
  await assertSucceeds(dono.doc('usuarios/ana.silva@empresa.com').update({ativo:false,atualizadoEm:stamp(),atualizadoPor:por}));
  await assertFails(operador.doc('dados/indice').get({source:'server'}));
+ await assertFails(minhaConta.update(nomeAtualizado('Conta desativada')));
  await assertFails(gravar(operador,agenda('bloqueada')));
- console.log('PASSOU: contatos de técnicos não autorizam acesso nem criam usuários, Google/Microsoft, verificação de e-mail, acesso individual, perfis, antiescalação, revogação, autor e horário autenticados, auditoria imutável, concorrência e lotes.');
+ console.log('PASSOU: edição exclusiva do próprio nome, cadastro e permissões protegidos, contatos de técnicos não autorizam acesso nem criam usuários, Google/Microsoft, verificação de e-mail, acesso individual, perfis, antiescalação, revogação, autor e horário autenticados, auditoria imutável, concorrência e lotes.');
 } finally {await env.cleanup();}

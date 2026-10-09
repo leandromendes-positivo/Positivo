@@ -416,6 +416,11 @@ function ligarEventos() {
   });
   document.addEventListener("input", (ev) => {
     const el = ev.target;
+    if (el.id === 'conta-nome') {
+      UIconta.nome = el.value; UIconta.erro = ''; UIconta.salvo = false;
+      el.form.querySelectorAll('.conta-feedback').forEach(p => p.hidden = true);
+      return;
+    }
     if (ev.isComposing || Pesquisas.compondo(el)) return;
     if (el.closest('[data-form="relatorios"]')) {
       UIrelatorios.rascunho = Object.fromEntries(new FormData(el.form));
@@ -437,6 +442,7 @@ function ligarEventos() {
     if (form.dataset.form === 'consulta') { aplicarConsulta(form); return; }
     if (form.dataset.form === 'relatorios') { aplicarFiltrosRelatorio(form); return; }
     if (form.dataset.form === 'ranking-intervalo') { aplicarIntervaloRanking(form); return; }
+    if (form.dataset.form === 'minha-conta') { salvarMinhaConta(form).catch(e => toast(erroAmigavel(e).message, 'erro')); return; }
     salvarFormulario(form).catch((e) => toast(erroAmigavel(e).message, "erro"));
   });
   document.addEventListener("focusout", () => {

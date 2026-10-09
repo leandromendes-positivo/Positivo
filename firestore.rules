@@ -47,7 +47,9 @@ service cloud.firestore {
       allow list: if administrador();
       function valido(d) {
         return d.keys().hasAll(['email','perfil','ativo','principal','criadoEm','criadoPor','atualizadoEm','atualizadoPor'])
-          && d.keys().hasOnly(['email','perfil','ativo','principal','criadoEm','criadoPor','atualizadoEm','atualizadoPor'])
+          && d.keys().hasOnly(['email','perfil','ativo','principal','criadoEm','criadoPor','atualizadoEm','atualizadoPor','nome'])
+          && (!('nome' in d) || (d.nome is string && d.nome.size() > 0 && d.nome.size() <= 80
+            && d.nome.matches('^\\S(.*\\S)?$') && d.nome.matches('^[^<>\\x00-\\x1F\\x7F]+$')))
           && d.email == id && id == id.lower() && id.size() <= 254 && id.matches('^[^ /@]+@[^ /@]+[.][^ /@]+$')
           && d.perfil in ['usuario','administrador'] && d.ativo is bool && d.principal is bool
           && d.atualizadoEm == request.time && porValido(d.atualizadoPor);
@@ -55,11 +57,14 @@ service cloud.firestore {
       allow create: if administrador() && valido(request.resource.data)
         && request.resource.data.principal == false && request.resource.data.criadoEm == request.time
         && porValido(request.resource.data.criadoPor);
-      allow update: if administrador() && valido(request.resource.data)
+      allow update: if autorizado() && valido(request.resource.data)
         && request.resource.data.criadoEm == resource.data.criadoEm
         && request.resource.data.criadoPor == resource.data.criadoPor
         && request.resource.data.principal == resource.data.principal
-        && (!(resource.data.principal || id == email()) || (request.resource.data.ativo == true && request.resource.data.perfil == 'administrador'));
+        && ((id == email() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nome','atualizadoEm','atualizadoPor'])
+            && 'nome' in request.resource.data)
+          || (administrador() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['perfil','ativo','atualizadoEm','atualizadoPor'])
+            && (!(resource.data.principal || id == email()) || (request.resource.data.ativo == true && request.resource.data.perfil == 'administrador'))));
       allow delete: if false;
     }
     match /seguranca/{id} { allow read: if autorizado(); allow write: if false; }

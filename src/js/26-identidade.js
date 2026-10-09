@@ -5,6 +5,22 @@ function primeiroNomeEmail(email) {
   const parte = String(email || '').split('@')[0].split(/[._+\-\s]/)[0].replace(/\d+$/u, '');
   return parte ? parte.charAt(0).toLocaleUpperCase('pt-BR') + parte.slice(1).toLocaleLowerCase('pt-BR') : 'Usuário';
 }
+function nomeDaConta(perfil = Acesso.perfil, email = Acesso.usuario?.email) {
+  return limpar(perfil?.nome) || primeiroNomeEmail(email);
+}
+async function salvarNomeConta(valor) {
+  if (Acesso.modo !== 'firebase' || !Acesso.usuario?.uid || !Acesso.perfil?.ativo) throw new Error('Entre com uma conta autorizada para alterar seu nome.');
+  const nome = limpar(valor);
+  if (!nome || nome.length > 80 || /[<>\u0000-\u001f\u007f]/u.test(nome)) throw new Error('Informe um nome de até 80 caracteres, sem símbolos < ou >.');
+  const usuario = Acesso.usuario, por = identidadeAtual();
+  await Acesso.fs.doc(`usuarios/${por.email}`).update({ nome, atualizadoEm: carimboServidor(), atualizadoPor: por });
+  if (Acesso.usuario?.uid === usuario.uid && Acesso.perfil?.ativo) {
+    Acesso.perfil = { ...Acesso.perfil, nome };
+    Acesso.usuario.nome = nome.split(' ')[0];
+    mudou();
+  }
+  return nome;
+}
 function podeAdministrar() { return Acesso.modo !== 'firebase' || (Acesso.perfil?.ativo === true && Acesso.perfil.perfil === 'administrador'); }
 function exigirAdministrador() {
   if (!podeAdministrar()) throw Object.assign(new Error('Esta ação é exclusiva de administradores.'), { code: 'sem_permissao' });
@@ -117,6 +133,7 @@ async function salvarUsuario(email, perfil, ativo) {
     const por = identidadeAtual(), em = carimboServidor();
     const d = { email, perfil, ativo, principal: atual.data()?.principal || false, atualizadoEm: em, atualizadoPor: por,
       criadoEm: atual.exists ? atual.data().criadoEm : em, criadoPor: atual.exists ? atual.data().criadoPor : por };
+    if (typeof atual.data()?.nome === 'string') d.nome = atual.data().nome;
     tx.set(ref, d);
   });
   toast(ativo ? 'Acesso autorizado salvo.' : 'Acesso desativado.');

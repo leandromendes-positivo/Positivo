@@ -6,7 +6,7 @@ function renderUsuarios() {
   return `<section class="usuarios-intro"><div><span class="sobretitulo">ADMINISTRAÇÃO / ACESSOS</span><h2>As pessoas da operação</h2><p>Autorize cada endereço e escolha o que a pessoa pode fazer.</p></div><button class="btn prim" data-acao="novo-usuario">${icone('mais')}Cadastrar usuário</button>${imagemCabecalho()}</section>
     <div class="perfis-grade"><article>${icone('pessoa')}<h3>Usuário</h3><p>Consulta peças e indicadores, agenda devoluções e registra contatos e observações.</p></article><article>${icone('ajustes')}<h3>Administrador</h3><p>Também importa planilhas, edita técnicos e regras, classifica saídas e gerencia acessos.</p></article></div>
     <div class="usuarios-resumo"><span><strong>${lista.filter(u=>u.ativo).length}</strong> acessos ativos</span><span><strong>${lista.filter(u=>u.ativo&&u.perfil==='administrador').length}</strong> administradores</span><span><strong>${lista.filter(u=>!u.ativo).length}</strong> desativados</span></div>
-    ${lista.length ? `<div class="tabela-rolagem"><table class="tabela"><thead><tr><th>Pessoa / e-mail autorizado</th><th>Perfil</th><th>Acesso</th><th>Última alteração</th><th></th></tr></thead><tbody>${lista.map(u=>`<tr><td><span class="celula-tec">${avatar(primeiroNomeEmail(u.email),'tecnico')}<span><strong>${esc(primeiroNomeEmail(u.email))}</strong><small class="sub-celula">${esc(u.email)}</small></span></span></td><td>${pill(u.perfil==='administrador'?'info':'neutro',u.principal?'Administrador principal':PERFIS[u.perfil])}</td><td>${pill(u.ativo?'ok':'grave',u.ativo?'Ativo':'Desativado')}</td><td>${u.atualizadoEm?fmtDataHora(u.atualizadoEm):'—'}<small class="sub-celula">${esc(u.atualizadoPor?.email ? primeiroNomeEmail(u.atualizadoPor.email) : 'Configuração inicial')}</small></td><td><button class="btn pequeno" data-acao="editar-usuario" data-email="${esc(u.email)}">Gerenciar</button></td></tr>`).join('')}</tbody></table></div>` : vazio('pessoas','Carregando acessos','Os cadastros aparecerão aqui.')}
+    ${lista.length ? `<div class="tabela-rolagem"><table class="tabela"><thead><tr><th>Pessoa / e-mail autorizado</th><th>Perfil</th><th>Acesso</th><th>Última alteração</th><th></th></tr></thead><tbody>${lista.map(u=>`<tr><td><span class="celula-tec">${avatar(nomeDaConta(u,u.email))}<span><strong>${esc(nomeDaConta(u,u.email))}</strong><small class="sub-celula">${esc(u.email)}</small></span></span></td><td>${pill(u.perfil==='administrador'?'info':'neutro',u.principal?'Administrador principal':PERFIS[u.perfil])}</td><td>${pill(u.ativo?'ok':'grave',u.ativo?'Ativo':'Desativado')}</td><td>${u.atualizadoEm?fmtDataHora(u.atualizadoEm):'—'}<small class="sub-celula">${esc(u.atualizadoPor?.email ? primeiroNomeEmail(u.atualizadoPor.email) : 'Configuração inicial')}</small></td><td><button class="btn pequeno" data-acao="editar-usuario" data-email="${esc(u.email)}">Gerenciar</button></td></tr>`).join('')}</tbody></table></div>` : vazio('pessoas','Carregando acessos','Os cadastros aparecerão aqui.')}
     <p class="nota usuarios-nota">A desativação bloqueia novas leituras e gravações, inclusive em uma sessão já aberta. O administrador principal permanece protegido para evitar que a equipe perca o acesso.</p>`;
 }
 function modalUsuario(email = '') {
@@ -25,12 +25,50 @@ function modalUsuario(email = '') {
   };
   btn.addEventListener('click',salvar); f.addEventListener('submit',e=>{e.preventDefault();salvar();});
 }
+const UIconta = { uid: '', nome: '', base: '', salvando: false, erro: '', salvo: false };
 function renderConta() {
-  const u=Acesso.usuario, p=Acesso.perfil;
+  const u = Acesso.usuario, p = Acesso.perfil;
   if (!u) return vazio('pessoa','Minha conta','Entre com uma conta autorizada para ver seu perfil.');
-  return `<section class="conta-perfil">${avatar(primeiroNomeEmail(u.email),'tecnico')}<div><span class="sobretitulo">MINHA CONTA</span><h2>${esc(primeiroNomeEmail(u.email))}</h2><p>${esc(u.email)}</p>${pill(p?.perfil==='administrador'?'info':'neutro',PERFIS[p?.perfil]||'Sem acesso')}</div>${imagemCabecalho()}</section>
-    <div class="perfis-grade"><article>${icone('pessoa')}<h3>Sua identificação</h3><p>Seus agendamentos e contatos ficam identificados por <strong>${esc(primeiroNomeEmail(u.email))}</strong>, com e-mail e horário no histórico.</p></article><article>${icone('ajustes')}<h3>Permissões da conta</h3><p>${podeAdministrar()?'Você administra acessos, cadastros e regras, além de acompanhar a operação.':'Você pode consultar o painel, agendar devoluções e registrar contatos e observações.'}</p></article></div>
+  const nome = nomeDaConta(), uid = u.uid || u.email;
+  if (UIconta.uid !== uid) Object.assign(UIconta, { uid, nome, base: nome, salvando: false, erro: '', salvo: false });
+  else if (UIconta.nome === UIconta.base) Object.assign(UIconta, { nome, base: nome });
+  const podeEditar = Acesso.modo === 'firebase' && p?.ativo;
+  const cadastro = p?.criadoEm ? fmtData(p.criadoEm) : 'Não informado';
+  return `<section class="conta-perfil">${avatar(nome)}<div><span class="sobretitulo">MINHA CONTA</span><h2>${esc(nome)}</h2>${pill(p?.perfil==='administrador'?'info':'neutro',p?.principal?'Administrador principal':PERFIS[p?.perfil]||'Sem acesso')}</div>${imagemCabecalho()}</section>
+    <div class="conta-grade">
+      <form class="conta-dados form" data-form="minha-conta" aria-busy="${UIconta.salvando}">
+        <div class="conta-bloco-titulo">${icone('pessoa')}<div><h3>Dados pessoais</h3><p>Escolha como seu nome aparece no painel.</p></div></div>
+        <label class="campo" for="conta-nome"><span>Nome de exibição</span><input id="conta-nome" name="nome" type="text" autocomplete="name" required maxlength="80" value="${esc(UIconta.nome)}" aria-describedby="conta-nome-ajuda" ${!podeEditar||UIconta.salvando?'disabled':''}><small id="conta-nome-ajuda">Você pode alterar somente o nome. No menu, aparece seu primeiro nome.</small></label>
+        <label class="campo" for="conta-email"><span>E-mail da conta <small>Somente leitura</small></span><input id="conta-email" type="email" value="${esc(u.email)}" readonly aria-describedby="conta-email-ajuda"><small id="conta-email-ajuda">Endereço autorizado para entrar no painel.</small></label>
+        <p class="conta-feedback erro" role="alert" ${UIconta.erro?'':'hidden'}>${esc(UIconta.erro)}</p>
+        <p class="conta-feedback sucesso" role="status" ${UIconta.salvo?'':'hidden'}>Nome atualizado com sucesso.</p>
+        <div class="conta-salvar"><button class="btn prim" type="submit" ${!podeEditar||UIconta.salvando?'disabled':''}>${icone('ok')}${UIconta.salvando?'Salvando…':'Salvar nome'}</button></div>
+      </form>
+      <aside class="conta-informacoes" aria-labelledby="conta-acesso-titulo">
+        <div class="conta-bloco-titulo">${icone('calendario')}<div><h3 id="conta-acesso-titulo">Cadastro e acesso</h3><p>Informações da sua conta no painel.</p></div></div>
+        <dl><div><dt>Cadastrado em</dt><dd data-conta-cadastro>${p?.criadoEm?`<time datetime="${esc(p.criadoEm.slice(0,10))}">${cadastro}</time>`:cadastro}</dd></div><div><dt>Perfil de acesso</dt><dd>${esc(p?.principal?'Administrador principal':PERFIS[p?.perfil]||'Sem acesso')}</dd></div></dl>
+        <p class="conta-acesso-nota">${podeAdministrar()?'Você administra acessos, cadastros e regras, além de acompanhar a operação.':'Você pode consultar o painel, agendar devoluções e registrar contatos e observações.'}</p>
+        <p class="nota">Seus registros permanecem vinculados à sua conta e ao seu e-mail.</p>
+      </aside>
+    </div>
     <div class="conta-acoes">${podeAdministrar()?'<button class="btn" data-acao="ir" data-pagina="usuarios">Gerenciar usuários</button>':''}<button class="btn" data-acao="sair">${icone('sair')}Sair desta conta</button></div><p class="nota">Em computadores compartilhados, saia ao terminar. A sessão fica limitada a esta aba do navegador.</p>`;
+}
+async function salvarMinhaConta(form) {
+  if (UIconta.salvando || !form.reportValidity()) return;
+  const uid = Acesso.usuario?.uid, valor = form.elements.nome.value;
+  UIconta.nome = valor; UIconta.salvando = true; UIconta.erro = ''; UIconta.salvo = false;
+  renderizar(true);
+  try {
+    const nome = await salvarNomeConta(valor);
+    if (Acesso.usuario?.uid === uid && Acesso.perfil?.ativo) Object.assign(UIconta, { nome, base: nome, salvo: true });
+  } catch (e) {
+    if (Acesso.usuario?.uid === uid) UIconta.erro = e.code ? erroAmigavel(e).message : e.message;
+  } finally {
+    if (Acesso.usuario?.uid === uid) {
+      UIconta.salvando = false;
+      if (UI.pagina === 'conta') renderizar(true);
+    }
+  }
 }
 async function modalHistoricoAgenda(tid) {
   const eventos = await Armazem.consultar('auditoria_agendamentos', { onde: [['tid','==',tid]] });

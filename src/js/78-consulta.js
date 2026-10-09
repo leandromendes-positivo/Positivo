@@ -50,7 +50,7 @@ function tabelaConsultaPecas(lista) {
     <td><span class="consulta-material"><strong class="mono">${esc(i.mat)}</strong><span>${esc(i.desc || 'Sem descrição')}</span><small>${esc(i.familia)}</small></span></td>
     <td><button class="link-forte" data-acao="tecnico" data-tid="${esc(i.tid)}">${esc(i.nome)}</button><small class="sub-celula">${esc(i.regiao)} · ${TIPOS_TEC[i.tipoTec]} · ${LOCALIDADES[i.localidade] || LOCALIDADES[""]}</small></td>
     <td>${pill(i.tipo === 'usadas' ? 'alerta' : 'info',i.tipo === 'usadas' ? 'Usada' : 'Nova')}</td><td class="num"><strong>${fmtNum(i.qtd)}</strong></td>
-    <td>${pill(i.origem === 'atual' && i.atrasada ? 'crit' : i.origem === 'atual' ? 'ok' : i.status === 'pendente' ? 'alerta' : 'neutro',i.situacao)}${i.previsao ? `<small class="sub-celula">Previsão ${fmtData(i.previsao)} · ${esc(autorPrevisao(i))}</small>` : ''}</td>
+    <td>${pill(i.origem === 'atual' && i.atrasada ? 'crit' : i.origem === 'atual' ? 'ok' : i.status === 'pendente' ? 'alerta' : 'neutro',i.situacao)}${resumoClassificacao(i)}${i.previsao ? `<small class="sub-celula">Previsão ${fmtData(i.previsao)} · ${esc(autorPrevisao(i))}</small>` : ''}</td>
     <td class="nowrap">${i.data ? fmtData(i.data) : '—'}<small class="sub-celula">${esc(i.referencia)}</small></td><td class="num">${i.dias == null ? '—' : fmtNum(i.dias)}<small class="sub-celula">Prazo ${i.prazo} d</small></td>
     <td>${i.chamado ? `<span class="mono">${esc(i.chamado)}</span>` : i.tipoEnvio ? esc(i.tipoEnvio) : '—'}${i.nf ? `<small class="sub-celula">NF ${esc(i.nf)}</small>` : ''}${i.remessa ? `<small class="sub-celula">Remessa ${esc(i.remessa)}</small>` : ''}</td>
     <td>${i.origem === 'saida' ? `<button class="btn pequeno" data-acao="consulta-classificar" data-k="${esc(i.k)}">${i.destino === 'pendente' ? 'Classificar saída' : 'Alterar destino'}</button>` : `<button class="btn pequeno" data-acao="tecnico" data-tid="${esc(i.tid)}">Ver técnico</button>`}</td></tr>`).join('')}</tbody></table></div>${paginacao(lista.length,UIconsulta.pagina,50,'consulta')}`;
@@ -62,18 +62,37 @@ function tabelaConsultaTecnicos(lista) {
 }
 async function exportarConsulta() {
   const lista = consultaOrdenada();
-  await exportarExcel(`consulta-pecas-${hojeISO()}.xlsx`, [{ nome: 'Peças filtradas', colunas: ['Código','Descrição','Família','Responsável','UF','Tipo','Origem','Quantidade','Situação','Data de referência','Referência da data','Dias','Chamado','NF','Remessa','Tipo de envio','Prazo aplicado (dias)'].map((titulo,n) => ({ titulo, largura: [1,3].includes(n) ? 36 : 20, tipo: [7,11,16].includes(n) ? 'numero' : 'texto' })), linhas: lista.map((i) => [i.mat,i.desc,i.familia,i.nome,i.regiao,i.tipo,i.origem,i.qtd,i.situacao,i.data,i.referencia,i.dias,i.chamado || '',i.nf || '',i.remessa || '',i.tipoEnvio || '',i.prazo]) }]);
+  await exportarExcel(`consulta-pecas-${hojeISO()}.xlsx`, [{ nome: 'Peças filtradas', colunas: ['Código','Descrição','Família','Responsável','UF','Tipo','Origem','Quantidade','Situação','Data de referência','Referência da data','Dias','Chamado','NF','Remessa','Tipo de envio','Prazo aplicado (dias)','Condição da devolução','Classificado por','Classificado em','Observação da classificação'].map((titulo,n) => ({ titulo, largura: [1,3].includes(n) ? 36 : 20, tipo: [7,11,16].includes(n) ? 'numero' : 'texto' })), linhas: lista.map((i) => [i.mat,i.desc,i.familia,i.nome,i.regiao,i.tipo,i.origem,i.qtd,i.situacao,i.data,i.referencia,i.dias,i.chamado || '',i.nf || '',i.remessa || '',i.tipoEnvio || '',i.prazo,condicaoDevolucao(i),i.classificadoPor?.email || '',i.classificadoEm || '',i.observacaoClassificacao || '']) }]);
 }
 function modalClassificarSaida(k) {
-  const i = E.movimentos.find((m) => m.k === k) || UIinventario.movimentos.find(m=>m.k===k); if (!i) return;
+  exigirAdministrador();
+  const i = E.movimentos.find(m => m.k === k) || UIinventario.movimentos.find(m => m.k === k); if (!i) return;
   const m = abrirModal({ titulo: 'Classificar saída de peças novas', subtitulo: `${nomeTecnico(i.tid)} · ${plural(i.qtd,'peça','peças')}`,
-    corpo: `<p class="texto-modal"><strong>${esc(i.mat)}</strong> · ${esc(E.catalogo[i.mat] || '')}</p><p class="nota">O saldo diminuiu na importação de ${fmtData(i.em)}. Informe o destino confirmado para atualizar os rankings. A data é a da observação no relatório.</p><label class="campo"><span>Quantidade a classificar</span><input type="number" id="quantidade-saida" min="1" max="${i.qtd}" step="1" value="${i.qtd}" required><small>Se a saída teve mais de um destino, classifique uma parte de cada vez.</small></label><label class="campo"><span>Destino confirmado</span><select id="destino-saida">${Object.entries(DESTINOS_NOVAS).map(([v,n]) => `<option value="${v}" ${i.destino === v ? 'selected' : ''}>${n}</option>`).join('')}</select></label>`,
-    rodape: '<button class="btn" data-fechar>Cancelar</button><button class="btn prim" data-salvar-destino>Salvar destino</button>' });
-  m.el.querySelector('[data-salvar-destino]').addEventListener('click', async (ev) => {
-    const quantidade = m.el.querySelector('#quantidade-saida');
-    if (!quantidade.reportValidity()) return;
+    corpo: `<p class="texto-modal"><strong>${esc(i.mat)}</strong> · ${esc(E.catalogo[i.mat] || '')}</p>
+      <p class="nota">Saída observada na planilha de ${fmtData(i.em)}. Confirme o destino conforme a informação recebida do técnico.</p>
+      <form id="classificar-saida" class="form">
+        <label class="campo"><span>Quantidade a classificar</span><input type="number" id="quantidade-saida" min="1" max="${i.qtd}" step="1" value="${i.qtd}" required><small>Ex.: de 3 peças, salve 2 como novas e depois classifique a restante como RMDF.</small></label>
+        <label class="campo"><span>Destino</span><select id="destino-saida">${Object.entries(DESTINOS_NOVAS).map(([v,n]) => `<option value="${v}" ${i.destino === v ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
+        <fieldset class="condicao-devolucao" data-condicao-saida><legend>Como a peça foi devolvida?</legend>${Object.entries(CONDICOES_DEVOLUCAO).map(([v,n]) => `<label class="condicao-opcao"><input type="radio" name="condicao" value="${v}" ${i.condicaoDevolucao === v ? 'checked' : ''}><span><strong>${esc(n)}</strong><small>${v === 'nova' ? 'Informada como apta a retornar ao estoque.' : 'Não deve retornar ao estoque de peças novas.'}</small></span></label>`).join('')}</fieldset>
+        <label class="campo"><span>Observação do técnico (opcional)</span><textarea id="observacao-saida" maxlength="300" rows="2" placeholder="Ex.: técnico informou que ainda vai aplicar RMDF">${esc(i.observacaoClassificacao || '')}</textarea></label>
+        <p class="nota">Se o RMDF ainda será aplicado, mantenha “A classificar” e registre a informação na observação. Marque RMDF somente após a confirmação. A classificação não adiciona peças ao estoque.</p>
+      </form>
+      ${(i.classificacoes || []).length ? `<details class="historico-classificacao"><summary>Histórico de classificações (${i.classificacoes.length})</summary><ol>${i.classificacoes.map(h => `<li><strong>${esc(h.destino === 'devolucao' ? CONDICOES_DEVOLUCAO[h.condicao] || 'Devolvida · condição não informada' : DESTINOS_NOVAS[h.destino])}</strong><small>${plural(h.qtd,'peça','peças')} · ${esc(h.por?.email ? primeiroNomeEmail(h.por.email) : 'Sem autoria registrada')} · ${fmtDataHora(h.em)}</small>${h.observacao ? `<p>${esc(h.observacao)}</p>` : ''}</li>`).join('')}</ol></details>` : ''}`,
+    rodape: '<button class="btn" data-fechar>Cancelar</button><button class="btn prim" data-salvar-destino>Salvar classificação</button>' });
+  const form = m.el.querySelector('#classificar-saida'), destino = m.el.querySelector('#destino-saida'), condicoes = m.el.querySelector('[data-condicao-saida]');
+  const atualizar = () => {
+    const devolvida = destino.value === 'devolucao';
+    condicoes.hidden = !devolvida;
+    condicoes.querySelectorAll('input').forEach(input => { input.required = devolvida; input.disabled = !devolvida; });
+  };
+  atualizar(); destino.addEventListener('change', atualizar);
+  form.addEventListener('submit', e => { e.preventDefault(); m.el.querySelector('[data-salvar-destino]').click(); });
+  m.el.querySelector('[data-salvar-destino]').addEventListener('click', async ev => {
+    if (!form.reportValidity()) return;
     const btn = ev.currentTarget; btn.disabled = true;
-    try { await classificarSaida(k,m.el.querySelector('#destino-saida').value, Number(quantidade.value)); m.fechar(); toast('Destino salvo. Rankings atualizados.'); renderizar(true); }
-    catch (e) { toast(erroAmigavel(e).message,'erro'); btn.disabled = false; }
+    try {
+      await classificarSaida(k, destino.value, Number(m.el.querySelector('#quantidade-saida').value), { condicao: new FormData(form).get('condicao'), observacao: m.el.querySelector('#observacao-saida').value, versaoEsperada: versaoSaida(i) });
+      m.fechar(); toast('Classificação salva no histórico.'); renderizar(true);
+    } catch (e) { toast(erroAmigavel(e).message,'erro'); btn.disabled = false; }
   });
 }

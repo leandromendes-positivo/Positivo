@@ -4,8 +4,8 @@ const EDITORES_EMAIL = {
   outlook: 'Outlook na Web · somente texto',
   aplicativo: 'Outlook instalado · somente texto',
 };
-function montarEmailCobranca(t, itens, lembrete = false) {
-  const prazo = prazoDoTecnico(t.tid), qtd = somar(itens, i => i.qtd);
+function montarEmailCobranca(t, itens, lembrete = false, tipo = 'usadas') {
+  const prazo = prazoDoTecnico(t.tid, tipo), qtd = somar(itens, i => i.qtd);
   const atrasadas = somar(itens.filter(i => i.dias > prazo), i => i.qtd);
   const lista = [...itens].sort((a,b) => b.dias - a.dias).map((i,n) => [
     `${n + 1}. ${i.desc || 'Material sem descrição'}`,
@@ -19,9 +19,10 @@ function montarEmailCobranca(t, itens, lembrete = false) {
     assunto: 'Devolução de peças',
     corpo: [
       `${saudacao()}, ${primeiroNome(t.nome)}!`,
-      lembrete ? 'Vamos programar a devolução das peças usadas abaixo para manter seu inventário em dia?' : 'Identificamos peças usadas pendentes de devolução sob sua responsabilidade. Segue a relação para conferência.',
+      tipo === 'novas' ? 'Precisamos combinar a devolução das peças novas abaixo, sob sua responsabilidade. Segue a relação para conferência.' : lembrete ? 'Vamos programar a devolução das peças usadas abaixo para manter seu inventário em dia?' : 'Identificamos peças usadas pendentes de devolução sob sua responsabilidade. Segue a relação para conferência.',
       `RESUMO DA SOLICITAÇÃO\nTécnico: ${t.nome}${t.regiao ? `\nRegião: ${t.regiao}` : ''}\nData da consulta: ${fmtData(hojeISO())}\nTotal: ${plural(qtd, 'peça', 'peças')}\nAcima do prazo: ${plural(atrasadas, 'peça', 'peças')}\nPrazo de devolução: ${plural(prazo, 'dia', 'dias')}`,
       `PEÇAS PARA DEVOLUÇÃO\n\n${lista}`,
+      ...(tipo === 'novas' ? [`PEÇAS NOVAS COM DEFEITO · RMDF\n${ORIENTACAO_RMDF}`] : []),
       'PRÓXIMO PASSO\nPor favor, responda este e-mail com a data prevista para devolução.',
       'Obrigado pela colaboração!',
     ].join('\n\n'),
@@ -64,6 +65,7 @@ function htmlEmailCobranca(d) {
       return titulo('Resumo da solicitação') + `<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="table-layout:fixed;border-collapse:collapse;background:#f5f6f7;border:1px solid #e5e7eb"><tbody>${resumo}</tbody></table>`;
     }
     if (primeira === 'PEÇAS PARA DEVOLUÇÃO') return titulo('Peças para devolução') + (resto ? `<p style="${fonte}margin:0 0 16px">${linhas(resto)}</p>` : '');
+    if (primeira === 'PEÇAS NOVAS COM DEFEITO · RMDF') return `<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="table-layout:fixed;border-collapse:collapse;margin:24px 0;background:#fff8e8;border-left:3px solid #9b6500"><tbody><tr><td style="${fonte}padding:16px">${forte('Peças novas com defeito · RMDF')}<br>${linhas(resto)}</td></tr></tbody></table>`;
     if (primeira === 'PRÓXIMO PASSO') return `<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="table-layout:fixed;border-collapse:collapse;margin:24px 0;background:#f0f7f6;border-left:3px solid #167d72"><tbody><tr><td style="${fonte}padding:16px">${forte('Confirme a previsão de devolução')}<br>${linhas(resto)}</td></tr></tbody></table>`;
     if (/^\d+\.\s/.test(primeira)) return `<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="table-layout:fixed;border-collapse:collapse;margin:0 0 12px;border:1px solid #e1e4e8;background:#fff"><tbody><tr><td style="${fonte}padding:12px 14px;border-bottom:1px solid #e1e4e8;background:#f8f9fa">${forte(primeira)}</td></tr><tr><td style="${fonte}font-size:13px;line-height:22px;padding:12px 14px">${campos(resto)}</td></tr></tbody></table>`;
     return `<p style="${fonte}margin:0 0 18px">${n === 0 ? forte(p).replace(/\n/g, '<br>') : linhas(p)}</p>`;

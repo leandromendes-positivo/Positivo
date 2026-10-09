@@ -192,3 +192,19 @@
   .ficha-prazos > .ic { display: none; }
   .ficha-prazos dl, .ficha-prazos > .btn { width: 100%; }
 }
+
+/* Condição de devolução: escolha explícita e mutuamente exclusiva. */
+.condicao-devolucao { margin: 0; padding: 16px; border: 1px solid var(--line); border-radius: 12px; min-width: 0; }
+.condicao-devolucao legend { padding: 0 6px; font-weight: 700; }
+.condicao-opcao { display: flex; align-items: flex-start; gap: 12px; padding: 14px; border: 1px solid var(--line); border-radius: 8px; cursor: pointer; transition: border-color .16s, background .16s; }
+.condicao-opcao + .condicao-opcao { margin-top: 10px; }
+.condicao-opcao:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+.condicao-opcao input { flex: 0 0 auto; width: 18px; height: 18px; margin: 2px 0 0; accent-color: var(--accent); }
+.condicao-opcao strong, .condicao-opcao small { display: block; }
+.condicao-opcao small { color: var(--muted); margin-top: 5px; line-height: 1.5; }
+.historico-classificacao { margin-top: 20px; border-top: 1px solid var(--line); padding-top: 16px; }
+.historico-classificacao summary { cursor: pointer; font-weight: 600; }
+.historico-classificacao ol { padding-left: 22px; }
+.historico-classificacao li { margin: 14px 0; overflow-wrap: anywhere; }
+.historico-classificacao small { display: block; color: var(--muted); margin-top: 4px; }
+.historico-classificacao p { margin: 6px 0; }

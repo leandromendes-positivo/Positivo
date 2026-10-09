@@ -1,5 +1,17 @@
 /* Consulta e desempenho: quantidades físicas, períodos civis e origem explícita. */
 const DESTINOS_NOVAS = { pendente: 'A classificar', devolucao: 'Devolvida', uso: 'Usada em atendimento', transferencia: 'Transferência / ajuste' };
+const CONDICOES_DEVOLUCAO = { nova: 'Nova — retorno ao estoque', rmdf: 'RMDF aplicado — peça com defeito' };
+function condicaoDevolucao(i) {
+  return i.destino === 'devolucao' && i.tipo !== 'usadas' ? (CONDICOES_DEVOLUCAO[i.condicaoDevolucao] || 'Condição não informada') : '';
+}
+function situacaoSaidaNova(i) {
+  return i.destino === 'devolucao' ? `Devolvida · ${condicaoDevolucao(i)}` : DESTINOS_NOVAS[i.destino] || DESTINOS_NOVAS.pendente;
+}
+function resumoClassificacao(i) {
+  if (!i.classificadoEm && !i.observacaoClassificacao) return '';
+  return `<small class="sub-celula">${esc(i.classificadoPor?.email ? primeiroNomeEmail(i.classificadoPor.email) : 'Sem autoria registrada')}${i.classificadoEm ? ` · ${fmtDataHora(i.classificadoEm)}` : ''}</small>${i.observacaoClassificacao ? `<small class="sub-celula">${esc(i.observacaoClassificacao)}</small>` : ''}`;
+}
+function versaoSaida(i) { return JSON.stringify([i.qtd,i.destino,i.condicaoDevolucao || '',i.classificadoEm || '',i.revisao || '']); }
 const FAMILIAS_PECAS = [
   ['Memória', /\b(mem|memoria|ram|sodimm|dimm)\b/],
   ['Armazenamento', /\b(ssd|hdd|hd|emmc)\b/],
@@ -30,7 +42,7 @@ function linhasConsulta(D = derivar()) {
     completar({ ...n, prazo, tipo: 'novas', origem: 'atual', data: n.desde, referencia: 'Primeira observação', atraso, atrasada: atraso > 0, status: atraso > 0 ? 'atrasada' : 'no_prazo', situacao: atraso > 0 ? 'Acima de ' + prazo + ' dias' : 'No prazo observado' });
   }
   for (const d of E.devolucoes) completar({ ...d, prazo: prazoDaDevolucao(d, 'usadas', D.cfg), tipo: 'usadas', origem: 'devolvida', data: d.em.slice(0, 10), referencia: 'Saída do relatório', status: 'devolvida', situacao: 'Devolvida', atrasada: d.dias > prazoDaDevolucao(d, 'usadas', D.cfg), atraso: Math.max(0, d.dias - prazoDaDevolucao(d, 'usadas', D.cfg)) });
-  for (const m of E.movimentos) completar({ ...m, prazo: prazoDaDevolucao(m, 'novas', D.cfg), tipo: 'novas', origem: 'saida', data: m.em.slice(0, 10), referencia: 'Saída do relatório', status: m.destino, situacao: DESTINOS_NOVAS[m.destino] || DESTINOS_NOVAS.pendente, atrasada: m.dias > prazoDaDevolucao(m, 'novas', D.cfg), atraso: Math.max(0, m.dias - prazoDaDevolucao(m, 'novas', D.cfg)) });
+  for (const m of E.movimentos) completar({ ...m, prazo: prazoDaDevolucao(m, 'novas', D.cfg), tipo: 'novas', origem: 'saida', data: m.em.slice(0, 10), referencia: 'Saída do relatório', status: m.destino, situacao: situacaoSaidaNova(m), atrasada: m.dias > prazoDaDevolucao(m, 'novas', D.cfg), atraso: Math.max(0, m.dias - prazoDaDevolucao(m, 'novas', D.cfg)) });
   return linhas;
 }
 const FILTROS_CONSULTA = { busca: '', correspondencia: 'termos', tecnico: '', tid: '', tipo: '', origem: 'atual', regiao: '', familia: '', situacao: '', envio: '', documento: '', inicio: '', fim: '', diasMin: '', diasMax: '', qtdMin: '', qtdMax: '', responsavel: 'tecnico' };
@@ -145,21 +157,48 @@ function calcularDesempenho({ tipo = 'usadas', periodo = 'semana', referencia = 
     semData: tipo === 'usadas' ? D.itens.filter((i) => permitido(i) && !i.dataFT).length : 0,
   };
 }
-async function classificarSaida(k, destino, quantidade = null) {
+async function classificarSaida(k, destino, quantidade = null, opcoes = {}) {
   exigirAdministrador();
-  if (!(destino in DESTINOS_NOVAS)) throw new Error('Destino inválido.');
-  const m = E.movimentos.find((i) => i.k === k) || UIinventario.movimentos.find(i=>i.k===k);
-  if (!m) throw new Error('Saída não encontrada. Atualize o painel.');
-  const doc = await Armazem.ler(`movimentos/${m.doc}`);
-  if (!doc || !(doc.itens || []).some((i) => i.k === k)) throw new Error('Esta importação foi desfeita ou atualizada.');
-  const atual = doc.itens.find((i) => i.k === k);
-  const qtd = quantidade == null ? atual.qtd : Number(quantidade);
-  if (!Number.isInteger(qtd) || qtd < 1 || qtd > atual.qtd) throw new Error('A quantidade deve estar entre 1 e ' + atual.qtd + '. Atualize a consulta se o saldo mudou.');
-  const itens = doc.itens.flatMap((i) => {
-    if (i.k !== k) return [i];
-    const parte = { ...i, qtd, destino, classificadoEm: agoraISO() };
-    return qtd === i.qtd ? [parte] : [parte, { ...i, k: `${i.k}-${Math.random().toString(36).slice(2,10)}`, qtd: i.qtd-qtd }];
-  });
-  await Armazem.gravar(`movimentos/${m.doc}`, { ...doc, itens });
-  E.movimentos = [...E.movimentos.filter((i) => i.doc !== m.doc), ...itens.map((i) => ({ ...i, doc: m.doc }))]; mudou();
+  const recusar = mensagem => Object.assign(new Error(mensagem), { amigavel: true });
+  if (!Object.hasOwn(DESTINOS_NOVAS, destino)) throw recusar('Destino inválido.');
+  const condicao = destino === 'devolucao' ? opcoes.condicao : '';
+  if (destino === 'devolucao' && !Object.hasOwn(CONDICOES_DEVOLUCAO, condicao)) throw recusar('Informe se a peça retorna como nova ou com RMDF aplicado.');
+  const m = E.movimentos.find(i => i.k === k) || UIinventario.movimentos.find(i => i.k === k);
+  if (!m) throw recusar('Saída não encontrada. Atualize o painel.');
+  const esperada = opcoes.versaoEsperada ?? versaoSaida(m);
+  const observacao = String(opcoes.observacao || '').trim().slice(0,300);
+  const em = agoraISO(), por = identidadeAtual(), revisao = crypto.randomUUID();
+  const atualizar = doc => {
+    const atual = doc?.itens?.find(i => i.k === k);
+    if (!atual) throw recusar('Esta importação foi desfeita ou atualizada.');
+    if (versaoSaida(atual) !== esperada) throw recusar('Esta saída foi alterada por outro registro. Atualize o histórico e abra a classificação novamente.');
+    const qtd = quantidade == null ? atual.qtd : Number(quantidade);
+    if (!Number.isInteger(qtd) || qtd < 1 || qtd > atual.qtd) throw recusar('A quantidade deve estar entre 1 e ' + atual.qtd + '. Atualize a consulta se o saldo mudou.');
+    const evento = { em, por, qtd, destino, condicao: condicao || '', observacao, anterior: { destino: atual.destino, condicao: atual.condicaoDevolucao || '' } };
+    const itens = doc.itens.flatMap(i => {
+      if (i.k !== k) return [i];
+      const parte = { ...i, qtd, destino, condicaoDevolucao: condicao || '', observacaoClassificacao: observacao, classificadoEm: em, classificadoPor: por, revisao, classificacoes: [...(i.classificacoes || []), evento] };
+      // O saldo restante conserva sua condição e seu histórico anteriores.
+      return qtd === i.qtd ? [parte] : [parte, { ...i, k: `saida-${crypto.randomUUID()}`, qtd: i.qtd - qtd }];
+    });
+    return { ...doc, itens };
+  };
+  const caminho = `movimentos/${m.doc}`;
+  let salvo;
+  if (Acesso.modo === 'firebase') {
+    salvo = await Acesso.fs.runTransaction(async tx => {
+      const ref = Acesso.fs.doc(caminho), snap = await tx.get(ref);
+      const doc = atualizar(snap.exists ? snap.data() : null);
+      tx.set(ref, doc); return doc;
+    });
+  } else {
+    salvo = await Armazem.enfileirar(async () => {
+      const doc = atualizar(await Armazem.ler(caminho));
+      await Armazem.db.doc(caminho).set(doc); return doc;
+    });
+  }
+  const substituir = lista => [...lista.filter(i => i.doc !== m.doc), ...salvo.itens.map(i => ({ ...i, doc: m.doc }))];
+  E.movimentos = substituir(E.movimentos);
+  UIinventario.movimentos = substituir(UIinventario.movimentos); UIinventario.chave = null;
+  mudou();
 }

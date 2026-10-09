@@ -62,6 +62,10 @@ try {
  // O tamanho real dos lotes permanece dentro do limite de consultas das regras.
  const lote=operador.batch();for(let n=0;n<8;n++){const x=agenda(`lote-${n}`);lote.set(operador.doc(`agendamentos/${x.peca}`),x);lote.set(operador.doc(`auditoria_agendamentos/${x.evento}`),x);}await assertSucceeds(lote.commit());
  await assertSucceeds(operador.doc('contatos/c1').set({tid:'t1',canal:'ligacao',previsao:'',obs:'Ligação registrada',pecas:1,itens:['p1'],uid:'ana',email:'ana.silva@empresa.com',em:stamp()}));
+ const contatoNova={tid:'t1',tipo:'novas',canal:'email',previsao:'',obs:'RMDF será aplicado',pecas:2,itens:['nova-p1'],uid:'ana',email:'ana.silva@empresa.com',em:stamp()};
+ await assertSucceeds(operador.doc('contatos/nova').set(contatoNova));
+ await assertFails(operador.doc('contatos/tipo-invalido').set({...contatoNova,tipo:'administrador'}));
+ await assertFails(operador.doc('contatos/autor-invalido').set({...contatoNova,uid:'dono',email:'dono@empresa.com'}));
  await assertFails(operador.doc('contatos/c1').update({obs:'reescrever'}));
  await assertSucceeds(dono.doc('usuarios/ana.silva@empresa.com').update({ativo:false,atualizadoEm:stamp(),atualizadoPor:por}));
  await assertFails(operador.doc('dados/indice').get({source:'server'}));

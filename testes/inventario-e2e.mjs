@@ -35,9 +35,9 @@ try {
  },inicial.tid);
  assert.equal(await p.evaluate(()=>E.devolucoes.some(d=>d.k==='antiga')),false);
  assert.equal(await p.evaluate(()=>filtrarInventario().some(i=>i.k==='antiga'&&i.qtd===4)),true);
- await p.locator('[data-digitar="inventario-busca"]').fill('88888');await p.waitForFunction(()=>UIinventario.busca==='88888'&&!UIinventario.carregando&&document.querySelectorAll('.tabela-inventario tbody tr').length===1);await p.locator('[data-acao="consulta-classificar"]').click();await p.locator('#destino-saida').selectOption('devolucao');await p.locator('[data-salvar-destino]').click();await p.waitForFunction(()=>!UIinventario.carregando&&filtrarInventario()[0]?.estado==='devolvida');
+ await p.locator('[data-digitar="inventario-busca"]').fill('88888');await p.waitForFunction(()=>UIinventario.busca==='88888'&&!UIinventario.carregando&&document.querySelectorAll('.tabela-inventario tbody tr').length===1);await p.locator('[data-acao="consulta-classificar"]').click();await p.locator('#destino-saida').selectOption('devolucao');await p.locator('[name="condicao"][value="nova"]').check();await p.locator('[data-salvar-destino]').click();await p.waitForFunction(()=>!UIinventario.carregando&&filtrarInventario()[0]?.estado==='devolvida');
  await p.evaluate(async()=>{exportarExcel=async(nome,abas)=>window.__exportacao=abas[0];await exportarInventario();});
- assert.deepEqual(await p.evaluate(()=>window.__exportacao.linhas.map(l=>[l[4],l[6],l[7]])),[['88888',5,'Devolvida']]);
+ assert.deepEqual(await p.evaluate(()=>window.__exportacao.linhas.map(l=>[l[4],l[6],l[7]])),[['88888',5,'Devolvida · Nova — retorno ao estoque']]);
  await p.evaluate(()=>{UIinventario.busca='';renderizar(true);});
  for(const tema of ['dark','light']){if(await p.evaluate(()=>document.documentElement.dataset.theme)!==tema)await p.locator('.acoes-topo [data-acao="tema"]').click();await p.waitForTimeout(100);await p.screenshot({path:`capturas/inventario/${tema}.png`,fullPage:true});for(const width of [390,320]){await p.setViewportSize({width,height:900});assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);}await p.setViewportSize({width:1440,height:1000});}
  // Desfazer a última foto volta ao saldo parcial e elimina somente as saídas dela.

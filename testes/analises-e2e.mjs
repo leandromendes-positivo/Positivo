@@ -159,7 +159,7 @@ try {
   assert.equal(await page.evaluate(()=>calcularDesempenho({tipo:'novas'}).uso[0].uso),3);
   await page.evaluate(()=>carregarTudo());
   assert.equal(await page.evaluate(()=>E.movimentos[0].destino),'uso');
-  await page.evaluate(async (k)=>{await classificarSaida(k,'devolucao');},movimento.k);
+  await page.evaluate(async (k)=>{await classificarSaida(k,'devolucao',null,{condicao:'nova'});},movimento.k);
   assert.equal(await page.evaluate(()=>calcularDesempenho({tipo:'novas'}).uso.length),0,'reclassificar remove consumo');
   await page.evaluate(async (k)=>{await classificarSaida(k,'uso',2); await carregarTudo();},movimento.k);
   assert.deepEqual(await page.evaluate(()=>[somar(E.movimentos,m=>m.qtd),calcularDesempenho({tipo:'novas'}).uso[0].uso,E.movimentos.filter(m=>m.destino==='devolucao')[0].qtd]),[3,2,1],'classificação parcial conserva o total e separa os destinos');

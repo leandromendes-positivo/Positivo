@@ -15,6 +15,8 @@
      resumo/atual                resumo dos próximos 7 dias (lido pela notificação diária)
    ========================================================================== */
 
+const ORIENTACAO_RMDF = 'Se alguma peça nova estiver com defeito, informe o código e a quantidade e avise se será aplicado RMDF ou se ele já foi aplicado.';
+const MENSAGEM_NOVAS = '{saudacao}, {nome}!\n\nPrecisamos combinar a devolução das seguintes peças novas sob sua responsabilidade:\n\n{lista}\n\nPrazo de devolução: {prazo} dias. Por favor, informe a data prevista para devolução.\n\nObrigado!';
 const PADROES = {
   prazo: 7,          // dias máximos com peça usada
   prazoNovas: 7,     // dias desde a primeira observação de estoque novo
@@ -328,7 +330,7 @@ function derivar() {
   // ---- cobranças registradas
   const ultimaCob = (tid) => {
     const a = E.acomp[tid];
-    const lista = (a && a.cobrancas) || [];
+    const lista = ((a && a.cobrancas) || []).filter(c => c.tipo !== 'novas');
     return lista.length ? lista[lista.length - 1] : null;
   };
 
@@ -462,7 +464,7 @@ function derivar() {
 
 // ============================================================ mensagens
 
-function montarMensagem(t, itens, modelo) {
+function montarMensagem(t, itens, modelo, tipo = 'usadas') {
   const max = 15;
   const ordenados = [...itens].sort((a, b) => b.dias - a.dias);
   let lista = ordenados.slice(0, max).map((i) =>
@@ -471,9 +473,9 @@ function montarMensagem(t, itens, modelo) {
   if (ordenados.length > max) lista += `\n\n+ ${plural(somar(ordenados.slice(max), i => i.qtd), 'peça', 'peças')} em ${plural(ordenados.length - max, 'registro adicional', 'registros adicionais')}.`;
   const valores = {
     saudacao: saudacao(), nome: primeiroNome(t.nome), nome_completo: t.nome,
-    qtd: somar(itens, (i) => i.qtd), lista, prazo: prazoDoTecnico(t.tid), regiao: t.regiao,
+    qtd: somar(itens, (i) => i.qtd), lista, prazo: prazoDoTecnico(t.tid, tipo), regiao: t.regiao,
   };
-  return String(modelo || "").replace(/\{(\w+)\}/g, (m, k) => (k in valores ? valores[k] : m));
+  return String(modelo || "").replace(/\{(\w+)\}/g, (m, k) => (k in valores ? valores[k] : m)) + (tipo === 'novas' ? `\n\n*Peças novas com defeito · RMDF*\n${ORIENTACAO_RMDF}` : '');
 }
 
 // ============================================================ resumo diário
@@ -582,8 +584,10 @@ async function definirObs(item, texto) {
   await carregarAcompanhamento(); mudou();
 }
 
-async function registrarCobranca(tid, { canal, previsao, obs, itens }) {
-  const contato = { tid, canal: canal || 'whatsapp', previsao: previsao || '', obs: String(obs || '').slice(0,300), pecas: somar(itens,i=>i.qtd), itens: itens.map(i=>i.k) };
+async function registrarCobranca(tid, { canal, previsao, obs, itens, tipo = 'usadas' }) {
+  if (!['novas','usadas'].includes(tipo)) throw new Error('Tipo de cobrança inválido.');
+  if (tipo === 'novas') previsao = ''; // Não cria agendamentos de usadas com chaves de novas.
+  const contato = { tid, tipo, canal: canal || 'whatsapp', previsao: previsao || '', obs: String(obs || '').slice(0,300), pecas: somar(itens,i=>i.qtd), itens: itens.map(i=>tipo === 'novas' ? `nova-${hash36(tid + '|' + i.mat + '|' + (i.tipoEnvio || ''))}` : i.k) };
   if (contato.itens.length > 500) throw new Error('Registre até 500 peças por cobrança.');
   await gravarAgendamentos(previsao ? itens : [], previsao || '', contato);
 }

@@ -100,7 +100,7 @@ function renderFicha(tid) {
   else if (s.aba === "novas") corpo = `${t.tipo === "tecnico" ? `<div class="linha-medidor">${medidorEstoque(t)}${pillNovas(t)}<span class="nota">${t.meta ? `Limite máximo: ${t.meta} peças${t.metaPropria != null ? " (personalizado)" : ""} · estoque menor está dentro do limite` : "Sem limite configurado"}</span></div>` : ""}<div class="tabela-rolagem">${tabelaLinhasNovas(t)}</div>`;
   else if (s.aba === "cobrancas") corpo = cobrancas.length ? `<ol class="linha-tempo">${cobrancas.map((c) => `<li>
       <span class="lt-quando">${fmtDataHora(c.em)}</span>
-      <div><strong>${esc(CANAIS[c.canal] || c.canal)}</strong><small class="sub-celula">${esc(c.email ? primeiroNomeEmail(c.email) : "Sem autoria registrada")}</small> · ${plural(c.pecas || 0, "peça", "peças")}${c.previsao ? ` · previsão para ${fmtData(c.previsao)}` : ""}${c.obs ? `<p></p>` : ""}</div>
+      <div><strong>${esc(CANAIS[c.canal] || c.canal)} · ${c.tipo === "novas" ? "Peças novas" : "Peças usadas"}</strong><small class="sub-celula">${esc(c.email ? primeiroNomeEmail(c.email) : "Sem autoria registrada")}</small> · ${plural(c.pecas || 0, "peça", "peças")}${c.previsao ? ` · previsão para ${fmtData(c.previsao)}` : ""}${c.obs ? `<p></p>` : ""}</div>
     </li>`).join("")}</ol>` : vazio("mensagem", "Nenhuma cobrança registrada", "Use o botão Cobrar para enviar a mensagem e registrar.");
   else corpo = devs.length ? `<div class="tabela-rolagem"><table class="tabela compacta"><thead><tr><th>Chamado</th><th>Material</th><th>Data FT</th><th>Saiu do relatório</th><th class="num">Dias</th><th>Prazo</th></tr></thead><tbody>
       ${devs.slice(0, 200).map((d) => `<tr><td class="mono">${esc(d.chamado || "—")}</td><td><span class="mat"><span class="mono">${esc(d.mat)}</span>${esc(E.catalogo[d.mat] || "")}</span></td><td class="mono">${fmtData(d.dataFT)}</td><td>${fmtDataHora(d.em)}</td><td class="num"><strong>${d.dias}</strong></td><td>${d.dias <= prazoDaDevolucao(d) ? pill("ok", "No prazo", "ok") : pill("grave", "Atrasada", "relogio")}</td></tr>`).join("")}
@@ -116,6 +116,7 @@ function renderFicha(tid) {
         ${t.obs ? `<p class="ficha-obs"></p>` : ""}
       </div>
       <div class="ficha-acoes"><button class="btn" data-acao="inventario-tecnico" data-tid="${esc(t.tid)}">${icone("caixa")}Histórico de peças</button><button class="btn" data-acao="historico-agenda" data-tid="${esc(t.tid)}">${icone("calendario")}Histórico de agendamentos</button>
+        ${t.novasLinhas.length ? `<button class="btn" data-acao="cobrar" data-aba="novas" data-tid="${esc(t.tid)}">${icone("mensagem")}Cobrar novas</button>` : ""}
         ${t.usadas.length ? `<button class="btn prim" data-acao="cobrar" data-tid="${esc(t.tid)}" data-aba="${t.itensCobrar.length ? "cobrar" : "todos"}">${icone("mensagem")}Cobrar</button>` : ""}
         <button class="btn" data-acao="editar-tecnico" data-tid="${esc(t.tid)}">${icone("lapis")}Editar cadastro</button>
       </div>

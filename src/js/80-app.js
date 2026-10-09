@@ -252,6 +252,7 @@ const ACOES = {
   "voltar-tecnicos": () => irPara("tecnicos"),
   cobrar: (el) => modalCobrar(el.dataset.tid, el.dataset.aba || "cobrar"),
   "inventario-tecnico": el => { UIinventario.tid=el.dataset.tid;UIinventario.tipo='';UIinventario.estado='';UIinventario.busca='';UIinventario.pagina=1;irPara('inventario'); },
+  "devolucoes-novas": () => { Object.assign(UIinventario,{tid:'',tipo:'novas',estado:'devolvidas',busca:'',pagina:1});irPara('inventario'); },
   "inventario-atualizar": () => carregarInventario(),
   "inventario-exportar": () => exportarInventario(),
   "novo-usuario": () => modalUsuario(),

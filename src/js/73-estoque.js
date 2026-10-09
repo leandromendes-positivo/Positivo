@@ -46,6 +46,7 @@ function renderEstoque() {
     </div>` : ""}
     <select data-mudar="regiao-es" aria-label="Região"><option value="">Todas as regiões</option>${D.regioes.map((r) => `<option value="${esc(r)}"${s.regiao === r ? " selected" : ""}>${esc(r)}</option>`).join("")}</select>
     <label class="busca-campo">${icone("busca")}<input type="search" placeholder="Buscar técnico" value="${esc(s.busca)}" data-digitar="busca-es" aria-label="Buscar técnico"></label>
+    <button class="btn" data-acao="devolucoes-novas">${icone("retorno")}Devoluções de novas</button>
     <button class="btn" data-acao="exportar-estoque">${icone("baixar")}Exportar</button>
   </div>`;
 
@@ -70,7 +71,7 @@ function renderEstoque() {
         ${s.bases ? "" : `<td class="num">${t.meta ? fmtNum(t.meta) : "Sem limite"}${t.metaPropria != null ? `<small class="sub-celula">personalizado</small>` : ""}</td>
         <td class="num ${t.excessoNovas ? "txt-grave" : ""}">${t.estoqueConhecido && t.meta ? fmtNum(t.excessoNovas) : "—"}</td>
         <td>${conhecidas.has(t.regiao) ? pillNovas(t) : pill("neutro", "Sem relatório", "arquivo")}</td>`}
-        <td><button class="btn-icone" data-acao="abrir-es" data-tid="${esc(t.tid)}" aria-expanded="${aberto}" aria-label="Ver peças">${icone(aberto ? "cima" : "baixo")}</button></td>
+        <td>${t.novasLinhas.length ? `<button class="btn pequeno" data-acao="cobrar" data-aba="novas" data-tid="${esc(t.tid)}">${icone("mensagem")}Cobrar novas</button>` : ""}<button class="btn-icone" data-acao="abrir-es" data-tid="${esc(t.tid)}" aria-expanded="${aberto}" aria-label="Ver peças">${icone(aberto ? "cima" : "baixo")}</button></td>
       </tr>${aberto ? `<tr class="detalhe"><td colspan="${5 + tipos.length + (s.bases ? 0 : 3)}">${tabelaLinhasNovas(t)}</td></tr>` : ""}`;
     }).join("")}</tbody></table></div>` : vazio("filtro", "Ninguém com estes filtros", "Mude os filtros acima.");
 

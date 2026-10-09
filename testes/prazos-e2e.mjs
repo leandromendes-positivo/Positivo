@@ -85,7 +85,7 @@ try {
       {tipo:'novas',regiao:'PR',nome:'PR Novas.csv',avisos:[],hash:'prazo-n',itens:E.novas.filter(n=>n.regiao==='PR').map(n=>({...n,tecChave:E.cadastro[n.tid].chave,tecNome:E.cadastro[n.tid].nome,qtd:n===nova?n.qtd-3:n.qtd}))}];
     for(const a of arquivos)a.linhasLidas=a.itens.length;
     await importarLote(arquivos);await carregarTudo();
-    await classificarSaida(E.movimentos[0].k,'devolucao');
+    await classificarSaida(E.movimentos[0].k,'devolucao',null,{condicao:'nova'});
     const antes={prazoUsadas:E.devolucoes[0].prazo,prazoNovas:E.movimentos[0].prazo};
     await salvarTecnico(ids.Ana,{prazoUsadas:30,prazoNovas:3});
     const D=derivar(),r=calcularDesempenho({tipo:'novas',periodo:'mes'}),u=calcularDesempenho({tipo:'usadas',periodo:'mes'});

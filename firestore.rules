@@ -68,7 +68,8 @@ service cloud.firestore {
     match /contatos/{id} {
       allow read: if autorizado();
       allow create: if autorizado() && request.resource.data.keys().hasAll(['tid','canal','previsao','obs','pecas','itens','uid','email','em'])
-        && request.resource.data.keys().hasOnly(['tid','canal','previsao','obs','pecas','itens','uid','email','em'])
+        && request.resource.data.keys().hasOnly(['tid','canal','previsao','obs','pecas','itens','uid','email','em','tipo'])
+        && (!('tipo' in request.resource.data) || request.resource.data.tipo in ['novas','usadas'])
         && autor(request.resource.data) && request.resource.data.em == request.time
         && request.resource.data.tid is string && request.resource.data.tid.size() <= 200
         && request.resource.data.canal in ['whatsapp','ligacao','email','pessoalmente','outro']

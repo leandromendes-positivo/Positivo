@@ -108,7 +108,7 @@ async function salvarFormulario(form) {
 async function exportarTudo() {
   const D = derivar();
   const cob = [];
-  for (const [tid, a] of Object.entries(E.acomp)) for (const c of a.cobrancas || []) cob.push([nomeTecnico(tid), c.em, CANAIS[c.canal] || c.canal, c.pecas, c.previsao, c.obs]);
+  for (const [tid, a] of Object.entries(E.acomp)) for (const c of a.cobrancas || []) cob.push([nomeTecnico(tid), c.em, CANAIS[c.canal] || c.canal, c.pecas, c.previsao, c.obs, c.tipo === 'novas' ? 'Novas' : 'Usadas']);
   cob.sort((a, b) => comparar(b[1], a[1]));
   await exportarExcel(`controle-de-pecas-${D.hoje}.xlsx`, [
     {
@@ -128,12 +128,12 @@ async function exportarTudo() {
     },
     {
       nome: "Saídas de novas",
-      colunas: [{ titulo: "Técnico", largura: 30 }, { titulo: "UF", largura: 5 }, { titulo: "Material", largura: 14 }, { titulo: "Descrição", largura: 40 }, { titulo: "Quantidade", largura: 10, tipo: "numero" }, { titulo: "Primeira observação", largura: 18, tipo: "data" }, { titulo: "Saída observada", largura: 18, tipo: "data" }, { titulo: "Dias observados", largura: 12, tipo: "numero" }, { titulo: "Destino", largura: 24 }],
-      linhas: [...E.movimentos].sort((a,b) => comparar(b.em,a.em)).map((m) => [nomeTecnico(m.tid),m.regiao,m.mat,E.catalogo[m.mat] || '',m.qtd,m.desde,m.em,m.dias,DESTINOS_NOVAS[m.destino] || m.destino]),
+      colunas: [{ titulo: "Técnico", largura: 30 }, { titulo: "UF", largura: 5 }, { titulo: "Material", largura: 14 }, { titulo: "Descrição", largura: 40 }, { titulo: "Quantidade", largura: 10, tipo: "numero" }, { titulo: "Primeira observação", largura: 18, tipo: "data" }, { titulo: "Saída observada", largura: 18, tipo: "data" }, { titulo: "Dias observados", largura: 12, tipo: "numero" }, { titulo: "Destino", largura: 24 }, { titulo: "Condição da devolução", largura: 36 }, { titulo: "Classificado por", largura: 32 }, { titulo: "Classificado em", largura: 23 }, { titulo: "Observação da classificação", largura: 45 }],
+      linhas: [...E.movimentos].sort((a,b) => comparar(b.em,a.em)).map((m) => [nomeTecnico(m.tid),m.regiao,m.mat,E.catalogo[m.mat] || '',m.qtd,m.desde,m.em,m.dias,DESTINOS_NOVAS[m.destino] || m.destino,condicaoDevolucao(m),m.classificadoPor?.email || '',m.classificadoEm || '',m.observacaoClassificacao || '']),
     },
     {
       nome: "Cobranças",
-      colunas: [{ titulo: "Técnico", largura: 30 }, { titulo: "Quando", largura: 16, tipo: "data" }, { titulo: "Canal", largura: 14 }, { titulo: "Peças", largura: 7, tipo: "numero" }, { titulo: "Previsão informada", largura: 12, tipo: "data" }, { titulo: "Observação", largura: 40 }],
+      colunas: [{ titulo: "Técnico", largura: 30 }, { titulo: "Quando", largura: 16, tipo: "data" }, { titulo: "Canal", largura: 14 }, { titulo: "Peças", largura: 7, tipo: "numero" }, { titulo: "Previsão informada", largura: 12, tipo: "data" }, { titulo: "Observação", largura: 40 }, { titulo: "Tipo de peça", largura: 14 }],
       linhas: cob,
     },
   ]);

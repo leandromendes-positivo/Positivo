@@ -27,16 +27,18 @@ function ligarAtalhos(el) {
 function modalCobrar(tid, aba = "cobrar", itensEscolhidos = null, canalInicial = 'whatsapp') {
   const D = derivar(), t = D.mapa.get(tid);
   if (!t) return;
-  let itens = itensEscolhidos || itensDaAba(t, aba, D.hoje);
-  if (!itens.length) itens = t.itensCobrar.length ? t.itensCobrar : t.usadas;
+  const tipo = aba === 'novas' ? 'novas' : 'usadas';
+  let itens = itensEscolhidos || (tipo === 'novas' ? linhasConsulta(D).filter(i => i.tipo === 'novas' && i.origem === 'atual' && i.tid === tid) : itensDaAba(t, aba, D.hoje));
+  if (!itens.length && tipo === 'usadas') itens = t.itensCobrar.length ? t.itensCobrar : t.usadas;
+  if (!itens.length) { toast('Não há peças para esta cobrança.'); return; }
   const lembrete = aba === "vencendo", qtd = somar(itens, i => i.qtd);
-  const email = montarEmailCobranca(t, itens, lembrete);
+  const email = montarEmailCobranca(t, itens, lembrete, tipo);
   let telefone = t.telefone, emailCadastrado = email.destinatario;
   const m = abrirModal({
     titulo: `${lembrete ? "Lembrar" : "Cobrar"} ${t.nome}`,
-    subtitulo: `${plural(qtd, "peça", "peças")} · mais antiga com ${Math.max(...itens.map(i => i.dias))} dias`,
+    subtitulo: `${plural(qtd, "peça", "peças")} ${qtd === 1 ? (tipo === "novas" ? "nova" : "usada") : tipo} · mais antiga com ${Math.max(...itens.map(i => i.dias))} dias`,
     largura: 'larga', aoFechar: () => aoMudar.delete(atualizarContato),
-    corpo: `<div class="cobrar-resumo"><div><span>Peças nesta cobrança</span><strong>${fmtNum(qtd)}</strong></div><div><span>Prazo do técnico</span><strong>${prazoDoTecnico(tid)} <small>dias</small></strong></div><div class="cobrar-contato"><span>Contato do técnico</span><small data-contato-resumo></small>${podeAdministrar() ? `<button class="link" type="button" data-acao="editar-tecnico" data-tid="${esc(tid)}">Editar contato</button>` : ''}</div></div>
+    corpo: `<div class="cobrar-resumo"><div><span>Peças nesta cobrança</span><strong>${fmtNum(qtd)}</strong></div><div><span>Prazo do técnico</span><strong>${prazoDoTecnico(tid, tipo)} <small>dias</small></strong></div><div class="cobrar-contato"><span>Contato do técnico</span><small data-contato-resumo></small>${podeAdministrar() ? `<button class="link" type="button" data-acao="editar-tecnico" data-tid="${esc(tid)}">Editar contato</button>` : ''}</div></div>
     <div class="cobrar-grade">
       <section class="cobrar-msg" aria-label="Preparar mensagem">
         <div class="cobrar-etapa"><span>01</span><div><h3>Preparar mensagem</h3><p>Confira o conteúdo e escolha o canal.</p></div></div>
@@ -72,16 +74,15 @@ function modalCobrar(tid, aba = "cobrar", itensEscolhidos = null, canalInicial =
         <div class="cobrar-etapa"><span>02</span><div><h3>Registrar a cobrança</h3><p>Depois de enviar, registre o contato.</p></div></div>
         <p class="nota">Abrir a mensagem não confirma o envio. O histórico só muda ao clicar em Registrar cobrança.</p>
         <label class="campo"><span>Como você cobrou</span><select name="canal">${Object.entries(CANAIS).map(([v,r]) => `<option value="${v}">${r}</option>`).join('')}</select></label>
-        <label class="campo"><span>Previsão informada pelo técnico</span><input type="date" name="previsao" id="cob-prev" min="${somaDias(D.hoje, -30)}"></label>
-        ${atalhosData('#cob-prev')}
+        ${tipo === 'usadas' ? `<label class="campo"><span>Previsão informada pelo técnico</span><input type="date" name="previsao" id="cob-prev" min="${somaDias(D.hoje, -30)}"></label>${atalhosData('#cob-prev')}` : ''}
         <label class="campo"><span>Observação</span><input type="text" name="obs" maxlength="300" placeholder="Ex.: vai deixar na base na sexta"></label>
-        <small class="nota">A previsão vale para ${plural(qtd, 'peça', 'peças')} desta cobrança. Até a data, elas saem da lista de cobrança.</small>
+        <small class="nota">${tipo === 'novas' ? 'Anote a resposta e eventual RMDF na observação. Após a saída na planilha, um administrador poderá confirmar a condição em Devoluções de novas.' : `A previsão vale para ${plural(qtd, 'peça', 'peças')} desta cobrança. Até a data, elas saem da lista de cobrança.`}</small>
       </form>
     </div>`,
     rodape: `<button class="btn" data-fechar>Fechar</button><button class="btn prim" data-registrar>${icone('ok')}Registrar cobrança</button>`,
   });
   const el = m.el, ta = el.querySelector('#cob-texto'), link = el.querySelector('#cob-link');
-  ta.value = montarMensagem(t, itens, lembrete ? E.config.msgLembrete : E.config.msgCobranca);
+  ta.value = montarMensagem(t, itens, tipo === 'novas' ? MENSAGEM_NOVAS : lembrete ? E.config.msgLembrete : E.config.msgCobranca, tipo);
   const fEmail = el.querySelector('#cob-painel-email'), para = el.querySelector('#cob-email-para'), assunto = el.querySelector('#cob-email-assunto'), corpo = el.querySelector('#cob-email-corpo'), editor = el.querySelector('#cob-email-editor'), linkEmail = el.querySelector('#cob-email-link');
   para.value = email.destinatario; assunto.value = email.assunto; corpo.value = email.corpo;
   try { const preferido = localStorage.getItem('cp-outlook-editor-v2'); if (Object.hasOwn(EDITORES_EMAIL, preferido)) editor.value = preferido; } catch (_) { /* preferência só nesta janela */ }
@@ -213,7 +214,7 @@ function modalCobrar(tid, aba = "cobrar", itensEscolhidos = null, canalInicial =
     if (btn.disabled || !form.reportValidity()) return;
     const f = new FormData(form); btn.disabled = true;
     try {
-      await registrarCobranca(tid, { canal: f.get('canal'), previsao: f.get('previsao') || '', obs: limpar(f.get('obs')), itens });
+      await registrarCobranca(tid, { canal: f.get('canal'), previsao: f.get('previsao') || '', obs: limpar(f.get('obs')), itens, tipo });
       m.fechar(); toast(`Cobrança de ${t.nome} registrada${f.get('previsao') ? `, previsão ${fmtPrevisao(f.get('previsao'))}` : ''}.`);
     } catch (e) { btn.disabled = false; toast(erroAmigavel(e).message, 'erro'); }
   };

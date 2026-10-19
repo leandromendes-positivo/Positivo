@@ -20,13 +20,15 @@ try {
  await form.locator('[name="matricula"]').fill('TESTE-A');
  await form.locator('[name="regiao"]').selectOption('PR');
  await form.locator('[name="area"]').selectOption('tecnico');
- await form.locator('[name="localidade"]').selectOption('interior');
+ assert.equal(await form.locator('[name="localidade"]').inputValue(),'');
+ assert.equal(await form.locator('[name="localidade"]').evaluate(el=>el.required),false);
  await form.locator('[name="ciclo"]').fill('2027');
  // Native value + input also works with the shared calendar's hidden input.
  await page.evaluate(()=>{for(const [n,v] of [['inicio0','2027-01-10'],['fim0','2027-01-29']]){const el=document.querySelector(`.ferias-form [name="${n}"]`);el.value=v;el.dispatchEvent(new Event('input',{bubbles:true}));}});
  await form.locator('[name="vendidos"]').fill('10');
  await page.click('[data-ferias-salvar]');
  await page.waitForFunction(()=>E.ferias.length===1 && document.querySelector('.ferias-lista')?.textContent.includes('20 dias programados'));
+ assert.equal(await page.evaluate(()=>E.ferias.find(f=>f.matricula==='TESTE-A').localidade),'','saves technician without locality');
  assert.match(await page.locator('.ferias-lista').innerText(),/20 dias programados/);
  assert.match(await page.locator('.ferias-lista').innerText(),/30\/01\/2027/);
  const resultados=await page.evaluate(async()=>{
@@ -62,7 +64,7 @@ try {
  assert.deepEqual(await page.evaluate(()=>{const f=E.ferias.find(f=>f.matricula==='TESTE-B');return [f.regiao,f.area,f.localidade,f.periodos[0].inicio,f.periodos[0].retorno];}),['PR','administrativo','','2027-02-01','2027-02-17']);
  const perfisInvalidos=await page.evaluate(()=>{
   const base=E.ferias.find(f=>f.matricula==='TESTE-A');let rejeitados=0;
-  for(const f of [{...base,area:'outro'},{...base,regiao:'SP'},{...base,localidade:''},{...base,area:'administrativo',localidade:'interior'}])try{validarFerias(f);}catch{rejeitados++;}
+  for(const f of [{...base,area:'outro'},{...base,regiao:'SP'},{...base,localidade:'outra'},{...base,area:'administrativo',localidade:'interior'}])try{validarFerias(f);}catch{rejeitados++;}
   return rejeitados;
  });assert.equal(perfisInvalidos,4);
  // Add a person before dates are known, and archive/reactivate through the screen.

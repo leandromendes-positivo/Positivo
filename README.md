@@ -379,7 +379,7 @@ Retirados e cancelados não participam. O acesso a retirados fica junto da lista
 consulta e reativação, preservando o histórico.
 
 O cadastro oferece UF **PR, SC, TO ou RS** e área **Administrativo ou Técnico**. Para
-Técnico, a localidade **Interior ou Capital** é obrigatória; Administrativo não tem
+Técnico, a localidade **Interior ou Capital** é opcional; Administrativo não tem
 localidade de técnico. Cadastros antigos continuam disponíveis sem inferir área pelo
 nome. Ao editar, selecione a classificação; a localidade já presente no texto antigo
 da região é aproveitada quando Técnico for selecionado.

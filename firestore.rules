@@ -75,7 +75,7 @@ service cloud.firestore {
         && ((!('area' in d) && !('localidade' in d))
           || ('area' in d && 'localidade' in d && d.regiao in ['PR','SC','TO','RS']
             && ((d.area == 'administrativo' && d.localidade == '')
-              || (d.area == 'tecnico' && d.localidade in ['interior','capital']))))
+              || (d.area == 'tecnico' && d.localidade in ['','interior','capital']))))
         && d.nome is string && d.nome.size() > 0 && d.nome.size() <= 120
         && d.matricula is string && d.matricula.matches('^[A-Za-z0-9_-]{1,40}$')
         && d.regiao is string && d.regiao.size() <= 40

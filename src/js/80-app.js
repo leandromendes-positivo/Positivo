@@ -116,12 +116,12 @@ function atualizarMoldura() {
   Notificacoes.atualizar();
   atualizarNavegacaoSecoes();
   const D = E.status === "pronto" ? derivar() : null;
-  document.getElementById("entrada-topo").closest("label").hidden = !podeAdministrar();
+  document.getElementById("entrada-topo").closest("label").hidden = !podeAdministrar() || UI.pagina === "ferias";
   const p = PAGINAS[UI.pagina];
   const titulo = document.getElementById("titulo");
   titulo.closest('.topo').dataset.pagina = UI.pagina;
   const grupo = document.getElementById('topo-grupo');
-  grupo.textContent = p.admin ? 'Administração' : UI.pagina === 'conta' ? 'Minha conta' : ['consulta', 'inventario', 'relatorios'].includes(UI.pagina) ? 'Análises e consultas' : ['estoque', 'tecnicos'].includes(UI.pagina) ? 'Recursos' : 'Monitoramento';
+  grupo.textContent = UI.pagina === 'ferias' ? 'Pessoas & descanso' : p.admin ? 'Administração' : UI.pagina === 'conta' ? 'Minha conta' : ['consulta', 'inventario', 'relatorios'].includes(UI.pagina) ? 'Análises e consultas' : ['estoque', 'tecnicos'].includes(UI.pagina) ? 'Recursos' : 'Monitoramento';
   const marca = document.getElementById('topo-icone'), simbolo = UI.tid ? 'pessoa' : p.icone;
   if (marca.dataset.icone !== simbolo) { marca.innerHTML = icone(simbolo); marca.dataset.icone = simbolo; }
   const tituloTexto = UI.tid && D && D.mapa.get(UI.tid) ? "Ficha do técnico" : p.titulo;
@@ -494,11 +494,12 @@ function ligarEventos() {
 
 function montarMoldura() {
   document.getElementById("nav").innerHTML = Object.entries(PAGINAS).filter(([,p])=>!p.admin || podeAdministrar()).map(([id, p]) =>
-    `${id === "painel" ? '<span class="nav-grupo">Monitoramento</span>' : id === "estoque" ? '<span class="nav-grupo">Recursos</span>' : id === "importar" ? '<span class="nav-grupo">Administração</span>' : ""}<a href="#${id}" data-nav="${id}" data-acao="ir" data-pagina="${id}">${icone(p.icone)}<span>${esc(p.nav || p.titulo)}</span>${id === "cobrancas" ? `<b class="nav-contador" id="contador-cobrancas" hidden></b>` : ""}</a>`
+    `${id === "painel" ? '<span class="nav-grupo">Monitoramento</span>' : id === "estoque" ? '<span class="nav-grupo">Recursos</span>' : id === "ferias" ? '<span class="nav-grupo">Pessoas</span>' : id === "relatorios" ? '<span class="nav-grupo">Análises</span>' : id === "importar" ? '<span class="nav-grupo">Administração</span>' : ""}<a href="#${id}" data-nav="${id}" data-acao="ir" data-pagina="${id}">${icone(p.icone)}<span>${esc(p.nav || p.titulo)}</span>${id === "cobrancas" ? `<b class="nav-contador" id="contador-cobrancas" hidden></b>` : ""}</a>`
   ).join("");
 }
 
 async function iniciar() {
+  capturarCargaInicialFerias();
   MenuLateral.iniciar();
   Camadas.iniciar();
   RolagemHorizontal.iniciar();
@@ -526,6 +527,7 @@ async function iniciar() {
     } catch (_) { /* sem identidade: segue sem */ }
   }
   await carregarTudo();
+  if (E.status === "pronto") await carregarEquipeInicialFerias();
   if (!E.usadas.length && !E.novas.length && UI.pagina === "painel") renderizar(true);
 }
 

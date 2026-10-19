@@ -70,7 +70,8 @@ service cloud.firestore {
     }
     function feriasValidas(d) {
       return d.keys().hasAll(['id','nome','matricula','regiao','ciclo','status','direito','vendidos','obs','periodos','versao','atualizadoEm','atualizadoPor','evento'])
-        && d.keys().hasOnly(['id','nome','matricula','regiao','ciclo','status','direito','vendidos','obs','periodos','versao','atualizadoEm','atualizadoPor','evento'])
+        && d.keys().hasOnly(['id','nome','matricula','regiao','ciclo','status','direito','vendidos','obs','periodos','versao','atualizadoEm','atualizadoPor','evento','arquivado'])
+        && (!('arquivado' in d) || d.arquivado is bool)
         && d.nome is string && d.nome.size() > 0 && d.nome.size() <= 120
         && d.matricula is string && d.matricula.matches('^[A-Za-z0-9_-]{1,40}$')
         && d.regiao is string && d.regiao.size() <= 40
@@ -79,8 +80,8 @@ service cloud.firestore {
         && d.status in ['planejado','confirmado','cancelado']
         && d.direito is int && d.direito >= 1 && d.direito <= 60
         && d.vendidos is int && d.vendidos >= 0 && d.vendidos <= 20
-        && d.periodos is list && d.periodos.size() >= 1 && d.periodos.size() <= 3
-        && periodoFeriasValido(d.periodos[0])
+        && d.periodos is list && d.periodos.size() >= 0 && d.periodos.size() <= 3
+        && (d.periodos.size() < 1 || periodoFeriasValido(d.periodos[0]))
         && (d.periodos.size() < 2 || periodoFeriasValido(d.periodos[1]))
         && (d.periodos.size() < 3 || periodoFeriasValido(d.periodos[2]))
         && d.evento is string && d.evento.matches('^[a-zA-Z0-9-]{20,80}$')

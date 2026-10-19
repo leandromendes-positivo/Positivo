@@ -41,26 +41,55 @@ try {
   return {conflito,foraUf,semRegiao,cancelado,concorrencia,invalidas,historico:hist.length,retorno:retornoFerias(E.ferias.find(f=>f.id===b.id).periodos[0]),bissexto:diasFerias({inicio:'2028-02-07',fim:'2028-03-07'}),concluido:situacaoFerias(a,'2027-01-30')};
  });
  assert.deepEqual(resultados,{conflito:1,foraUf:0,semRegiao:0,cancelado:0,concorrencia:true,invalidas:3,historico:2,retorno:'2027-02-17',bissexto:30,concluido:'Concluído'});
- // Generate/import an actual workbook with fictitious names and inconsistent spreadsheet totals.
- const importacao=await page.evaluate(async()=>{
-  await bibliotecasExcelRelatorio();const w=new ExcelJS.Workbook(),s=w.addWorksheet('Relação');s.getCell('B3').value='Matrícula';s.getCell('C3').value='Nome';
-  s.getRow(4).values=[1,'TESTE-C','Colaborador Fictício C','','20 dias + vender 10',new Date('2027-03-01T00:00:00Z'),new Date('2027-03-20T00:00:00Z'),19,null,null,null,19,'Informar região',null,'Conferir com RH'];
-  const file=new File([await w.xlsx.writeBuffer()],'ferias-teste.xlsx');
-  const resultado=await lerPlanilhaFerias(file);await importarFerias(file);return {n:resultado.lista.length,avisos:resultado.avisos.length};
- });
- assert.equal(importacao.n,1);assert.equal(importacao.avisos,4);
- await page.click('[data-importar]');await page.waitForFunction(()=>E.ferias.length===3);
+ // Add a person before dates are known, and archive/reactivate through the screen.
+ await page.evaluate(async()=>{await salvarFerias({nome:'Colaborador Fictício C',matricula:'TESTE-C',regiao:'SC',ciclo:'2027',direito:30,vendidos:0,status:'planejado',obs:'',periodos:[]});});
+ await page.waitForFunction(()=>document.querySelectorAll('.ferias-card').length===3);
+ assert.match(await page.locator('.ferias-lista').innerText(),/Sem programação/);
+ assert.equal(await page.locator('[data-ferias-arquivo]').count(),0);
+ assert.equal(await page.locator('[data-ferias="exportar"]').count(),0);
+ const idC=await page.evaluate(()=>E.ferias.find(f=>f.matricula==='TESTE-C').id);
+ await page.locator(`[data-ferias="retirar"][data-id="${idC}"]`).click();
+ await page.click('[data-ok]');
+ await page.waitForFunction(()=>E.ferias.find(f=>f.matricula==='TESTE-C').arquivado===true);
+ await page.waitForFunction(()=>document.querySelectorAll('.ferias-card').length===2);
+ await page.click('[data-ferias="arquivados"]');
+ await page.waitForFunction(()=>document.querySelectorAll('.ferias-card').length===1);
+ assert.match(await page.locator('.ferias-lista').innerText(),/Colaborador Fictício C/);
+ await page.locator(`[data-ferias="retirar"][data-id="${idC}"]`).click();await page.click('[data-ok]');
+ await page.waitForFunction(()=>E.ferias.find(f=>f.matricula==='TESTE-C').arquivado===false);
+ await page.click('[data-ferias="arquivados"]');
+ await page.waitForFunction(()=>document.querySelectorAll('.ferias-card').length===3);
+ await page.click('[data-ferias="mes"][data-mes="02"]');
+ await page.waitForFunction(()=>document.querySelectorAll('.ferias-card').length===1);
+ assert.match(await page.locator('.ferias-lista').innerText(),/Colaborador Fictício B/);
+ await page.click('[data-ferias="limpar"]');
  await page.evaluate(()=>carregarTudo());await page.waitForFunction(()=>E.status==='pronto');
  assert.equal(await page.evaluate(()=>E.ferias.length),3);
- const [download]=await Promise.all([page.waitForEvent('download'),page.click('[data-ferias="exportar"]')]);assert.match(download.suggestedFilename(),/^ferias-.*\.xlsx$/);
  for(const theme of ['light','dark']){
   await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
   await page.setViewportSize({width:320,height:844});
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'sem rolagem horizontal');
  }
+ // Initial roster is encrypted; repeating its load must preserve later edits and withdrawals.
+ const carga=await page.evaluate(async()=>{
+  const lista=Array.from({length:26},(_,i)=>({nome:`Pessoa de teste ${i}`,matricula:`CARGA-${i}`,regiao:'SC',ciclo:'2027',direito:30,vendidos:0,status:'planejado',obs:'',periodos:[]}));
+  const key=crypto.getRandomValues(new Uint8Array(32)),iv=crypto.getRandomValues(new Uint8Array(12));
+  const b64=x=>btoa(String.fromCharCode(...x)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  const k=await crypto.subtle.importKey('raw',key,'AES-GCM',false,['encrypt']);
+  const dados=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv},k,new TextEncoder().encode(JSON.stringify(lista))));
+  const pacote={iv:b64(iv),dados:b64(dados)};
+  let rejeitou=false;try{await decodificarEquipeInicialFerias('A'.repeat(43),pacote);}catch{rejeitou=true;}
+  const decodificada=await decodificarEquipeInicialFerias(b64(key),pacote);
+  const primeira=await cadastrarEquipeInicialFerias(decodificada);
+  const f=E.ferias.find(f=>f.matricula==='CARGA-0');await salvarFerias({...f,obs:'Conservar edição',arquivado:true},f.versao);
+  const segunda=await cadastrarEquipeInicialFerias(decodificada);
+  const preservado=E.ferias.find(x=>x.id===f.id);
+  return {primeira,segunda,rejeitou,preservado:preservado.arquivado&&preservado.obs==='Conservar edição'};
+ });
+ assert.deepEqual(carga,{primeira:{adicionados:26,preservados:0},segunda:{adicionados:0,preservados:26},rejeitou:true,preservado:true});
  // A standard user can consult but cannot edit, even by calling the save function.
  const permissao=await page.evaluate(async()=>{Acesso.modo='firebase';Acesso.perfil={ativo:true,perfil:'usuario'};try{await salvarFerias(E.ferias[0]);return false;}catch{return true;}});assert.equal(permissao,true);
  await page.evaluate(()=>renderizar(true));assert.equal(await page.locator('[data-ferias="novo"]').count(),0);
  assert.deepEqual(erros,[]);
- console.log('PASSOU: cadastro pela tela, cálculos inclusivos e ano bissexto, retorno ajustado, conflitos por UF, cancelamento, validação, concorrência, histórico, importação Excel, exportação, recarga, temas, celular e restrição de edição.');
+ console.log('PASSOU: cadastro pela tela, cálculos inclusivos e ano bissexto, retorno ajustado, conflitos por UF, cancelamento, validação, concorrência, histórico, cadastro sem datas, retirada e reativação, mapa mensal, recarga, temas, celular, carga cifrada repetível e restrição de edição.');
 } finally {await browser.close();}

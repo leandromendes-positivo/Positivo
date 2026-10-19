@@ -340,31 +340,34 @@ Até **10 peças**, inclusive zero, está dentro do limite padrão. **11 peças 
 
 ### Férias da equipe
 
-O menu **Férias da equipe** reúne planejamentos por matrícula e ciclo de referência,
-com até três períodos, dias corridos, dias vendidos, saldo a programar e retorno.
-Administradores cadastram, importam e editam; usuários autorizados consultam e exportam.
-O cadastro de férias também aceita colaboradores sem estoque ou sem cadastro de peças.
-O histórico preserva versões, datas anteriores e o responsável por cada alteração;
-uma edição desatualizada é recusada. Para desconsiderar férias, altere a confirmação
-para **Cancelado**, preservando o registro e seu histórico.
+O menu **Férias da equipe** tem identidade visual própria: mapa anual de descanso,
+indicadores de pessoas e cartões individuais. Todo o cadastro é feito no sistema,
+sem importar ou manter planilhas. Use **Adicionar colaborador** para incluir uma
+pessoa, mesmo sem datas definidas; depois, **Editar colaborador** permite programar
+até três períodos, dias vendidos, observações, direito e retorno ajustado à escala.
+Administradores alteram os cadastros; usuários autorizados consultam.
 
-Em **Importar Excel**, selecione a relação `.xlsx` com Matrícula/Nome nas colunas B/C,
-Região em D, opção em E, períodos em F/G e I/J e observações em O. Confira a prévia e
-confirme a importação. A posição do cabeçalho é reconhecida automaticamente nas primeiras
-20 linhas. O ciclo inicial é o ano da primeira saída, ajustável no cadastro; não representa
-uma inferência do período aquisitivo. Registros da mesma matrícula e ciclo já existentes
-são preservados. Totais são recalculados pelas datas; notas e divergências da origem ficam
-sinalizadas para conferência. A planilha e os dados pessoais não são incluídos no site público.
+**Retirar da lista** arquiva o cadastro, remove suas ausências dos alertas e preserva
+o histórico. Em **Colaboradores retirados**, é possível consultar ou reativar a pessoa.
+Não há exclusão definitiva de auditoria. Cancelar um período planejado e retirar um
+colaborador da equipe são operações distintas. O histórico registra quem alterou as
+informações; alterações simultâneas desatualizadas são recusadas.
 
-Conflitos são alertas de cobertura entre colaboradores da mesma UF, incluindo capital e
-interior, quando os períodos têm ao menos um dia em comum. Cancelados não participam;
-região ausente exige revisão e não equivale a ausência de conflito. Filtros não escondem
-conflitos com pessoas fora do recorte. O retorno padrão é o dia seguinte ao fim, com ajuste
-manual para escala, folgas e feriados. O painel não determina aprovação do RH nem valida
-todas as exigências trabalhistas. O Excel exportado respeita os filtros e inclui todos os
-períodos dos planejamentos selecionados.
+O mapa anual mostra as ausências de toda a equipe ativa. Clique em um mês para filtrar.
+Conflitos são alertas entre colaboradores da mesma UF, incluindo capital e interior,
+quando as férias têm ao menos um dia em comum. Regiões ausentes exigem conferência.
+Dias incluem início e fim. Retorno padrão é o dia seguinte, ajustável para escala,
+folgas e feriados. O painel não determina aprovação do RH nem todas as exigências legais.
 
-Regressão local, com dados fictícios e sem acessar Firebase de produção:
+A carga inicial da equipe foi preparada em um arquivo cifrado. Seu link reservado
+contém a chave somente no fragmento da URL, sem enviá-la ao servidor. Ao abrir esse
+link no painel e entrar como administrador, o sistema cadastra a equipe no Firestore.
+Cadastros existentes, suas edições e retiradas são preservados. A carga pode ser repetida
+se houver falha de conexão. A chave não está no código nem no arquivo cifrado. Guarde
+o link em local privado; não o publique. Sem esse link, a rotina normal permanece apenas
+com o cadastro manual pelo sistema. O uso diário não depende da carga inicial.
+
+Regressão local com dados fictícios:
 
 ```bash
 python3 build.py

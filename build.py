@@ -94,6 +94,8 @@ def main() -> int:
               .replace("<!--__BOTAO_TEMA__-->", botao_tema))
     config = config_firebase()
     (DIST / "site").mkdir(parents=True, exist_ok=True)
+    for destino in (DIST, DIST / "site"):
+        shutil.copyfile(SRC / "assets" / "ferias-inicial.enc.json", destino / "ferias-inicial.enc.json")
     # Geradores carregados sob demanda, servidos pelo próprio site (sem CDN).
     for destino in (DIST / "vendor", DIST / "site" / "vendor"):
         if destino.exists():

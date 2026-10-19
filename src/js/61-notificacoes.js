@@ -22,7 +22,7 @@ function alertasOperacionais(D = derivar()) {
   const admin = podeAdministrar();
   const alertas = [];
   const adicionar = (a, fatos) => {
-    const pagina = a.destino === 'importar' ? 'importar' : a.destino === 'estoque' ? 'estoque' : 'cobrancas';
+    const pagina = a.destino === 'ferias' ? 'ferias' : a.destino === 'importar' ? 'importar' : a.destino === 'estoque' ? 'estoque' : 'cobrancas';
     if (!PAGINAS[pagina] || (PAGINAS[pagina].admin && !admin)) return;
     a.pessoal = !admin && pagina === 'cobrancas';
     a.versao = hash36(JSON.stringify(fatos.map(f => JSON.stringify(f)).sort()));
@@ -77,6 +77,22 @@ function alertasOperacionais(D = derivar()) {
       acao:estado==='confirmada'?'Conferir confirmações':'Acompanhar resposta',destino,
     },linhas.map(i=>[i.k,i.qtd,i.previsao,i.agendadoEm,i.contato?.id,estado==='confirmada'?'':D.hoje]));
   }
+  const agendaFerias = agendaEquipeFerias(D.hoje);
+  const proximasFerias = agendaFerias.proximas.filter(p => diffDias(D.hoje,p.inicio) <= 30);
+  const marcoFerias = p => { const dias = diffDias(D.hoje,p.inicio); return dias <= 1 ? 1 : dias <= 7 ? 7 : 30; };
+  const detalheFerias = p => `${nomeBonito(p.registro.nome)} · ${ufFerias(p.registro.regiao) || 'UF não informada'} · ${perfilFerias(p.registro)} · saída ${fmtData(p.inicio)} · retorno ${fmtData(retornoFerias(p))}`;
+  if (proximasFerias.length) adicionar({
+    id: 'ferias_proximas', nivel: 'atencao', icone: 'calendario', titulo: 'Férias se aproximando',
+    texto: `${plural(proximasFerias.length, 'colaborador sai', 'colaboradores saem')} de férias nos próximos 30 dias. Próxima saída: ${nomeBonito(proximasFerias[0].registro.nome)}, ${diffDias(D.hoje,proximasFerias[0].inicio) === 1 ? 'amanhã' : `em ${diffDias(D.hoje,proximasFerias[0].inicio)} dias`}.`,
+    detalhes: proximasFerias.map(p => `${detalheFerias(p)} · em ${diffDias(D.hoje,p.inicio)} dia(s)`),
+    acao: 'Ver próximas saídas', destino: 'ferias',
+    orientacao: 'Aviso com 30 dias de antecedência; reforços em 7 e 1 dia. Confira a cobertura antes da saída.',
+  }, proximasFerias.map(p => [p.registro.id,p.indice,p.registro.nome,p.registro.regiao,perfilFerias(p.registro),p.inicio,p.fim,retornoFerias(p),marcoFerias(p)]));
+  if (agendaFerias.iniciando.length) adicionar({
+    id: 'ferias_hoje', nivel: 'atencao', icone: 'calendario', titulo: 'Férias começam hoje',
+    texto: `${plural(agendaFerias.iniciando.length, 'colaborador inicia', 'colaboradores iniciam')} férias hoje: ${agendaFerias.iniciando.slice(0,3).map(p=>nomeBonito(p.registro.nome)).join(', ')}${agendaFerias.iniciando.length>3?' e outros':''}. Confira a cobertura e as datas de retorno.`,
+    detalhes: agendaFerias.iniciando.map(detalheFerias), acao: 'Ver quem está de férias', destino: 'ferias',
+  }, agendaFerias.iniciando.map(p => [p.registro.id,p.indice,p.registro.nome,p.registro.regiao,perfilFerias(p.registro),p.inicio,p.fim,retornoFerias(p)]));
   // Qualidade da base primeiro: não apresentar saldos antigos como confirmação de atraso.
   return alertas;
 }
@@ -84,7 +100,7 @@ function alertasOperacionais(D = derivar()) {
 const Notificacoes = (() => {
   let chave = '', lidos = {}, lista = [], modal = null, filtro = 'todas', persistente = true;
   let recebidos = {}, recebimentoPersistente = true;
-  const ids = ['planilhas','previsoes','sem_previsao','sem_contato','estoque','respostas_pendentes','cobrancas_formais','respostas_confirmadas'];
+  const ids = ['planilhas','previsoes','sem_previsao','sem_contato','estoque','respostas_pendentes','cobrancas_formais','respostas_confirmadas','ferias_proximas','ferias_hoje'];
   const autorizado = () => E.status === 'pronto' && (Acesso.modo !== 'firebase' || Boolean(Acesso.usuario?.uid && Acesso.perfil?.ativo));
   const chaveConta = () => `cp-notificacoes-v1-${hash36(`${Acesso.projeto || configFirebase()?.projectId || Acesso.modo}:${Acesso.usuario?.uid || E.usuario.id || 'local'}`)}`;
   const chaveRecebimentos = () => chave.replace('cp-notificacoes-v1-', 'cp-notificacoes-recebidas-v1-');
@@ -169,7 +185,7 @@ const Notificacoes = (() => {
     if (!naoLidas.length && document.activeElement === todasLidas) el.querySelector('[data-notif-filtro="todas"]').focus({preventScroll:true});
     todasLidas.disabled = !naoLidas.length;
     el.querySelectorAll('[data-notif-filtro]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.notifFiltro === filtro)));
-    el.querySelector('[data-notif-escopo]').textContent = podeAdministrar() ? 'Administrador · todos os alertas da operação' : 'Suas cobranças e agendamentos · estoque das áreas permitidas';
+    el.querySelector('[data-notif-escopo]').textContent = podeAdministrar() ? 'Administrador · todos os alertas da operação' : 'Suas cobranças e agendamentos · estoque e férias da equipe';
     el.querySelector('[data-notif-local]').textContent = persistente && recebimentoPersistente ? 'Recebimento e leitura são salvos para sua conta neste navegador. Horário de Brasília. Marcar como lido não resolve a pendência.' : 'O navegador não permitiu salvar todos os registros de recebimento e leitura. Eles serão mantidos apenas enquanto esta página estiver aberta. Horário de Brasília.';
     const area = el.querySelector('[data-notif-lista]');
     const html = visiveis.map(a => `<article class="notif-item ${lida(a) ? 'lida' : 'nao-lida'}" data-notif-id="${a.id}">
@@ -193,6 +209,7 @@ const Notificacoes = (() => {
   function abrirDestino(a) {
     UI.cob.somenteMeus = Boolean(a.pessoal);
     if (a.destino === 'importar') { if (podeAdministrar()) irPara('importar'); }
+    else if (a.destino === 'ferias') { Object.assign(UIferias,{busca:'',uf:'',ano:'',situacao:'',mes:'',arquivados:false}); irPara('ferias'); }
     else if (a.destino === 'estoque') { Object.assign(UI.es, {regiao:'',status:'acima',busca:''}); irPara('estoque'); }
     else if(a.destino.startsWith('respostas_')){Object.assign(UI.cob,{aba:'respostas',tipo:'todas',resposta:a.destino.slice(10),foco:'',regiao:'',busca:''});irPara('cobrancas');}
     else {

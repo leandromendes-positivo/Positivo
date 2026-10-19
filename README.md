@@ -371,3 +371,27 @@ python3 build.py
 # Com o servidor de dist ativo na porta 8000:
 PW_PATH=/workspace/positivo-tools/node_modules/playwright CHROMIUM=/usr/bin/chromium node testes/ferias-e2e.mjs
 ```
+
+No topo de Férias, **Em férias agora** mostra nomes e retornos; **Próximos a sair de
+férias** apresenta a próxima saída de cada colaborador em ordem cronológica. Esses
+quadros consultam a equipe ativa inteira e não são escondidos pelos filtros da lista.
+Retirados e cancelados não participam. O acesso a retirados fica junto da lista, para
+consulta e reativação, preservando o histórico.
+
+O cadastro oferece UF **PR, SC, TO ou RS** e área **Administrativo ou Técnico**. Para
+Técnico, a localidade **Interior ou Capital** é obrigatória; Administrativo não tem
+localidade de técnico. Cadastros antigos continuam disponíveis sem inferir área pelo
+nome. Ao editar, selecione a classificação; a localidade já presente no texto antigo
+da região é aproveitada quando Técnico for selecionado.
+
+A central do sino avisa sobre saídas nos próximos **30 dias**, com novos avisos nos
+marcos de **7 dias**, **1 dia** e **no dia da saída**. Marcar como lido permanece válido
+dentro do mesmo marco; uma mudança de datas ou um novo marco gera nova atualização.
+Os avisos levam à página de Férias e ficam disponíveis aos usuários autorizados que
+podem consultá-la. O acompanhamento recalcula na virada do dia com o painel aberto.
+
+Teste de férias e notificações, também sem acesso a produção:
+
+```bash
+PW_PATH=/workspace/positivo-tools/node_modules/playwright CHROMIUM=/usr/bin/chromium node testes/ferias-notificacoes-e2e.mjs
+```

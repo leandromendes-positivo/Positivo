@@ -1,0 +1,42 @@
+# Operação temporária de cadastro inicial. Exporta somente uma chave PÚBLICA.
+name: Preparar cadastro inicial de férias
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/preparar-cadastro-ferias.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  preparar:
+    runs-on: ubuntu-latest
+    environment: github-pages
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: main
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+      - name: Exportar somente a chave pública para proteger a carga
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          node --input-type=module <<'JS'
+          import {createPublicKey} from 'node:crypto';
+          import {writeFileSync} from 'node:fs';
+          const conta=JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+          if(conta.project_id!=='controle-pecas-positivo')throw new Error('Projeto incorreto.');
+          const publica=createPublicKey(conta.private_key).export({type:'spki',format:'pem'});
+          writeFileSync('seguranca/cadastro-ferias-publica.pem',publica);
+          JS
+      - name: Salvar chave pública sem expor credenciais ou dados de colaboradores
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add seguranca/cadastro-ferias-publica.pem
+          if ! git diff --cached --quiet; then
+            git commit -m 'Prepara chave pública para cadastro privado de férias'
+            git push origin HEAD:main
+          fi

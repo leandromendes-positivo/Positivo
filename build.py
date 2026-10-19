@@ -62,6 +62,8 @@ def main() -> int:
     for nome, marcador in (("positivo-claro.png", "/*__LOGO_CLARA__*/"), ("positivo-escuro.png", "/*__LOGO_ESCURA__*/")):
         imagem = base64.b64encode((SRC / "assets" / nome).read_bytes()).decode("ascii")
         css = css.replace(marcador, "data:image/png;base64," + imagem)
+    calendario = base64.b64encode((SRC / "assets" / "ferias-calendario.svg").read_bytes()).decode("ascii")
+    css = css.replace("/*__FERIAS_CALENDARIO__*/", "data:image/svg+xml;base64," + calendario)
     tema = (SRC / "tema.js").read_text(encoding="utf-8")
     js = "\n".join(p.read_text(encoding="utf-8") for p in sorted((SRC / "js").glob("*.js")))
     for extensao, mime, marcador in (("webm", "video/webm", "WEBM"), ("mp4", "video/mp4", "MP4"), ("jpg", "image/jpeg", "POSTER")):
@@ -94,8 +96,6 @@ def main() -> int:
               .replace("<!--__BOTAO_TEMA__-->", botao_tema))
     config = config_firebase()
     (DIST / "site").mkdir(parents=True, exist_ok=True)
-    for destino in (DIST, DIST / "site"):
-        shutil.copyfile(SRC / "assets" / "ferias-inicial.enc.json", destino / "ferias-inicial.enc.json")
     # Geradores carregados sob demanda, servidos pelo próprio site (sem CDN).
     for destino in (DIST / "vendor", DIST / "site" / "vendor"):
         if destino.exists():

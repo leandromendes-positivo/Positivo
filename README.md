@@ -340,7 +340,7 @@ Até **10 peças**, inclusive zero, está dentro do limite padrão. **11 peças 
 
 ### Férias da equipe
 
-O menu **Férias da equipe** tem identidade visual própria: mapa anual de descanso,
+O menu **Férias da equipe** tem cabeçalho com calendário e programação anual,
 indicadores de pessoas e cartões individuais. Todo o cadastro é feito no sistema,
 sem importar ou manter planilhas. Use **Adicionar colaborador** para incluir uma
 pessoa, mesmo sem datas definidas; depois, **Editar colaborador** permite programar
@@ -359,13 +359,10 @@ quando as férias têm ao menos um dia em comum. Regiões ausentes exigem confer
 Dias incluem início e fim. Retorno padrão é o dia seguinte, ajustável para escala,
 folgas e feriados. O painel não determina aprovação do RH nem todas as exigências legais.
 
-A carga inicial da equipe foi preparada em um arquivo cifrado. Seu link reservado
-contém a chave somente no fragmento da URL, sem enviá-la ao servidor. Ao abrir esse
-link no painel e entrar como administrador, o sistema cadastra a equipe no Firestore.
-Cadastros existentes, suas edições e retiradas são preservados. A carga pode ser repetida
-se houver falha de conexão. A chave não está no código nem no arquivo cifrado. Guarde
-o link em local privado; não o publique. Sem esse link, a rotina normal permanece apenas
-com o cadastro manual pelo sistema. O uso diário não depende da carga inicial.
+Os dados iniciais foram extraídos uma única vez da relação enviada e são cadastrados
+no Firestore pela rotina administrativa de implantação, preservando registros existentes.
+O uso do sistema não depende de planilha, arquivo de importação ou link especial.
+Dados pessoais não ficam embutidos no HTML ou nos arquivos públicos do site.
 
 Regressão local com dados fictícios:
 

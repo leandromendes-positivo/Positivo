@@ -70,26 +70,9 @@ try {
   await page.setViewportSize({width:320,height:844});
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'sem rolagem horizontal');
  }
- // Initial roster is encrypted; repeating its load must preserve later edits and withdrawals.
- const carga=await page.evaluate(async()=>{
-  const lista=Array.from({length:26},(_,i)=>({nome:`Pessoa de teste ${i}`,matricula:`CARGA-${i}`,regiao:'SC',ciclo:'2027',direito:30,vendidos:0,status:'planejado',obs:'',periodos:[]}));
-  const key=crypto.getRandomValues(new Uint8Array(32)),iv=crypto.getRandomValues(new Uint8Array(12));
-  const b64=x=>btoa(String.fromCharCode(...x)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
-  const k=await crypto.subtle.importKey('raw',key,'AES-GCM',false,['encrypt']);
-  const dados=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv},k,new TextEncoder().encode(JSON.stringify(lista))));
-  const pacote={iv:b64(iv),dados:b64(dados)};
-  let rejeitou=false;try{await decodificarEquipeInicialFerias('A'.repeat(43),pacote);}catch{rejeitou=true;}
-  const decodificada=await decodificarEquipeInicialFerias(b64(key),pacote);
-  const primeira=await cadastrarEquipeInicialFerias(decodificada);
-  const f=E.ferias.find(f=>f.matricula==='CARGA-0');await salvarFerias({...f,obs:'Conservar edição',arquivado:true},f.versao);
-  const segunda=await cadastrarEquipeInicialFerias(decodificada);
-  const preservado=E.ferias.find(x=>x.id===f.id);
-  return {primeira,segunda,rejeitou,preservado:preservado.arquivado&&preservado.obs==='Conservar edição'};
- });
- assert.deepEqual(carga,{primeira:{adicionados:26,preservados:0},segunda:{adicionados:0,preservados:26},rejeitou:true,preservado:true});
  // A standard user can consult but cannot edit, even by calling the save function.
  const permissao=await page.evaluate(async()=>{Acesso.modo='firebase';Acesso.perfil={ativo:true,perfil:'usuario'};try{await salvarFerias(E.ferias[0]);return false;}catch{return true;}});assert.equal(permissao,true);
  await page.evaluate(()=>renderizar(true));assert.equal(await page.locator('[data-ferias="novo"]').count(),0);
  assert.deepEqual(erros,[]);
- console.log('PASSOU: cadastro pela tela, cálculos inclusivos e ano bissexto, retorno ajustado, conflitos por UF, cancelamento, validação, concorrência, histórico, cadastro sem datas, retirada e reativação, mapa mensal, recarga, temas, celular, carga cifrada repetível e restrição de edição.');
+ console.log('PASSOU: cadastro pela tela, cálculos inclusivos e ano bissexto, retorno ajustado, conflitos por UF, cancelamento, validação, concorrência, histórico, cadastro sem datas, retirada e reativação, mapa mensal, recarga, temas, celular, restrição de edição.');
 } finally {await browser.close();}

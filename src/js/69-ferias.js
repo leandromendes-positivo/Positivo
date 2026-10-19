@@ -56,12 +56,11 @@ function renderFerias() {
   const lista = listaFeriasFiltrada(), ps = periodosFerias(), hoje = hojeISO(), ativos = E.ferias.filter(f=>!f.arquivado);
   const anos = [...new Set(E.ferias.flatMap(f => f.periodos.flatMap(p => Array.from({length:Number(p.fim.slice(0,4))-Number(p.inicio.slice(0,4))+1},(_,i)=>Number(p.inicio.slice(0,4))+i))))].sort();
   const opcoes = (valores, atual) => valores.map(([v,n]) => `<option value="${esc(v)}" ${String(atual)===String(v)?'selected':''}>${esc(n)}</option>`).join('');
-  return `<section class="ferias"><div class="ferias-abertura"><div><span class="ferias-eyebrow">PESSOAS & DESCANSO</span><h2>Tempo para recarregar.<br><em>Equipe para planejar.</em></h2><p>Uma visão das pessoas, dos dias de descanso e da cobertura de cada região.</p><div class="ferias-acoes">${podeAdministrar()?'<button class="btn prim" data-ferias="novo">'+icone('mais')+' Adicionar colaborador</button>':''}<button class="btn" data-ferias="arquivados">${UIferias.arquivados?'Ver equipe ativa':'Colaboradores retirados'}</button></div></div><div class="ferias-hero-ilustracao" aria-hidden="true"><div class="ferias-sol"></div><div class="ferias-arco"></div><div class="ferias-onda"></div><span>PAUSA<br>PLANEJADA.</span></div></div>
+  return `<section class="ferias"><div class="ferias-abertura"><div><span class="ferias-eyebrow">GESTÃO DE COLABORADORES</span><h2>Férias da equipe</h2><p>Controle de períodos, datas de retorno e cobertura por região.</p><div class="ferias-acoes">${podeAdministrar()?'<button class="btn prim" data-ferias="novo">'+icone('mais')+' Adicionar colaborador</button>':''}<button class="btn" data-ferias="arquivados">${UIferias.arquivados?'Ver equipe ativa':'Colaboradores retirados'}</button></div></div></div>
   ${Acesso.modo !== 'firebase'?'<p class="aviso">Demonstração: alterações ficam somente nesta página.</p>':''}
-  ${cargaFeriasInicial.erro?`<div class="ferias-conflito" role="alert">${esc(cargaFeriasInicial.erro)} <button class="btn" data-ferias="carga">Tentar carregar colaboradores</button></div>`:''}
-  <div class="ferias-kpis">${[['Equipe cadastrada',new Set(ativos.map(f=>f.matricula)).size,'pessoas no planejamento'],['Em descanso agora',new Set(ps.filter(p=>p.inicio<=hoje && retornoFerias(p)>hoje).map(p=>p.registro.matricula)).size,'com retorno acompanhado'],['Saídas em 30 dias',ps.filter(p=>p.inicio>hoje && p.inicio<=somaDias(hoje,30)).length,'próximos períodos'],['Atenção à cobertura',ativos.filter(f=>conflitosFerias(f).length).length,'cadastros com coincidências']].map(([t,n,sub],i)=>`<div><span class="ferias-kpi-num">0${i+1}</span><strong>${n}</strong><span>${t}</span><small>${sub}</small></div>`).join('')}</div>
+  <div class="ferias-kpis">${[['Equipe cadastrada',new Set(ativos.map(f=>f.matricula)).size,'colaboradores ativos'],['Em férias hoje',new Set(ps.filter(p=>p.inicio<=hoje && retornoFerias(p)>hoje).map(p=>p.registro.matricula)).size,'com retorno acompanhado'],['Saídas em 30 dias',ps.filter(p=>p.inicio>hoje && p.inicio<=somaDias(hoje,30)).length,'próximos períodos'],['Conflitos de cobertura',ativos.filter(f=>conflitosFerias(f).length).length,'planejamentos a revisar']].map(([t,n,sub],i)=>`<div><strong>${n}</strong><span>${t}</span><small>${sub}</small></div>`).join('')}</div>
   ${mapaAnualFerias()}
-  <div class="ferias-secao-titulo"><div><span class="ferias-eyebrow">${UIferias.arquivados?'ARQUIVO':'NOSSA EQUIPE'}</span><h3>${UIferias.arquivados?'Colaboradores retirados':'Cada pessoa, seu tempo.'}</h3></div><span>${lista.length} cadastros neste recorte</span></div>
+  <div class="ferias-secao-titulo"><div><span class="ferias-eyebrow">${UIferias.arquivados?'ARQUIVO':'CADASTROS'}</span><h3>${UIferias.arquivados?'Colaboradores retirados':'Colaboradores'}</h3></div><span>${lista.length} cadastros neste recorte</span></div>
   <form class="ferias-filtros"><label class="campo"><span>Colaborador ou matrícula</span><input name="busca" value="${esc(UIferias.busca)}" type="search"></label><label class="campo"><span>Ano dos períodos</span><select name="ano">${opcoes([['','Todos'],...anos.map(a=>[a,a])],UIferias.ano)}</select></label><label class="campo"><span>UF</span><select name="uf">${opcoes([['','Todas'],...([...new Set(E.ferias.map(f=>ufFerias(f.regiao)).filter(Boolean))].sort().map(x=>[x,x])),['?','Sem região']],UIferias.uf)}</select></label><label class="campo"><span>Situação</span><select name="situacao">${opcoes([['','Todas'],...['Sem programação','Programado','Em férias','Concluído','Cancelado'].map(x=>[x,x]),['conflito','Com conflito']],UIferias.situacao)}</select></label><button class="btn" type="submit">Aplicar filtros</button><button class="btn" type="button" data-ferias="limpar">Limpar</button></form>
   <p class="nota">${lista.length} de ${E.ferias.length} cadastros.${UIferias.mes?` Mês selecionado: ${UIferias.mes}/${UIferias.ano}.`:""} Dias corridos, incluindo início e fim. Retorno padrão no dia seguinte, ajustável à escala. Conflitos consideram períodos simultâneos na mesma UF, inclusive capital e interior; são alertas de cobertura, sem bloquear a programação. O cálculo considera toda a equipe, mesmo fora dos filtros.</p>
   <div class="ferias-lista">${lista.map(f=>{
@@ -80,7 +79,6 @@ function prepararTelaFerias() {
       if(b.dataset.ferias==='editar')modalFerias(E.ferias.find(f=>f.id===b.dataset.id));
       if(b.dataset.ferias==='limpar'){Object.assign(UIferias,{busca:'',uf:'',ano:'',situacao:'',mes:''});renderizar(true);}
       if(b.dataset.ferias==='arquivados'){UIferias.arquivados=!UIferias.arquivados;renderizar(true);}
-      if(b.dataset.ferias==='carga')await carregarEquipeInicialFerias();
       if(b.dataset.ferias==='mes'){UIferias.mes=UIferias.mes===b.dataset.mes?'':b.dataset.mes;UIferias.ano=b.dataset.ano;renderizar(true);}
       if(b.dataset.ferias==='ano'){UIferias.ano=String(Number(b.dataset.ano)+Number(b.dataset.passo));UIferias.mes='';renderizar(true);}
       if(b.dataset.ferias==='retirar'){
@@ -120,59 +118,10 @@ function mapaAnualFerias() {
   for(const p of periodosFerias())contagem.set(p.inicio.slice(0,4),(contagem.get(p.inicio.slice(0,4))||0)+1);
   const ano=UIferias.ano || [...contagem].sort((a,b)=>b[1]-a[1])[0]?.[0] || hojeISO().slice(0,4);
   const meses=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-  return `<section class="ferias-mapa" aria-label="Mapa anual de ausências"><div class="ferias-mapa-topo"><div><span class="ferias-eyebrow">O ANO, DE RELANCE</span><h3>Mapa de descanso</h3><p>Selecione um mês para ver quem estará fora.</p></div><div class="ferias-ano"><button class="btn-icone" data-ferias="ano" data-ano="${ano}" data-passo="-1" aria-label="Ano anterior">${icone('esquerda')}</button><strong>${ano}</strong><button class="btn-icone" data-ferias="ano" data-ano="${ano}" data-passo="1" aria-label="Próximo ano">${icone('direita')}</button></div></div><div class="ferias-meses">${meses.map((nome,i)=>{
+  return `<section class="ferias-mapa" aria-label="Mapa anual de ausências"><div class="ferias-mapa-topo"><div><span class="ferias-eyebrow">CALENDÁRIO ANUAL</span><h3>Programação anual</h3><p>Selecione um mês para ver quem estará fora.</p></div><div class="ferias-ano"><button class="btn-icone" data-ferias="ano" data-ano="${ano}" data-passo="-1" aria-label="Ano anterior">${icone('esquerda')}</button><strong>${ano}</strong><button class="btn-icone" data-ferias="ano" data-ano="${ano}" data-passo="1" aria-label="Próximo ano">${icone('direita')}</button></div></div><div class="ferias-meses">${meses.map((nome,i)=>{
     const mes=String(i+1).padStart(2,'0'),inicio=`${ano}-${mes}-01`,fim=fimMesFerias(ano,mes),ps=periodosFerias().filter(p=>p.inicio<=fim&&p.fim>=inicio);
     const pessoas=new Set(ps.map(p=>p.registro.matricula)).size;
     const dias=Number(fim.slice(-2));
     return `<button class="ferias-mes ${UIferias.ano===ano&&UIferias.mes===mes?'selecionado':''}" data-ferias="mes" data-mes="${mes}" data-ano="${ano}" aria-pressed="${UIferias.ano===ano&&UIferias.mes===mes}" aria-label="${nome} de ${ano}: ${pessoas} colaboradores com férias"><span>${nome}</span><strong>${pessoas || '—'}</strong><div class="ferias-dias" aria-hidden="true">${Array.from({length:dias},(_,d)=>{const dia=`${ano}-${mes}-${String(d+1).padStart(2,'0')}`,fora=ps.filter(p=>p.inicio<=dia&&p.fim>=dia);return `<i class="${fora.length?'ocupado':''} ${fora.some(p=>ufFerias(p.registro.regiao) && fora.some(q=>q.registro.matricula!==p.registro.matricula && ufFerias(q.registro.regiao)===ufFerias(p.registro.regiao)))?'coincidente':''}"></i>`;}).join('')}</div><small>${pessoas===1?'pessoa':'pessoas'}</small></button>`;
-  }).join('')}</div><p class="ferias-legenda"><span>● Período de descanso</span><span>● Atenção à cobertura</span>As ausências consideram toda a equipe ativa.</p></section>`;
-}
-// A chave fica somente no link reservado e na sessão do administrador, nunca no código publicado.
-const cargaFeriasInicial = { chave: '', erro: '', executando: false };
-function capturarCargaInicialFerias() {
-  const chave=new URLSearchParams(location.hash.slice(1)).get('ferias-carga');
-  try {
-    if(chave && /^[A-Za-z0-9_-]{43}$/.test(chave)){
-      sessionStorage.setItem('ferias-carga-inicial',chave);
-      history.replaceState(null,'','#ferias');
-    }
-    cargaFeriasInicial.chave=sessionStorage.getItem('ferias-carga-inicial') || '';
-  }catch{cargaFeriasInicial.chave=chave || '';}
-}
-async function decodificarEquipeInicialFerias(chave, pacote) {
-  const bytes=s=>Uint8Array.from(atob(s.replace(/-/g,'+').replace(/_/g,'/')),c=>c.charCodeAt(0));
-  const key=await crypto.subtle.importKey('raw',bytes(chave),{name:'AES-GCM'},false,['decrypt']);
-  const texto=await crypto.subtle.decrypt({name:'AES-GCM',iv:bytes(pacote.iv)},key,bytes(pacote.dados));
-  const lista=JSON.parse(new TextDecoder().decode(texto));
-  if(!Array.isArray(lista)||lista.length!==26)throw new Error('Carga inicial de colaboradores inválida.');
-  lista.forEach(validarFerias);return lista;
-}
-async function cadastrarEquipeInicialFerias(lista) {
-  exigirAdministrador();
-  let adicionados=0,preservados=0;
-  for(const f of lista){
-    exigirAdministrador();
-    const bytes=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(`${f.matricula}|${f.ciclo}`));
-    const id='import-'+[...new Uint8Array(bytes)].map(n=>n.toString(16).padStart(2,'0')).join('');
-    if(E.ferias.some(x=>x.matricula===f.matricula&&x.ciclo===f.ciclo)||await Armazem.ler(`ferias/${id}`)){preservados++;continue;}
-    await salvarFerias({...f,id});adicionados++;
-  }
-  return {adicionados,preservados};
-}
-async function carregarEquipeInicialFerias() {
-  if(!cargaFeriasInicial.chave || cargaFeriasInicial.executando)return;
-  cargaFeriasInicial.executando=true;cargaFeriasInicial.erro='';
-  try {
-    if(Acesso.modo!=='firebase')throw new Error('Entre no painel conectado ao Firebase para cadastrar a equipe definitivamente.');
-    exigirAdministrador();
-    const resposta=await fetch(new URL('./ferias-inicial.enc.json',document.baseURI));
-    if(!resposta.ok)throw new Error('Aguarde a atualização do site e tente carregar a equipe novamente.');
-    const lista=await decodificarEquipeInicialFerias(cargaFeriasInicial.chave,await resposta.json());
-    const r=await cadastrarEquipeInicialFerias(lista);
-    sessionStorage.removeItem('ferias-carga-inicial');cargaFeriasInicial.chave='';
-    toast(`Equipe pronta: ${r.adicionados} colaboradores cadastrados; ${r.preservados} cadastros existentes preservados.`,'ok',{duracao:12000});
-  } catch(e) {
-    cargaFeriasInicial.erro=`Não foi possível concluir o cadastro inicial. ${e.message} As inclusões já concluídas serão preservadas ao tentar novamente.`;
-    toast(cargaFeriasInicial.erro,'erro',{duracao:15000});
-  } finally {cargaFeriasInicial.executando=false;UI.pagina='ferias';renderizar(true);}
+  }).join('')}</div><p class="ferias-legenda"><span>● Período de férias</span><span>● Conflitos de cobertura</span>As ausências consideram toda a equipe ativa.</p></section>`;
 }

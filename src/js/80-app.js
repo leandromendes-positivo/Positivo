@@ -121,7 +121,7 @@ function atualizarMoldura() {
   const titulo = document.getElementById("titulo");
   titulo.closest('.topo').dataset.pagina = UI.pagina;
   const grupo = document.getElementById('topo-grupo');
-  grupo.textContent = UI.pagina === 'ferias' ? 'Pessoas & descanso' : p.admin ? 'Administração' : UI.pagina === 'conta' ? 'Minha conta' : ['consulta', 'inventario', 'relatorios'].includes(UI.pagina) ? 'Análises e consultas' : ['estoque', 'tecnicos'].includes(UI.pagina) ? 'Recursos' : 'Monitoramento';
+  grupo.textContent = UI.pagina === 'ferias' ? 'Gestão de pessoas' : p.admin ? 'Administração' : UI.pagina === 'conta' ? 'Minha conta' : ['consulta', 'inventario', 'relatorios'].includes(UI.pagina) ? 'Análises e consultas' : ['estoque', 'tecnicos'].includes(UI.pagina) ? 'Recursos' : 'Monitoramento';
   const marca = document.getElementById('topo-icone'), simbolo = UI.tid ? 'pessoa' : p.icone;
   if (marca.dataset.icone !== simbolo) { marca.innerHTML = icone(simbolo); marca.dataset.icone = simbolo; }
   const tituloTexto = UI.tid && D && D.mapa.get(UI.tid) ? "Ficha do técnico" : p.titulo;
@@ -499,7 +499,6 @@ function montarMoldura() {
 }
 
 async function iniciar() {
-  capturarCargaInicialFerias();
   MenuLateral.iniciar();
   Camadas.iniciar();
   RolagemHorizontal.iniciar();
@@ -527,7 +526,6 @@ async function iniciar() {
     } catch (_) { /* sem identidade: segue sem */ }
   }
   await carregarTudo();
-  if (E.status === "pronto") await carregarEquipeInicialFerias();
   if (!E.usadas.length && !E.novas.length && UI.pagina === "painel") renderizar(true);
 }
 

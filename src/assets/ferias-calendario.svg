@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="780" height="350" viewBox="0 0 780 350" fill="none">
+<defs><filter id="s" x="0" y="0" width="100%" height="100%"><feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#153d44" flood-opacity=".08"/></filter></defs>
+<g transform="translate(160 20) rotate(-8 220 160)" filter="url(#s)">
+<rect x="60" y="25" width="410" height="284" rx="10" fill="#fff" stroke="#b5c4c8" stroke-width="2"/>
+<path d="M60 72H470" stroke="#b5c4c8" stroke-width="2"/>
+<path d="M130 12V40M400 12V40" stroke="#60777f" stroke-width="7" stroke-linecap="round"/>
+<rect x="83" y="44" width="89" height="7" rx="3" fill="#728c94"/>
+<rect x="399" y="45" width="45" height="5" rx="2" fill="#c4cfd3"/>
+<g stroke="#dce4e7"><path d="M80 113H450M80 152H450M80 191H450M80 230H450M80 269H450"/><path d="M133 91V289M186 91V289M239 91V289M292 91V289M345 91V289M398 91V289"/></g>
+<g fill="#80969e"><circle cx="105" cy="99" r="3"/><circle cx="159" cy="99" r="3"/><circle cx="212" cy="99" r="3"/><circle cx="265" cy="99" r="3"/><circle cx="318" cy="99" r="3"/><circle cx="371" cy="99" r="3"/><circle cx="424" cy="99" r="3"/></g>
+<g fill="#9aaeb5" font-family="Arial,sans-serif" font-size="13" text-anchor="middle"><text x="105" y="138">1</text><text x="159" y="138">2</text><text x="212" y="138">3</text><text x="265" y="138">4</text><text x="318" y="138">5</text><text x="371" y="138">6</text><text x="424" y="138">7</text><text x="105" y="177">8</text><text x="159" y="177">9</text><text x="212" y="177">10</text><text x="265" y="177">11</text><text x="318" y="177">12</text><text x="371" y="177">13</text><text x="424" y="177">14</text><text x="105" y="216">15</text><text x="159" y="216">16</text><text x="212" y="216">17</text><text x="265" y="216">18</text><text x="318" y="216">19</text><text x="371" y="216">20</text><text x="424" y="216">21</text><text x="105" y="255">22</text><text x="159" y="255">23</text><text x="212" y="255">24</text><text x="265" y="255">25</text><text x="318" y="255">26</text><text x="371" y="255">27</text><text x="424" y="255">28</text></g>
+<rect x="84" y="185" width="359" height="35" rx="5" fill="#47938b" fill-opacity=".18" stroke="#47938b" stroke-opacity=".3"/>
+<circle cx="318" cy="250" r="15" stroke="#47938b" stroke-width="2"/>
+</g></svg>

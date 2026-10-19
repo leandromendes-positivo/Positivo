@@ -23,12 +23,14 @@ try{
  await admin.evaluate(async()=>{
   const item=(regiao,tipo,mat,qtd)=>({tipo,regiao,nome:`${regiao}-${tipo}.csv`,hash:mat,linhasLidas:1,avisos:[],itens:[{tecNome:'ANA PORTAL',tecChave:'ANA PORTAL',mat,desc:`Peça ${mat}`,qtd,nf:'NF1',remessa:'REM1',chamado:'CH1',dataFT:'2026-10-19',qtdUso:qtd,tipoEnvio:'BACKUP'}]});
   await importarLote([item('PR','usadas','USADA-PR',2),item('PR','novas','NOVA-PR',5),item('SC','usadas','SEGREDO-SC',9)]);
+  if(!opcoesVinculoTecnico().some(t=>t.id==='SC--ANA_PORTAL'))throw new Error('O estoque da segunda UF precisa estar disponível para vínculo explícito.');
   irPara('usuarios');
  });
  await admin.locator('[data-acao="novo-acesso-tecnico"]').click();await admin.locator('.modal [name="email"]').fill('ana@empresa.com');await admin.locator('.modal [name="tecnicoId"]').selectOption('PR--ANA_PORTAL');await admin.locator('.modal [data-salvar]').click();
  await admin.waitForFunction(()=>E.usuarios.some(u=>u.email==='ana@empresa.com'&&u.perfil==='tecnico'));
  const duplicado=await admin.evaluate(async()=>{try{await salvarUsuario('duplicado@empresa.com','tecnico',true,'PR--ANA_PORTAL');return '';}catch(e){return e.message;}});assert.match(duplicado,/já está vinculado/);
  const tec=await abrir('ana@empresa.com');
+ await tec.getByText('USADA-PR',{exact:true}).waitFor();
  assert.equal(await tec.evaluate(()=>UI.pagina),'meu-painel');assert.deepEqual(await tec.evaluate(()=>[E.usadas.length,E.novas.length,Object.keys(E.cadastro).length,E.usuarios.length,E.ferias.length]),[0,0,0,0,0]);
  assert.equal(await tec.locator('[data-nav="importar"]').count(),0);assert.match(await tec.locator('#conteudo').innerText(),/USADA-PR/);assert.doesNotMatch(await tec.locator('#conteudo').innerText(),/SEGREDO-SC/);
  const negados=await tec.evaluate(async()=>{
@@ -41,13 +43,13 @@ try{
  await tec.locator('.modal [name="quantidadeRmdf"]').fill('1');await tec.locator('.modal [name="rmdf"]').selectOption('aplicado');await tec.locator('.modal [name="protocolo"]').fill('RMDF-123');await tec.locator('.modal [data-enviar]').click();
  await tec.waitForFunction(()=>PortalTecnico.declaracoes.some(d=>d.protocolo==='RMDF-123'));
  assert.equal(await tec.evaluate(()=>PortalTecnico.pecas.find(p=>p.tipo==='novas').quantidade),5,'declaração não altera saldo');
- await admin.evaluate(()=>irPara('respostas-tecnicos'));await admin.waitForFunction(()=>RespostasTecnicos.eventos.some(d=>d.protocolo==='RMDF-123'));assert.match(await admin.locator('#conteudo').innerText(),/ana@empresa.com/);
+ await admin.evaluate(()=>irPara('respostas-tecnicos'));await admin.waitForFunction(()=>RespostasTecnicos.eventos.some(d=>d.protocolo==='RMDF-123'));await admin.locator('#conteudo .portal-historico').waitFor();assert.match(await admin.locator('#conteudo').innerText(),/ana@empresa.com/);
  await tec.locator('[data-acao="portal-historico"]').click();await tec.locator('.modal').waitFor();assert.match(await tec.locator('.modal').innerText(),/RMDF-123/);await tec.locator('.modal [data-fechar]').first().click();
  // Esvaziar uma UF elimina o saldo publicado dela, sem copiar o saldo de outra UF.
  await admin.evaluate(async()=>{window.__zerarPortal=await importarLote(['usadas','novas'].map(tipo=>({tipo,regiao:'PR',nome:`PR-${tipo}.csv`,hash:'vazio-'+tipo,linhasLidas:0,avisos:[],itens:[]})));});
  await tec.waitForFunction(()=>E.status==='pronto'&&PortalTecnico.pecas.length===0);assert.doesNotMatch(await tec.locator('#conteudo').innerText(),/SEGREDO-SC/);
  await admin.evaluate(async()=>desfazerImportacao(E.importacoes.find(i=>i.id===window.__zerarPortal.lote)));
- await tec.waitForFunction(()=>E.status==='pronto'&&PortalTecnico.pecas.length===2);assert.match(await tec.locator('#conteudo').innerText(),/Relatório anterior/);
+ await tec.waitForFunction(()=>E.status==='pronto'&&PortalTecnico.pecas.length===2);await tec.getByText('Relatório anterior: confira novamente o saldo.',{exact:true}).first().waitFor();assert.match(await tec.locator('#conteudo').innerText(),/Relatório anterior/);
  await admin.evaluate(()=>salvarUsuario('ana@empresa.com','tecnico',false,'PR--ANA_PORTAL'));
  await tec.waitForFunction(()=>E.status==='erro'&&Acesso.perfil===null);assert.equal(await tec.evaluate(()=>PortalTecnico.pecas.length),0);
  assert.deepEqual(erros,[]);console.log('Portal E2E: cadastro e vínculo exclusivo, login real no emulador, isolamento por UF, devolução/RMDF, histórico, importação vazia, desfazer e revogação passaram.');

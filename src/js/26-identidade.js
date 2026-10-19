@@ -140,8 +140,9 @@ async function salvarUsuario(email, perfil, ativo, tecnicoId = '') {
     if (novoId) {
       const [regiao, ...partes] = novoId.split('--'), tid = partes.join('--');
       chaveSaldoTecnico(tid, regiao);
-      const cadastro = await tx.get(Acesso.fs.doc('cadastro/tecnicos'));
-      if (ativo && (!cadastro.data()?.t?.[tid] || cadastro.data().t[tid].regiao !== regiao)) throw new Error('O cadastro ou a UF mudou. Atualize antes de vincular.');
+      const [cadastro, controle] = await Promise.all([tx.get(Acesso.fs.doc('cadastro/tecnicos')),tx.get(Acesso.fs.doc('portal/controle'))]);
+      const saldo = controle.exists ? await tx.get(Acesso.fs.doc(`saldos_tecnicos/${novoId}/geracoes/${controle.data().geracao}`)) : null;
+      if (ativo && (!cadastro.data()?.t?.[tid] || (cadastro.data().t[tid].regiao !== regiao && (!saldo?.exists || saldo.data().tid !== tid || saldo.data().regiao !== regiao)))) throw new Error('O cadastro ou a UF mudou. Atualize antes de vincular.');
       if (anterior(novoId)?.exists && anterior(novoId).data().email !== email) throw new Error('Este estoque já está vinculado a outro e-mail. Desvincule o acesso anterior primeiro.');
       vinculo = {email, tid, regiao};
     }

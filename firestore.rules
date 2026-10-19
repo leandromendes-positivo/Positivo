@@ -49,6 +49,10 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/vinculos_tecnicos/$(id)).data.email == email();
     }
     function geracaoAtual(gen) { return get(/databases/$(database)/documents/portal/controle).data.geracao == gen; }
+    function saldoPublicado(id) {
+      let gen = get(/databases/$(database)/documents/portal/controle).data.geracao;
+      return get(/databases/$(database)/documents/saldos_tecnicos/$(id)/geracoes/$(gen)).data;
+    }
     function vinculoValido(d) {
       let v = getAfter(/databases/$(database)/documents/vinculos_tecnicos/$(d.tecnicoId)).data;
       return d.tecnicoId is string && v.email == d.email
@@ -62,7 +66,9 @@ service cloud.firestore {
         && request.resource.data.regiao in ['PR','SC','TO','RS']
         && request.resource.data.tid.matches('^[A-Z0-9_.-]{1,120}$')
         && (exists(/databases/$(database)/documents/vinculos_tecnicos/$(id))
-          || get(/databases/$(database)/documents/cadastro/tecnicos).data.t[request.resource.data.tid].regiao == request.resource.data.regiao)
+          || get(/databases/$(database)/documents/cadastro/tecnicos).data.t[request.resource.data.tid].regiao == request.resource.data.regiao
+          || (saldoPublicado(id).tid == request.resource.data.tid
+            && saldoPublicado(id).regiao == request.resource.data.regiao))
         && getAfter(/databases/$(database)/documents/usuarios/$(request.resource.data.email)).data.tecnicoId == id
         && getAfter(/databases/$(database)/documents/usuarios/$(request.resource.data.email)).data.perfil == 'tecnico'
         && (!exists(/databases/$(database)/documents/vinculos_tecnicos/$(id)) || resource.data.email == request.resource.data.email);

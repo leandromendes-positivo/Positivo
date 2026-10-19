@@ -9,6 +9,15 @@ function chaveSaldoTecnico(tid, regiao) {
   if (!/^[A-Z0-9_.-]{1,120}$/.test(tid) || !['PR','SC','TO','RS'].includes(regiao)) throw new Error('Identificação ou UF do técnico inválida.');
   return `${regiao}--${tid}`;
 }
+function opcoesVinculoTecnico() {
+  const opcoes=new Map();
+  const incluir=(tid,regiao)=>{if(E.cadastro[tid] && /^[A-Z0-9_.-]{1,120}$/.test(tid) && ['PR','SC','TO','RS'].includes(regiao)) {
+    const id=chaveSaldoTecnico(tid,regiao);opcoes.set(id,{id,tid,regiao,nome:E.cadastro[tid].nome});
+  }};
+  for(const [tid,t] of Object.entries(E.cadastro))incluir(tid,t.regiao);
+  for(const p of [...E.usadas,...E.novas])incluir(p.tid,p.regiao);
+  return [...opcoes.values()].sort((a,b)=>comparar(a.nome,b.nome)||comparar(a.regiao,b.regiao));
+}
 /* Função pura também usada pela implantação para publicar o estoque já existente. */
 function montarSaldosTecnicos(usadas, novas, cadastro, catalogo) {
   const saldos = new Map();

@@ -337,3 +337,37 @@ Até **10 peças**, inclusive zero, está dentro do limite padrão. **11 peças 
 **Copiar resumo** identifica a aba ativa (por exemplo, **Previsões vencidas** ou **Vencem em breve**), o tipo de peça, a data, a UF e os filtros usados. Quantidades e idade da peça mais antiga são calculadas somente sobre esse recorte, na mesma ordem da tela.
 
 **Exportar lista** inclui o nome da lista e o tipo de peça no nome do arquivo. A primeira aba, **Resumo da lista**, documenta os filtros, o critério e os totais; a segunda recebe o nome da lista selecionada e contém as peças completas. Mesmo um resultado vazio mantém o contexto da consulta.
+
+### Férias da equipe
+
+O menu **Férias da equipe** reúne planejamentos por matrícula e ciclo de referência,
+com até três períodos, dias corridos, dias vendidos, saldo a programar e retorno.
+Administradores cadastram, importam e editam; usuários autorizados consultam e exportam.
+O cadastro de férias também aceita colaboradores sem estoque ou sem cadastro de peças.
+O histórico preserva versões, datas anteriores e o responsável por cada alteração;
+uma edição desatualizada é recusada. Para desconsiderar férias, altere a confirmação
+para **Cancelado**, preservando o registro e seu histórico.
+
+Em **Importar Excel**, selecione a relação `.xlsx` com Matrícula/Nome nas colunas B/C,
+Região em D, opção em E, períodos em F/G e I/J e observações em O. Confira a prévia e
+confirme a importação. A posição do cabeçalho é reconhecida automaticamente nas primeiras
+20 linhas. O ciclo inicial é o ano da primeira saída, ajustável no cadastro; não representa
+uma inferência do período aquisitivo. Registros da mesma matrícula e ciclo já existentes
+são preservados. Totais são recalculados pelas datas; notas e divergências da origem ficam
+sinalizadas para conferência. A planilha e os dados pessoais não são incluídos no site público.
+
+Conflitos são alertas de cobertura entre colaboradores da mesma UF, incluindo capital e
+interior, quando os períodos têm ao menos um dia em comum. Cancelados não participam;
+região ausente exige revisão e não equivale a ausência de conflito. Filtros não escondem
+conflitos com pessoas fora do recorte. O retorno padrão é o dia seguinte ao fim, com ajuste
+manual para escala, folgas e feriados. O painel não determina aprovação do RH nem valida
+todas as exigências trabalhistas. O Excel exportado respeita os filtros e inclui todos os
+períodos dos planejamentos selecionados.
+
+Regressão local, com dados fictícios e sem acessar Firebase de produção:
+
+```bash
+python3 build.py
+# Com o servidor de dist ativo na porta 8000:
+PW_PATH=/workspace/positivo-tools/node_modules/playwright CHROMIUM=/usr/bin/chromium node testes/ferias-e2e.mjs
+```

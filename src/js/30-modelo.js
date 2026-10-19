@@ -57,7 +57,7 @@ const E = {
   existe: {},          // quais documentos fixos já existem no banco
   indice: { arquivos: {}, anterior: {} },
   catalogo: {},
-  cadastro: {},
+  cadastro: {}, ferias: [],
   usadas: [],
   novas: [],
   acomp: {}, acompLegado: {}, agendamentos: [], contatos: [], anotacoes: [], usuarios: [],
@@ -144,6 +144,7 @@ async function carregarTudo() {
     E.cadastro = (cadastro && cadastro.t) || {};
     E.acompLegado = {};
     for (const a of acomp) E.acompLegado[a.id] = a;
+    E.ferias = await Armazem.consultar("ferias");
     await carregarAcompanhamento();
     await Promise.all([carregarFotos(), carregarHistoricos()]);
     E.status = "pronto";
@@ -163,6 +164,7 @@ function assinarMudancas() {
   for (const parar of E.ouvintes) parar();
   E.ouvintes = [];
   if (!Armazem.online) return;
+  E.ouvintes.push(Armazem.ouvirColecao("ferias", docs => { E.ferias = docs; mudou(); }));
   let versaoIndice = E.indice.versao || 0;
   E.ouvintes.push(Armazem.ouvirDoc("dados/indice", async (d) => {
     if (!d || (d.versao || 0) === versaoIndice) return;

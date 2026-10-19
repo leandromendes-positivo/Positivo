@@ -68,6 +68,46 @@ service cloud.firestore {
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['perfil','ativo','atualizadoEm','atualizadoPor'])));
       allow delete: if false;
     }
+    function feriasValidas(d) {
+      return d.keys().hasAll(['id','nome','matricula','regiao','ciclo','status','direito','vendidos','obs','periodos','versao','atualizadoEm','atualizadoPor','evento'])
+        && d.keys().hasOnly(['id','nome','matricula','regiao','ciclo','status','direito','vendidos','obs','periodos','versao','atualizadoEm','atualizadoPor','evento'])
+        && d.nome is string && d.nome.size() > 0 && d.nome.size() <= 120
+        && d.matricula is string && d.matricula.matches('^[A-Za-z0-9_-]{1,40}$')
+        && d.regiao is string && d.regiao.size() <= 40
+        && d.ciclo is string && d.ciclo.size() > 0 && d.ciclo.size() <= 40
+        && d.obs is string && d.obs.size() <= 1000
+        && d.status in ['planejado','confirmado','cancelado']
+        && d.direito is int && d.direito >= 1 && d.direito <= 60
+        && d.vendidos is int && d.vendidos >= 0 && d.vendidos <= 20
+        && d.periodos is list && d.periodos.size() >= 1 && d.periodos.size() <= 3
+        && periodoFeriasValido(d.periodos[0])
+        && (d.periodos.size() < 2 || periodoFeriasValido(d.periodos[1]))
+        && (d.periodos.size() < 3 || periodoFeriasValido(d.periodos[2]))
+        && d.evento is string && d.evento.matches('^[a-zA-Z0-9-]{20,80}$')
+        && d.versao is int && d.atualizadoEm == request.time && porValido(d.atualizadoPor);
+    }
+    function periodoFeriasValido(p) {
+      return p.keys().hasAll(['inicio','fim','retorno']) && p.keys().hasOnly(['inicio','fim','retorno'])
+        && dataValida(p.inicio) && p.inicio != '' && dataValida(p.fim) && p.fim >= p.inicio
+        && dataValida(p.retorno) && (p.retorno == '' || p.retorno > p.fim);
+    }
+    match /ferias/{id} {
+      allow read: if autorizado();
+      allow create: if administrador() && feriasValidas(request.resource.data)
+        && request.resource.data.id == id && request.resource.data.versao == 1
+        && getAfter(/databases/$(database)/documents/historico_ferias/$(request.resource.data.evento)).data == request.resource.data;
+      allow update: if administrador() && feriasValidas(request.resource.data)
+        && request.resource.data.id == id && request.resource.data.versao == resource.data.versao + 1
+        && getAfter(/databases/$(database)/documents/historico_ferias/$(request.resource.data.evento)).data == request.resource.data;
+      allow delete: if false;
+    }
+    match /historico_ferias/{id} {
+      allow read: if autorizado();
+      allow create: if administrador() && feriasValidas(request.resource.data)
+        && request.resource.data.evento == id
+        && getAfter(/databases/$(database)/documents/ferias/$(request.resource.data.id)).data == request.resource.data;
+      allow update, delete: if false;
+    }
     match /seguranca/{id} { allow read: if autorizado(); allow write: if false; }
     match /agendamentos/{id} {
       allow read: if autorizado();

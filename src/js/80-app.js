@@ -22,6 +22,7 @@ const PAGINAS = {
   inventario: { titulo: "Histórico de inventário", icone: "caixa", render: renderInventario },
   estoque: { titulo: "Estoque de novas", icone: "caixa", render: renderEstoque },
   tecnicos: { titulo: "Técnicos", icone: "pessoas", render: renderTecnicos },
+  ferias: { titulo: "Férias da equipe", icone: "calendario", render: renderFerias, depois: prepararTelaFerias },
   relatorios: { titulo: "Relatórios", icone: "grafico", render: renderRelatorios },
   importar: { admin: true, titulo: "Importar planilhas", icone: "upload", render: renderImportar },
   config: { admin: true, titulo: "Configurações", icone: "ajustes", render: renderConfig, depois: posRenderConfig },

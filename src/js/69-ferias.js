@@ -120,7 +120,7 @@ function renderFerias() {
   ${Acesso.modo !== 'firebase'?'<p class="aviso">Demonstração: alterações ficam somente nesta página.</p>':''}
   ${destaquesFerias()}
   <div class="ferias-kpis">${[['Equipe cadastrada',new Set(ativos.map(f=>f.matricula)).size,'colaboradores ativos'],['Em férias hoje',new Set(ps.filter(p=>p.inicio<=hoje && retornoFerias(p)>hoje).map(p=>p.registro.matricula)).size,'com retorno acompanhado'],['Saídas em 30 dias',ps.filter(p=>p.inicio>hoje && p.inicio<=somaDias(hoje,30)).length,'próximos períodos'],['Conflitos de cobertura',ativos.filter(f=>conflitosFerias(f).length).length,'planejamentos a revisar']].map(([t,n,sub],i)=>`<div><strong>${n}</strong><span>${t}</span><small>${sub}</small></div>`).join('')}</div>
-  ${renderMapaFerias()}
+  ${renderFeriasPorEstado()}
   ${mapaAnualFerias()}
   <div class="ferias-secao-titulo"><div><span class="ferias-eyebrow">${UIferias.arquivados?'ARQUIVO':'CADASTROS'}</span><h3>${UIferias.arquivados?'Colaboradores retirados':'Colaboradores'}</h3></div><div class="ferias-lista-opcoes"><span>${lista.length} cadastros neste recorte</span><button class="link" data-acao="ir" data-pagina="colaboradores">Colaboradores cadastrados</button></div></div>
   <form class="ferias-filtros"><label class="campo"><span>Colaborador ou matrícula</span><input name="busca" value="${esc(UIferias.busca)}" type="search"></label><label class="campo"><span>Ano dos períodos</span><select name="ano">${opcoes([['','Todos'],...anos.map(a=>[a,a])],UIferias.ano)}</select></label><label class="campo"><span>UF</span><select name="uf">${opcoes([['','Todas'],...UFS_FERIAS.map(x=>[x,x]),['?','Sem região']],UIferias.uf)}</select></label><label class="campo"><span>Situação</span><select name="situacao">${opcoes([['','Todas'],...['Sem programação','Programado','Em férias','Concluído','Cancelado'].map(x=>[x,x]),['conflito','Com conflito']],UIferias.situacao)}</select></label><button class="btn" type="submit">Aplicar filtros</button><button class="btn" type="button" data-ferias="limpar">Limpar</button></form>
@@ -150,7 +150,7 @@ function prepararTelaFerias() {
   const raiz=document.querySelector('.ferias');
   if (!raiz || raiz.dataset.eventosFerias === 'prontos') return;
   raiz.dataset.eventosFerias = 'prontos';
-  prepararMapaFerias();
+  prepararFeriasPorEstado();
   raiz.querySelector('form').addEventListener('submit',e=>{e.preventDefault();Object.assign(UI.pagina==='colaboradores'?UIcolaboradores:UIferias,Object.fromEntries(new FormData(e.target)));renderizar(true);});
   raiz.addEventListener('click',e=>{
     const b=e.target.closest('[data-ferias]'); if(!b)return;

@@ -16,17 +16,15 @@ try{
   irPara('ferias');
  });
  assert.equal(await p.locator('.ferias-card [data-ferias="excluir"]').count(),0);
- assert.equal(await p.locator('.ferias-mapa-brasil g[role="button"]').count(),4);
- assert.match(await p.locator('.ferias-mapa-detalhe').innerText(),/Pessoa Paraná/);
- assert.doesNotMatch(await p.locator('.ferias-mapa-detalhe').innerText(),/Pessoa Retirada|Pessoa Cancelada/);
- await p.locator('.ferias-mapa-estados [data-uf="SC"]').click();
- assert.match(await p.locator('[data-mapa-ferias-atuais]').innerText(),/Pessoa Santa Catarina/);
- assert.match(await p.locator('[data-mapa-ferias-atuais]').innerText(),/30\/01\/2027/);
- await p.locator('.ferias-mapa-brasil g[data-uf="TO"]').focus();await p.keyboard.press('Enter');
- assert.match(await p.locator('[data-mapa-ferias-proximas]').innerText(),/Pessoa Tocantins/);
- await p.locator('[data-ferias-mapa="zoom"][data-passo="1"]').click();assert.equal(await p.evaluate(()=>UImapaFerias.zoom),1.5);
- await p.locator('[data-ferias-mapa="zoom"][data-passo="0"]').click();assert.equal(await p.evaluate(()=>UImapaFerias.zoom),1);
- await p.locator('[data-ferias-mapa="cadastros"]').click();assert.equal(await p.evaluate(()=>UI.pagina),'colaboradores');
+ assert.equal(await p.locator('.ferias-estado').count(),4);
+ assert.equal(await p.locator('.ferias-mapa-brasil').count(),0);
+ assert.match(await p.locator('[data-ferias-estado="PR"]').innerText(),/Pessoa Paraná/);
+ assert.doesNotMatch(await p.locator('[data-ferias-estado="PR"]').innerText(),/Pessoa Retirada|Pessoa Cancelada/);
+ assert.match(await p.locator('[data-ferias-estado="SC"] [data-estado-ferias-atuais]').innerText(),/Pessoa Santa Catarina/);
+ assert.match(await p.locator('[data-ferias-estado="SC"] [data-estado-ferias-atuais]').innerText(),/30\/01\/2027/);
+ assert.match(await p.locator('[data-ferias-estado="TO"] [data-estado-ferias-proximas]').innerText(),/Pessoa Tocantins/);
+ assert.match(await p.locator('[data-ferias-estado="RS"]').innerText(),/Pessoa Rio Grande/);
+ await p.locator('[data-ferias-estado-cadastros="TO"]').click();assert.equal(await p.evaluate(()=>UI.pagina),'colaboradores');
  assert.equal(await p.locator('[data-colaborador]').count(),1);assert.match(await p.locator('[data-colaborador]').innerText(),/Pessoa Tocantins/);
  await p.click('[data-ferias="limpar-cadastro"]');assert.equal(await p.locator('[data-colaborador]').count(),7,'complete list includes cancelled, withdrawn and missing-UF records');
  await p.locator('[data-colaborador="pr"] [data-ferias="historico"]').click();
@@ -45,7 +43,7 @@ try{
  }
  await p.locator('.historico-ferias-modal [data-fechar]').first().click();
  assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'roster scroll is confined to its own table');
- await p.evaluate(()=>irPara('ferias'));assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'map fits mobile');
+ await p.evaluate(()=>irPara('ferias'));assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'state panels fit mobile');
  assert.deepEqual(erros,[]);
- console.log('PASSOU: lista completa, ações separadas dos cartões, mapa por UF e teclado, zoom, retorno, filtros de cadastro, histórico com antes/depois, autoria legível, texto seguro e temas/celular.');
+ console.log('PASSOU: lista completa, ações separadas dos cartões, quadros por UF, retorno, filtros de cadastro, histórico com antes/depois, autoria legível, texto seguro e temas/celular.');
 }finally{await b.close();}

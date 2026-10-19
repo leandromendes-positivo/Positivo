@@ -412,12 +412,12 @@ responsável, diferenças entre valores anteriores e atuais e detalhes de cada v
 A autoria da carga administrativa é apresentada como **Cadastro inicial**. Identificadores
 técnicos continuam preservados no banco e não ocupam o título do histórico.
 
-O mapa **Férias por estado** reutiliza a geometria do mapa operacional. Selecione PR, SC,
-TO ou RS pelo mapa, teclado ou botões para ver quem está de férias, as próximas saídas
-e os retornos. O detalhe permite abrir os colaboradores daquela UF. Contagens consultam
-a equipe ativa completa, independentemente dos filtros; retirados e cancelados são
-excluídos. Pessoas sem UF são sinalizadas para completar o cadastro.
+A seção **Férias por estado** apresenta quatro quadros, PR, SC, TO e RS, visíveis
+simultaneamente. Cada um mostra quem está de férias, próximas saídas, retornos e
+contagens, com acesso aos colaboradores daquela UF. Os quadros consultam a equipe
+ativa completa; retirados e cancelados não participam. Não há mapa geográfico,
+seleção de estados ou controles de zoom nesta seção.
 
 ```bash
-PW_PATH=/workspace/positivo-tools/node_modules/playwright CHROMIUM=/usr/bin/chromium node testes/historico-mapa-ferias-e2e.mjs
+PW_PATH=/workspace/positivo-tools/node_modules/playwright CHROMIUM=/usr/bin/chromium node testes/historico-estados-ferias-e2e.mjs
 ```

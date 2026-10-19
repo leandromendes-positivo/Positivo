@@ -79,3 +79,20 @@ node testes/inventario-e2e.mjs
 ```
 
 Os testes de usuários precisam de Playwright, Chromium, Firebase compat 10.14.1, `@firebase/rules-unit-testing` 3.x e `firebase-admin`. `PW_PATH`, `CHROMIUM` e `FIREBASE_SDK_DIR` permitem usar instalações locais. Os testes de navegador usam `URL_PAINEL_TESTE`; o teste legado de Firebase usa `URL_SITE`. Os testes que preparam o mesmo emulador devem rodar em sequência.
+
+## Portal exclusivo do técnico
+
+Em **Cadastro de usuários → Cadastrar técnico**, informe o e-mail usado no Google/Microsoft e selecione o técnico e a UF do estoque. Os identificadores vêm do cadastro e dos relatórios oficiais importados; confira o nome e o identificador antes de autorizar. E-mail de contato, apelido e cadastro de férias não concedem acesso. Cada estoque aceita um único e-mail vinculado, inclusive quando desativado. Para trocar o e-mail, altere o acesso anterior para outro perfil desativado, liberando o vínculo, e então cadastre o novo acesso.
+
+O técnico acessa **Minhas peças** e **Minha conta**. Pode informar quantidade/data de devolução, RMDF previsto ou aplicado (somente novas), protocolo e observação, além de revisar ou cancelar a informação. A operação consulta os eventos em **Respostas dos técnicos**. Essas declarações não baixam estoque, não confirmam recebimento e não substituem a classificação de uma saída. Cada alteração conserva a versão anterior, o autor e a data no histórico. Um relatório novo exige conferir novamente as informações anteriores.
+
+A separação ocorre no Firestore: `saldos_tecnicos/{UF--identificador}/geracoes/{geracao}/pecas` contém apenas aquele responsável naquela UF. Técnicos não podem ler os documentos globais, consultar outros usuários/UFs, importar, alterar saldos ou conceder permissões. `vinculos_tecnicos` exige associação recíproca com o cadastro de usuário. `declaracoes_tecnicos` e `eventos_tecnicos` são gravados juntos; as regras conferem proprietário, quantidade, tipo, autoria e versão. O histórico é imutável. Alterar perfil ou vínculo reinicia a sessão; desativar o acesso bloqueia leituras e gravações no banco.
+
+A importação prepara uma geração isolada antes de publicar, na mesma transação, os índices do estoque oficial e do portal. O desfazer segue o mesmo processo. Gerações antigas, incompletas ou divergentes do índice oficial não ficam acessíveis aos técnicos. A implantação prepara o estoque que já existe, sem criar contas automaticamente, e interrompe a publicação se uma importação concorrente impedir uma leitura consistente. Homônimos na mesma UF precisam de identificadores diferentes no relatório de origem; o sistema não tenta adivinhar se representam pessoas distintas.
+
+A publicação só libera regras e site depois dos testes das regras reais e do fluxo completo em Auth/Firestore Emulator. Para executar os mesmos testes localmente, instale os pacotes com `npm ci --prefix seguranca`, instale o Chromium com `./seguranca/node_modules/.bin/playwright install chromium`, gere o HTML, inicie o servidor local na porta 8003 e execute, na raiz:
+
+```sh
+node testes/portal-projecao.mjs
+PW_PATH="$PWD/seguranca" ./seguranca/node_modules/.bin/firebase emulators:exec --only firestore,auth --project demo-controle-seguranca "node testes/verificar-acessos.mjs"
+```

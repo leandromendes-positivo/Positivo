@@ -32,7 +32,7 @@ try{
   await db.doc(`vinculos_tecnicos/${outroId}`).set({email:'bruno@empresa.com',tid:'ANA',regiao:'SC'});
   await db.doc('dados/indice').set({versao:1});await db.doc('portal/controle').set({versao:1,geracao:gen,atualizadoEm:'2026-10-19T09:00:00'});
   await db.doc('seguranca/controle').set({versao:2});
-  for(const t of [id,outroId])for(const g of [gen,gen2]){
+  for(const t of [id,outroId,'RS--ANA'])for(const g of [gen,gen2]){
    await db.doc(`saldos_tecnicos/${t}/geracoes/${g}`).set({nome:'Ana',regiao:t.split('--')[0],tid:'ANA',total:2});
    await db.doc(`saldos_tecnicos/${t}/geracoes/${g}/pecas/n-1`).set(peca());
    await db.doc(`saldos_tecnicos/${t}/geracoes/${g}/pecas/u-1`).set(peca('usadas'));
@@ -60,6 +60,8 @@ try{
  // Vínculos devem ser recíprocos, explícitos e exclusivos em uma transação administrativa.
  await nao(admin.doc('usuarios/novo@empresa.com').set(usuario('novo@empresa.com','tecnico','SC--BRUNO')));
  const b=admin.batch();b.set(admin.doc('usuarios/novo@empresa.com'),usuario('novo@empresa.com','tecnico','SC--BRUNO'));b.set(admin.doc('vinculos_tecnicos/SC--BRUNO'),{email:'novo@empresa.com',tid:'BRUNO',regiao:'SC'});await sim(b.commit());
+ const rs=admin.batch();rs.set(admin.doc('usuarios/ana.rs@empresa.com'),usuario('ana.rs@empresa.com','tecnico','RS--ANA'));rs.set(admin.doc('vinculos_tecnicos/RS--ANA'),{email:'ana.rs@empresa.com',tid:'ANA',regiao:'RS'});await sim(rs.commit());
+ const anaRS=conta('ana-rs','ana.rs@empresa.com');await sim(anaRS.doc(`saldos_tecnicos/RS--ANA/geracoes/${gen}/pecas/n-1`).get());await nao(anaRS.doc(`saldos_tecnicos/${id}/geracoes/${gen}/pecas/n-1`).get());
  await nao(admin.doc('usuarios/roubo@empresa.com').set(usuario('roubo@empresa.com')));
  const roubo=admin.batch();roubo.set(admin.doc('usuarios/roubo@empresa.com'),usuario('roubo@empresa.com'));roubo.set(admin.doc(`vinculos_tecnicos/${id}`),{email:'roubo@empresa.com',tid:'ANA',regiao:'PR'});await nao(roubo.commit());
  await sim(ana.doc('usuarios/ana@empresa.com').update({nome:'Ana Silva',atualizadoPor:{uid:'ana',email:'ana@empresa.com'},atualizadoEm:stamp()}));

@@ -65,7 +65,7 @@ async function carregarPortalTecnico() {
     PortalTecnico.pecas=[];PortalTecnico.saldo=null;
     PortalTecnico.erro='Não foi possível atualizar seu estoque com segurança. Verifique a conexão e recarregue.';
     E.status='erro';E.erro=PortalTecnico.erro;mudou();
-    if(e?.code!=='permission-denied' || verificandoAcesso)return;
+    if(verificandoAcesso)return;
     verificandoAcesso=true;
     try {
       const perfil=await Acesso.fs.doc(`usuarios/${identidadeAtual().email}`).get({source:'server'});

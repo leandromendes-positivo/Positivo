@@ -9,11 +9,11 @@ const {chromium}=require('playwright');
 const {initializeTestEnvironment}=require('@firebase/rules-unit-testing');
 const env=await initializeTestEnvironment({projectId:'demo-controle-pecas',firestore:{host:'127.0.0.1',port:8080,rules:fs.readFileSync('firestore.rules','utf8')}});
 await prepararEmulador();
-const browser=await chromium.launch({executablePath:process.env.CHROMIUM||undefined});const erros=[];
+const browser=await chromium.launch({executablePath:process.env.CHROMIUM||undefined});const erros=[],diagnosticos=[];
 async function abrir(email){
  const ctx=await browser.newContext({viewport:{width:1360,height:1000},locale:'pt-BR'});
  await ctx.route('https://www.gstatic.com/firebasejs/**',r=>r.fulfill({path:path.resolve(process.env.FIREBASE_SDK_DIR||'seguranca/node_modules/firebase',r.request().url().split('/').at(-1)),contentType:'application/javascript'}));
- const p=await ctx.newPage();p.on('pageerror',e=>erros.push(e.message));
+ const p=await ctx.newPage();p.on('pageerror',e=>erros.push(e.message));p.on('console',m=>{if(m.type()==='error')diagnosticos.push(m.text());});
  await p.addInitScript(email=>{window.CP_FIREBASE={apiKey:'chave-de-teste',projectId:'demo-controle-pecas',authDomain:'demo-controle-pecas.firebaseapp.com'};window.__CP_FIREBASE_EMULADOR__=true;window.__CP_LOGIN_TESTE__={sub:'uid-'+email,email,email_verified:true};},email);
  await p.goto(process.env.URL_PAINEL_TESTE||'http://127.0.0.1:8003/pagina-completa.html');await p.waitForFunction(()=>['pronto','erro'].includes(E.status));
  assert.equal(await p.evaluate(()=>E.status),'pronto',await p.locator('#conteudo').innerText());return p;
@@ -54,7 +54,8 @@ try{
  try {await tec.waitForFunction(()=>E.status==='erro'&&Acesso.perfil===null);} catch(e) {
   const estado=await tec.evaluate(()=>({status:E.status,perfil:Acesso.perfil,erro:E.erro,pecas:PortalTecnico.pecas.length}));
   const cadastro=await admin.evaluate(async()=>(await Acesso.fs.doc('usuarios/ana@empresa.com').get({source:'server'})).data().ativo);
-  throw new Error(`A sessão deve ser bloqueada após revogação. Estado fictício: ${JSON.stringify({estado,ativoNoBanco:cadastro,erros})}`);
+  const propriaLeitura=await tec.evaluate(async()=>{try{return {email:identidadeAtual().email,perfil:(await Acesso.fs.doc(`usuarios/${identidadeAtual().email}`).get({source:'server'})).data()};}catch(e){return {code:e.code,message:e.message};}});
+  throw new Error(`A sessão deve ser bloqueada após revogação. Estado fictício: ${JSON.stringify({estado,ativoNoBanco:cadastro,propriaLeitura,erros,diagnosticos:diagnosticos.slice(-8)})}`);
  }
  assert.equal(await tec.evaluate(()=>PortalTecnico.pecas.length),0);
  assert.deepEqual(erros,[]);console.log('Portal E2E: cadastro e vínculo exclusivo, login real no emulador, isolamento por UF, devolução/RMDF, histórico, importação vazia, desfazer e revogação passaram.');

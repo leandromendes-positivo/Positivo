@@ -1,5 +1,6 @@
 /* Gestão de pessoas e férias. Cadastro direto, sem dependência de planilhas. */
 const UIferias = { busca: '', uf: '', ano: '', situacao: '', mes: '', arquivados: false };
+const UIcolaboradores = { busca: '', uf: '', area: '', situacao: '' };
 const UFS_FERIAS = ['PR', 'SC', 'TO', 'RS'];
 const AREAS_FERIAS = { administrativo: 'Administrativo', tecnico: 'Técnico' };
 const LOCALIDADES_FERIAS = { interior: 'Interior', capital: 'Capital' };
@@ -115,32 +116,49 @@ function renderFerias() {
   const lista = listaFeriasFiltrada(), ps = periodosFerias(), hoje = hojeISO(), ativos = E.ferias.filter(f=>!f.arquivado);
   const anos = [...new Set(E.ferias.flatMap(f => f.periodos.flatMap(p => Array.from({length:Number(p.fim.slice(0,4))-Number(p.inicio.slice(0,4))+1},(_,i)=>Number(p.inicio.slice(0,4))+i))))].sort();
   const opcoes = (valores, atual) => valores.map(([v,n]) => `<option value="${esc(v)}" ${String(atual)===String(v)?'selected':''}>${esc(n)}</option>`).join('');
-  return `<section class="ferias"><div class="ferias-abertura"><div><span class="ferias-eyebrow">GESTÃO DE COLABORADORES</span><h2>Férias da equipe</h2><p>Controle de períodos, datas de retorno e cobertura por região.</p><div class="ferias-acoes">${podeAdministrar()?'<button class="btn prim" data-ferias="novo">'+icone('mais')+' Adicionar colaborador</button>':''}</div></div></div>
+  return `<section class="ferias"><div class="ferias-abertura"><div><span class="ferias-eyebrow">GESTÃO DE COLABORADORES</span><h2>Férias da equipe</h2><p>Controle de períodos, datas de retorno e cobertura por região.</p><div class="ferias-acoes">${podeAdministrar()?'<button class="btn prim" data-ferias="novo">'+icone('mais')+' Adicionar colaborador</button>':''}<button class="btn" data-acao="ir" data-pagina="colaboradores">Colaboradores cadastrados</button></div></div></div>
   ${Acesso.modo !== 'firebase'?'<p class="aviso">Demonstração: alterações ficam somente nesta página.</p>':''}
   ${destaquesFerias()}
   <div class="ferias-kpis">${[['Equipe cadastrada',new Set(ativos.map(f=>f.matricula)).size,'colaboradores ativos'],['Em férias hoje',new Set(ps.filter(p=>p.inicio<=hoje && retornoFerias(p)>hoje).map(p=>p.registro.matricula)).size,'com retorno acompanhado'],['Saídas em 30 dias',ps.filter(p=>p.inicio>hoje && p.inicio<=somaDias(hoje,30)).length,'próximos períodos'],['Conflitos de cobertura',ativos.filter(f=>conflitosFerias(f).length).length,'planejamentos a revisar']].map(([t,n,sub],i)=>`<div><strong>${n}</strong><span>${t}</span><small>${sub}</small></div>`).join('')}</div>
+  ${renderMapaFerias()}
   ${mapaAnualFerias()}
-  <div class="ferias-secao-titulo"><div><span class="ferias-eyebrow">${UIferias.arquivados?'ARQUIVO':'CADASTROS'}</span><h3>${UIferias.arquivados?'Colaboradores retirados':'Colaboradores'}</h3></div><div class="ferias-lista-opcoes"><span>${lista.length} cadastros neste recorte</span><button class="link" data-ferias="arquivados">${UIferias.arquivados?'Voltar à equipe ativa':'Consultar retirados'}</button></div></div>
+  <div class="ferias-secao-titulo"><div><span class="ferias-eyebrow">${UIferias.arquivados?'ARQUIVO':'CADASTROS'}</span><h3>${UIferias.arquivados?'Colaboradores retirados':'Colaboradores'}</h3></div><div class="ferias-lista-opcoes"><span>${lista.length} cadastros neste recorte</span><button class="link" data-acao="ir" data-pagina="colaboradores">Colaboradores cadastrados</button></div></div>
   <form class="ferias-filtros"><label class="campo"><span>Colaborador ou matrícula</span><input name="busca" value="${esc(UIferias.busca)}" type="search"></label><label class="campo"><span>Ano dos períodos</span><select name="ano">${opcoes([['','Todos'],...anos.map(a=>[a,a])],UIferias.ano)}</select></label><label class="campo"><span>UF</span><select name="uf">${opcoes([['','Todas'],...UFS_FERIAS.map(x=>[x,x]),['?','Sem região']],UIferias.uf)}</select></label><label class="campo"><span>Situação</span><select name="situacao">${opcoes([['','Todas'],...['Sem programação','Programado','Em férias','Concluído','Cancelado'].map(x=>[x,x]),['conflito','Com conflito']],UIferias.situacao)}</select></label><button class="btn" type="submit">Aplicar filtros</button><button class="btn" type="button" data-ferias="limpar">Limpar</button></form>
   <p class="nota">${lista.length} de ${E.ferias.length} cadastros.${UIferias.mes?` Mês selecionado: ${UIferias.mes}/${UIferias.ano}.`:""} Dias corridos, incluindo início e fim. Retorno padrão no dia seguinte, ajustável à escala. Conflitos consideram períodos simultâneos na mesma UF, inclusive capital e interior; são alertas de cobertura, sem bloquear a programação. O cálculo considera toda a equipe, mesmo fora dos filtros.</p>
   <div class="ferias-lista">${lista.map(f=>{
     const conflitos=conflitosFerias(f), total=f.periodos.reduce((s,p)=>s+diasFerias(p),0), saldo=f.direito-total-f.vendidos;
     return `<article class="ferias-card ${conflitos.length?'tem-conflito':''}"><header><span class="ferias-avatar" aria-hidden="true">${esc(f.nome.split(/\s+/).filter(Boolean).map(x=>x[0]).slice(0,2).join(''))}</span><div><h3>${esc(f.nome)}</h3><p>Matrícula ${esc(f.matricula)} · ${esc(f.regiao || 'UF não informada')} · ${esc(perfilFerias(f))} · Ciclo ${esc(f.ciclo)}</p></div>${pill(conflitos.length?'alerta':situacaoFerias(f)==='Em férias'?'info':'neutro',situacaoFerias(f))}</header><div class="ferias-periodos">${f.periodos.map((p,i)=>`<div><strong>${i+1}º período · ${diasFerias(p)} dias</strong><span>${fmtData(p.inicio)} a ${fmtData(p.fim)}</span><span>Retorno: <b>${fmtData(retornoFerias(p))}</b>${p.retorno?' · ajustado':''}</span></div>`).join('')}</div><p><b>${total} dias programados</b> · ${f.vendidos} vendidos · ${saldo} a programar de ${f.direito} dias · ${f.status==='confirmado'?'Confirmado':f.status==='cancelado'?'Cancelado':'Planejamento'}</p>
-    ${conflitos.length?`<p class="ferias-conflito">${icone('alerta')} Coincide com ${[...new Set(conflitos.map(p=>`${p.registro.nome} (${fmtData(p.inicio)} a ${fmtData(p.fim)})`))].map(esc).join('; ')}.</p>`:''}${!ufFerias(f.regiao)?'<p class="ferias-conflito">Informe a região para verificar conflitos de cobertura.</p>':''}${f.obs?`<p class="ferias-observacao">${esc(f.obs)}</p>`:''}<footer>${podeAdministrar()?`<button class="btn pequeno" data-ferias="editar" data-id="${esc(f.id)}">Editar colaborador</button><button class="btn pequeno" data-ferias="retirar" data-id="${esc(f.id)}">${f.arquivado?'Reativar na lista':'Retirar da lista'}</button><button class="btn pequeno perigo" data-ferias="excluir" data-id="${esc(f.id)}">Excluir cadastro</button>`:''}<button class="btn pequeno" data-ferias="historico" data-id="${esc(f.id)}">Histórico</button></footer></article>`;
+    ${conflitos.length?`<p class="ferias-conflito">${icone('alerta')} Coincide com ${[...new Set(conflitos.map(p=>`${p.registro.nome} (${fmtData(p.inicio)} a ${fmtData(p.fim)})`))].map(esc).join('; ')}.</p>`:''}${!ufFerias(f.regiao)?'<p class="ferias-conflito">Informe a região para verificar conflitos de cobertura.</p>':''}${f.obs?`<p class="ferias-observacao">${esc(f.obs)}</p>`:''}<footer>${podeAdministrar()?`<button class="btn pequeno" data-ferias="editar" data-id="${esc(f.id)}">Editar férias</button>`:''}<button class="btn pequeno" data-ferias="historico" data-id="${esc(f.id)}">Histórico</button></footer></article>`;
   }).join('') || vazio('calendario','Nenhum planejamento encontrado',E.ferias.length?'Revise os filtros para consultar a equipe.':'Adicione um colaborador diretamente por aqui.')}</div></section>`;
+}
+/** Relação completa, independente dos filtros e datas da programação de férias. */
+function renderColaboradoresCadastrados() {
+  const f = UIcolaboradores;
+  const registros = E.ferias.filter(c => (!f.busca || normBusca(`${c.nome} ${c.matricula}`).includes(normBusca(f.busca)))
+    && (!f.uf || (f.uf === '?' ? !ufFerias(c.regiao) : ufFerias(c.regiao) === f.uf))
+    && (!f.area || (f.area === '?' ? !c.area : c.area === f.area))
+    && (!f.situacao || (f.situacao === 'retirado' ? c.arquivado : !c.arquivado)))
+    .sort((a,b) => comparar(a.nome,b.nome) || comparar(a.matricula,b.matricula) || comparar(a.ciclo,b.ciclo));
+  const opcoes = (lista, atual) => lista.map(([v,n])=>`<option value="${esc(v)}" ${v===atual?'selected':''}>${esc(n)}</option>`).join('');
+  return `<section class="ferias colaboradores-cadastro"><header class="colaboradores-intro"><div><h2>Colaboradores cadastrados</h2><p>Consulte e gerencie os cadastros da equipe, incluindo pessoas sem férias programadas, com férias canceladas ou retiradas da lista ativa.</p></div><div class="ferias-acoes">${podeAdministrar()?'<button class="btn prim" data-ferias="novo">'+icone('mais')+' Adicionar colaborador</button>':''}<button class="btn" data-acao="ir" data-pagina="ferias">Ver programação de férias</button></div></header>
+  <form class="ferias-filtros"><label class="campo"><span>Nome ou matrícula</span><input type="search" name="busca" value="${esc(f.busca)}"></label><label class="campo"><span>UF</span><select name="uf">${opcoes([['','Todas'],...UFS_FERIAS.map(x=>[x,x]),['?','Não informada']],f.uf)}</select></label><label class="campo"><span>Área</span><select name="area">${opcoes([['','Todas'],...Object.entries(AREAS_FERIAS),['?','Não informada']],f.area)}</select></label><label class="campo"><span>Situação do cadastro</span><select name="situacao">${opcoes([['','Todos'],['ativo','Ativos'],['retirado','Retirados']],f.situacao)}</select></label><button class="btn" type="submit">Aplicar filtros</button><button class="btn" type="button" data-ferias="limpar-cadastro">Limpar</button></form>
+  <div class="colaboradores-resumo"><strong>${new Set(registros.map(c=>c.matricula)).size} colaboradores</strong><span>${registros.length} de ${E.ferias.length} cadastros por ciclo</span></div>
+  <p class="nota">As ações se aplicam ao ciclo indicado em cada linha. Retirar mantém o cadastro para reativação; excluir remove definitivamente o cadastro de férias daquele ciclo, preservando o histórico e os cadastros de peças.</p>
+  <div class="colaboradores-tabela" tabindex="0" role="region" aria-label="Relação de colaboradores cadastrados"><table><caption class="sr-only">Todos os cadastros de colaboradores por ciclo de férias</caption><thead><tr><th scope="col">Colaborador</th><th scope="col">Matrícula</th><th scope="col">UF</th><th scope="col">Área e localidade</th><th scope="col">Ciclo</th><th scope="col">Situação</th><th scope="col">Ações</th></tr></thead><tbody>${registros.map(c=>`<tr data-colaborador="${esc(c.id)}"><th scope="row">${esc(nomeBonito(c.nome))}</th><td class="mono">${esc(c.matricula)}</td><td>${esc(ufFerias(c.regiao)||'Não informada')}</td><td>${esc(perfilFerias(c))}</td><td>${esc(c.ciclo)}</td><td>${pill(c.arquivado?'neutro':'ok',c.arquivado?'Retirado':'Ativo')}<small>${esc(situacaoFerias(c))}</small></td><td><div class="colaboradores-acoes">${podeAdministrar()?`<button class="btn pequeno" data-ferias="editar" data-id="${esc(c.id)}">Editar cadastro</button><button class="btn pequeno" data-ferias="retirar" data-id="${esc(c.id)}">${c.arquivado?'Reativar':'Retirar da lista'}</button><button class="btn pequeno perigo" data-ferias="excluir" data-id="${esc(c.id)}">Excluir cadastro</button>`:''}<button class="btn pequeno" data-ferias="historico" data-id="${esc(c.id)}">Histórico</button></div></td></tr>`).join('')||'<tr><td colspan="7">Nenhum colaborador encontrado. Revise os filtros ou adicione um cadastro.</td></tr>'}</tbody></table></div></section>`;
 }
 function prepararTelaFerias() {
   const raiz=document.querySelector('.ferias');
   if (!raiz || raiz.dataset.eventosFerias === 'prontos') return;
   raiz.dataset.eventosFerias = 'prontos';
-  raiz.querySelector('form').addEventListener('submit',e=>{e.preventDefault();Object.assign(UIferias,Object.fromEntries(new FormData(e.target)));renderizar(true);});
+  prepararMapaFerias();
+  raiz.querySelector('form').addEventListener('submit',e=>{e.preventDefault();Object.assign(UI.pagina==='colaboradores'?UIcolaboradores:UIferias,Object.fromEntries(new FormData(e.target)));renderizar(true);});
   raiz.addEventListener('click',e=>{
     const b=e.target.closest('[data-ferias]'); if(!b)return;
     Promise.resolve().then(async()=>{
       if(b.dataset.ferias==='novo')modalFerias();
       if(b.dataset.ferias==='editar')modalFerias(E.ferias.find(f=>f.id===b.dataset.id));
       if(b.dataset.ferias==='limpar'){Object.assign(UIferias,{busca:'',uf:'',ano:'',situacao:'',mes:''});renderizar(true);}
-      if(b.dataset.ferias==='arquivados'){UIferias.arquivados=!UIferias.arquivados;renderizar(true);}
+      if(b.dataset.ferias==='limpar-cadastro'){Object.assign(UIcolaboradores,{busca:'',uf:'',area:'',situacao:''});renderizar(true);}
       if(b.dataset.ferias==='mes'){UIferias.mes=UIferias.mes===b.dataset.mes?'':b.dataset.mes;UIferias.ano=b.dataset.ano;renderizar(true);}
       if(b.dataset.ferias==='ano'){UIferias.ano=String(Number(b.dataset.ano)+Number(b.dataset.passo));UIferias.mes='';renderizar(true);}
       if(b.dataset.ferias==='retirar'){
@@ -157,11 +175,7 @@ function prepararTelaFerias() {
           }
         } finally {if(b.isConnected)b.disabled=false;}
       }
-      if(b.dataset.ferias==='historico'){
-        const docs=await Armazem.consultar('historico_ferias',{onde:[['id','==',b.dataset.id]]});
-        docs.sort((a,b)=>b.versao-a.versao);
-        abrirModal({titulo:'Histórico de férias',corpo:`<ol class="linha-tempo">${docs.map(d=>`<li><div><strong>Versão ${d.versao} · ${esc(d.atualizadoPor.email || 'Demonstração')}</strong><p>${fmtDataHora(d.atualizadoEm)} · ${esc(d.status)} · ${esc(d.nome)} · ${esc(d.regiao)} · ${esc(perfilFerias(d))} · ciclo ${esc(d.ciclo)}</p><p>${d.periodos.map(p=>`${fmtData(p.inicio)} a ${fmtData(p.fim)} · retorno ${fmtData(retornoFerias(p))}`).join('<br>')}</p><p>${d.vendidos} dias vendidos · direito ${d.direito}${d.obs?` · ${esc(d.obs)}`:''}</p></div></li>`).join('') || '<li>Sem alterações registradas.</li>'}</ol>`});
-      }
+      if(b.dataset.ferias==='historico')await abrirHistoricoFerias(b.dataset.id);
     }).catch(e=>toast(e.message,'erro'));
   });
 

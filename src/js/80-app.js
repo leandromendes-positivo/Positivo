@@ -23,6 +23,7 @@ const PAGINAS = {
   estoque: { titulo: "Estoque de novas", icone: "caixa", render: renderEstoque },
   tecnicos: { titulo: "Técnicos", icone: "pessoas", render: renderTecnicos },
   ferias: { titulo: "Férias da equipe", icone: "calendario", render: renderFerias, depois: prepararTelaFerias },
+  colaboradores: { titulo: "Colaboradores cadastrados", icone: "pessoas", render: renderColaboradoresCadastrados, depois: prepararTelaFerias },
   relatorios: { titulo: "Relatórios", icone: "grafico", render: renderRelatorios },
   importar: { admin: true, titulo: "Importar planilhas", icone: "upload", render: renderImportar },
   config: { admin: true, titulo: "Configurações", icone: "ajustes", render: renderConfig, depois: posRenderConfig },
@@ -116,12 +117,12 @@ function atualizarMoldura() {
   Notificacoes.atualizar();
   atualizarNavegacaoSecoes();
   const D = E.status === "pronto" ? derivar() : null;
-  document.getElementById("entrada-topo").closest("label").hidden = !podeAdministrar() || UI.pagina === "ferias";
+  document.getElementById("entrada-topo").closest("label").hidden = !podeAdministrar() || ["ferias", "colaboradores"].includes(UI.pagina);
   const p = PAGINAS[UI.pagina];
   const titulo = document.getElementById("titulo");
   titulo.closest('.topo').dataset.pagina = UI.pagina;
   const grupo = document.getElementById('topo-grupo');
-  grupo.textContent = UI.pagina === 'ferias' ? 'Gestão de pessoas' : p.admin ? 'Administração' : UI.pagina === 'conta' ? 'Minha conta' : ['consulta', 'inventario', 'relatorios'].includes(UI.pagina) ? 'Análises e consultas' : ['estoque', 'tecnicos'].includes(UI.pagina) ? 'Recursos' : 'Monitoramento';
+  grupo.textContent = ['ferias','colaboradores'].includes(UI.pagina) ? 'Gestão de pessoas' : p.admin ? 'Administração' : UI.pagina === 'conta' ? 'Minha conta' : ['consulta', 'inventario', 'relatorios'].includes(UI.pagina) ? 'Análises e consultas' : ['estoque', 'tecnicos'].includes(UI.pagina) ? 'Recursos' : 'Monitoramento';
   const marca = document.getElementById('topo-icone'), simbolo = UI.tid ? 'pessoa' : p.icone;
   if (marca.dataset.icone !== simbolo) { marca.innerHTML = icone(simbolo); marca.dataset.icone = simbolo; }
   const tituloTexto = UI.tid && D && D.mapa.get(UI.tid) ? "Ficha do técnico" : p.titulo;

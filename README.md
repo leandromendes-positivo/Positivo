@@ -348,7 +348,7 @@ até três períodos, dias vendidos, observações, direito e retorno ajustado �
 Administradores alteram os cadastros; usuários autorizados consultam.
 
 **Retirar da lista** arquiva o cadastro, remove suas ausências dos alertas e preserva
-o histórico. Em **Colaboradores retirados**, é possível consultar ou reativar a pessoa.
+o histórico. Em **Colaboradores cadastrados**, filtre por **Retirados** para consultar ou reativar a pessoa.
 Não há exclusão definitiva de auditoria. Cancelar um período planejado e retirar um
 colaborador da equipe são operações distintas. O histórico registra quem alterou as
 informações; alterações simultâneas desatualizadas são recusadas.
@@ -375,8 +375,8 @@ PW_PATH=/workspace/positivo-tools/node_modules/playwright CHROMIUM=/usr/bin/chro
 No topo de Férias, **Em férias agora** mostra nomes e retornos; **Próximos a sair de
 férias** apresenta a próxima saída de cada colaborador em ordem cronológica. Esses
 quadros consultam a equipe ativa inteira e não são escondidos pelos filtros da lista.
-Retirados e cancelados não participam. O acesso a retirados fica junto da lista, para
-consulta e reativação, preservando o histórico.
+Retirados e cancelados não participam. A página **Colaboradores cadastrados** reúne
+todos os cadastros para consulta, edição, retirada, reativação e exclusão.
 
 O cadastro oferece UF **PR, SC, TO ou RS** e área **Administrativo ou Técnico**. Para
 Técnico, a localidade **Interior ou Capital** é opcional; Administrativo não tem
@@ -396,8 +396,28 @@ Teste de férias e notificações, também sem acesso a produção:
 PW_PATH=/workspace/positivo-tools/node_modules/playwright CHROMIUM=/usr/bin/chromium node testes/ferias-notificacoes-e2e.mjs
 ```
 
-**Excluir cadastro**, disponível aos administradores no cartão do colaborador, remove
+**Excluir cadastro**, disponível aos administradores em **Colaboradores cadastrados**, remove
 definitivamente o cadastro de férias daquele ciclo e seus períodos, após confirmação.
 A exclusão atualiza calendário, destaques e avisos; outros ciclos e o cadastro de peças
 não são alterados. O histórico permanece preservado e a operação registra responsável
 e horário. Alterações simultâneas desatualizadas impedem a exclusão até atualizar a lista.
+
+A relação de **Colaboradores cadastrados** é independente dos filtros de férias e inclui
+cadastros ativos, retirados, sem datas e com férias canceladas. Há filtros por nome,
+matrícula, UF, área e situação; cada linha identifica o ciclo afetado pelas ações.
+Os cartões da programação mantêm apenas edição de férias e consulta do histórico.
+
+O **Histórico de férias** mostra os registros mais recentes primeiro, com data completa,
+responsável, diferenças entre valores anteriores e atuais e detalhes de cada versão.
+A autoria da carga administrativa é apresentada como **Cadastro inicial**. Identificadores
+técnicos continuam preservados no banco e não ocupam o título do histórico.
+
+O mapa **Férias por estado** reutiliza a geometria do mapa operacional. Selecione PR, SC,
+TO ou RS pelo mapa, teclado ou botões para ver quem está de férias, as próximas saídas
+e os retornos. O detalhe permite abrir os colaboradores daquela UF. Contagens consultam
+a equipe ativa completa, independentemente dos filtros; retirados e cancelados são
+excluídos. Pessoas sem UF são sinalizadas para completar o cadastro.
+
+```bash
+PW_PATH=/workspace/positivo-tools/node_modules/playwright CHROMIUM=/usr/bin/chromium node testes/historico-mapa-ferias-e2e.mjs
+```

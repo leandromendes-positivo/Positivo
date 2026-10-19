@@ -51,6 +51,11 @@ try{
  await admin.evaluate(async()=>desfazerImportacao(E.importacoes.find(i=>i.id===window.__zerarPortal.lote)));
  await tec.waitForFunction(()=>E.status==='pronto'&&PortalTecnico.pecas.length===2);await tec.getByText('Relatório anterior: confira novamente o saldo.',{exact:true}).first().waitFor();assert.match(await tec.locator('#conteudo').innerText(),/Relatório anterior/);
  await admin.evaluate(()=>salvarUsuario('ana@empresa.com','tecnico',false,'PR--ANA_PORTAL'));
- await tec.waitForFunction(()=>E.status==='erro'&&Acesso.perfil===null);assert.equal(await tec.evaluate(()=>PortalTecnico.pecas.length),0);
+ try {await tec.waitForFunction(()=>E.status==='erro'&&Acesso.perfil===null);} catch(e) {
+  const estado=await tec.evaluate(()=>({status:E.status,perfil:Acesso.perfil,erro:E.erro,pecas:PortalTecnico.pecas.length}));
+  const cadastro=await admin.evaluate(async()=>(await Acesso.fs.doc('usuarios/ana@empresa.com').get({source:'server'})).data().ativo);
+  throw new Error(`A sessão deve ser bloqueada após revogação. Estado fictício: ${JSON.stringify({estado,ativoNoBanco:cadastro,erros})}`);
+ }
+ assert.equal(await tec.evaluate(()=>PortalTecnico.pecas.length),0);
  assert.deepEqual(erros,[]);console.log('Portal E2E: cadastro e vínculo exclusivo, login real no emulador, isolamento por UF, devolução/RMDF, histórico, importação vazia, desfazer e revogação passaram.');
 }finally{await browser.close();await env.cleanup();}

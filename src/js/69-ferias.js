@@ -85,6 +85,28 @@ async function salvarFerias(f, versao = 0) {
   }
   E.ferias = await Armazem.consultar('ferias'); mudou();
 }
+/** Exclusão do cadastro de férias; auditoria e outros cadastros do painel são preservados. */
+async function excluirCadastroFerias(f) {
+  exigirAdministrador();
+  if (!f?.id) throw new Error('Cadastro não encontrado. Atualize a lista.');
+  const caminho = `ferias/${f.id}`;
+  const conferir = atual => {
+    if (!atual || atual.versao !== f.versao) throw new Error('Este cadastro mudou em outra sessão. Atualize a lista antes de excluir.');
+    return {cadastroId:f.id,versao:atual.versao,por:identidadeAtual(),em:carimboServidor()};
+  };
+  if (Acesso.modo === 'firebase') await Acesso.fs.runTransaction(async tx => {
+    const ref = Acesso.fs.doc(caminho), snap = await tx.get(ref), atual = snap.exists ? snap.data() : null;
+    const registro = conferir(atual);
+    tx.set(Acesso.fs.doc(`exclusoes_ferias/${atual.evento}`),registro);
+    tx.delete(ref);
+  });
+  else {
+    const atual = await Armazem.ler(caminho), registro = conferir(atual);
+    await Armazem.gravar(`exclusoes_ferias/${atual.evento}`,registro);
+    await Armazem.apagar(caminho);
+  }
+  E.ferias = await Armazem.consultar('ferias'); mudou();
+}
 function listaFeriasFiltrada() {
   return E.ferias.filter(f => (UIferias.arquivados ? f.arquivado : !f.arquivado) && (!UIferias.mes || f.periodos.some(p => p.inicio <= fimMesFerias(UIferias.ano, UIferias.mes) && p.fim >= `${UIferias.ano}-${UIferias.mes}-01`)) && (!UIferias.busca || normBusca(`${f.nome} ${f.matricula}`).includes(normBusca(UIferias.busca))) && (!UIferias.uf || (UIferias.uf === '?' ? !ufFerias(f.regiao) : ufFerias(f.regiao) === UIferias.uf)) && (!UIferias.ano || f.periodos.some(p => p.inicio <= `${UIferias.ano}-12-31` && p.fim >= `${UIferias.ano}-01-01`)) && (!UIferias.situacao || (UIferias.situacao === 'conflito' ? conflitosFerias(f).length : situacaoFerias(f) === UIferias.situacao)))
     .sort((a,b) => comparar(a.periodos[0]?.inicio || '9999',b.periodos[0]?.inicio || '9999') || comparar(a.nome,b.nome));
@@ -104,7 +126,7 @@ function renderFerias() {
   <div class="ferias-lista">${lista.map(f=>{
     const conflitos=conflitosFerias(f), total=f.periodos.reduce((s,p)=>s+diasFerias(p),0), saldo=f.direito-total-f.vendidos;
     return `<article class="ferias-card ${conflitos.length?'tem-conflito':''}"><header><span class="ferias-avatar" aria-hidden="true">${esc(f.nome.split(/\s+/).filter(Boolean).map(x=>x[0]).slice(0,2).join(''))}</span><div><h3>${esc(f.nome)}</h3><p>Matrícula ${esc(f.matricula)} · ${esc(f.regiao || 'UF não informada')} · ${esc(perfilFerias(f))} · Ciclo ${esc(f.ciclo)}</p></div>${pill(conflitos.length?'alerta':situacaoFerias(f)==='Em férias'?'info':'neutro',situacaoFerias(f))}</header><div class="ferias-periodos">${f.periodos.map((p,i)=>`<div><strong>${i+1}º período · ${diasFerias(p)} dias</strong><span>${fmtData(p.inicio)} a ${fmtData(p.fim)}</span><span>Retorno: <b>${fmtData(retornoFerias(p))}</b>${p.retorno?' · ajustado':''}</span></div>`).join('')}</div><p><b>${total} dias programados</b> · ${f.vendidos} vendidos · ${saldo} a programar de ${f.direito} dias · ${f.status==='confirmado'?'Confirmado':f.status==='cancelado'?'Cancelado':'Planejamento'}</p>
-    ${conflitos.length?`<p class="ferias-conflito">${icone('alerta')} Coincide com ${[...new Set(conflitos.map(p=>`${p.registro.nome} (${fmtData(p.inicio)} a ${fmtData(p.fim)})`))].map(esc).join('; ')}.</p>`:''}${!ufFerias(f.regiao)?'<p class="ferias-conflito">Informe a região para verificar conflitos de cobertura.</p>':''}${f.obs?`<p class="ferias-observacao">${esc(f.obs)}</p>`:''}<footer>${podeAdministrar()?`<button class="btn pequeno" data-ferias="editar" data-id="${esc(f.id)}">Editar colaborador</button><button class="btn pequeno" data-ferias="retirar" data-id="${esc(f.id)}">${f.arquivado?'Reativar na lista':'Retirar da lista'}</button>`:''}<button class="btn pequeno" data-ferias="historico" data-id="${esc(f.id)}">Histórico</button></footer></article>`;
+    ${conflitos.length?`<p class="ferias-conflito">${icone('alerta')} Coincide com ${[...new Set(conflitos.map(p=>`${p.registro.nome} (${fmtData(p.inicio)} a ${fmtData(p.fim)})`))].map(esc).join('; ')}.</p>`:''}${!ufFerias(f.regiao)?'<p class="ferias-conflito">Informe a região para verificar conflitos de cobertura.</p>':''}${f.obs?`<p class="ferias-observacao">${esc(f.obs)}</p>`:''}<footer>${podeAdministrar()?`<button class="btn pequeno" data-ferias="editar" data-id="${esc(f.id)}">Editar colaborador</button><button class="btn pequeno" data-ferias="retirar" data-id="${esc(f.id)}">${f.arquivado?'Reativar na lista':'Retirar da lista'}</button><button class="btn pequeno perigo" data-ferias="excluir" data-id="${esc(f.id)}">Excluir cadastro</button>`:''}<button class="btn pequeno" data-ferias="historico" data-id="${esc(f.id)}">Histórico</button></footer></article>`;
   }).join('') || vazio('calendario','Nenhum planejamento encontrado',E.ferias.length?'Revise os filtros para consultar a equipe.':'Adicione um colaborador diretamente por aqui.')}</div></section>`;
 }
 function prepararTelaFerias() {
@@ -124,6 +146,16 @@ function prepararTelaFerias() {
       if(b.dataset.ferias==='retirar'){
         exigirAdministrador();const f=E.ferias.find(f=>f.id===b.dataset.id);
         if(await confirmar({titulo:f.arquivado?'Reativar colaborador?':'Retirar colaborador da lista?',texto:f.arquivado?`${f.nome} voltará para a lista e para os alertas de cobertura.`:`${f.nome} sairá da lista ativa e dos alertas. Datas e histórico serão preservados.`,ok:f.arquivado?'Reativar':'Retirar da lista'}))await salvarFerias({...f,arquivado:!f.arquivado},f.versao);
+      }
+      if(b.dataset.ferias==='excluir'){
+        exigirAdministrador();const f=E.ferias.find(f=>f.id===b.dataset.id);
+        if(!f)throw new Error('Cadastro não encontrado. Atualize a lista.');
+        if(b.disabled)return;b.disabled=true;
+        try {
+          if(await confirmar({titulo:'Excluir cadastro de férias?',texto:`Excluir ${f.nome} (matrícula ${f.matricula}, ciclo ${f.ciclo})? O cadastro e seus períodos serão removidos definitivamente desta lista, do calendário e dos avisos. O histórico será preservado. Cadastros de peças e outros ciclos não serão alterados.`,ok:'Excluir cadastro',perigo:true})){
+            await excluirCadastroFerias(f);toast('Cadastro de férias excluído.');
+          }
+        } finally {if(b.isConnected)b.disabled=false;}
       }
       if(b.dataset.ferias==='historico'){
         const docs=await Armazem.consultar('historico_ferias',{onde:[['id','==',b.dataset.id]]});

@@ -96,6 +96,21 @@ service cloud.firestore {
         && dataValida(p.inicio) && p.inicio != '' && dataValida(p.fim) && p.fim >= p.inicio
         && dataValida(p.retorno) && (p.retorno == '' || p.retorno > p.fim);
     }
+    function exclusaoFeriasValida(d, cadastroId, versao) {
+      return d.keys().hasAll(['cadastroId','versao','por','em'])
+        && d.keys().hasOnly(['cadastroId','versao','por','em'])
+        && d.cadastroId == cadastroId && d.versao == versao
+        && porValido(d.por) && d.em == request.time;
+    }
+    match /exclusoes_ferias/{id} {
+      allow read: if administrador();
+      allow create: if administrador()
+        && get(/databases/$(database)/documents/ferias/$(request.resource.data.cadastroId)).data.evento == id
+        && exclusaoFeriasValida(request.resource.data, request.resource.data.cadastroId,
+          get(/databases/$(database)/documents/ferias/$(request.resource.data.cadastroId)).data.versao)
+        && !existsAfter(/databases/$(database)/documents/ferias/$(request.resource.data.cadastroId));
+      allow update, delete: if false;
+    }
     match /ferias/{id} {
       allow read: if autorizado();
       allow create: if administrador() && feriasValidas(request.resource.data)
@@ -104,7 +119,8 @@ service cloud.firestore {
       allow update: if administrador() && feriasValidas(request.resource.data)
         && request.resource.data.id == id && request.resource.data.versao == resource.data.versao + 1
         && getAfter(/databases/$(database)/documents/historico_ferias/$(request.resource.data.evento)).data == request.resource.data;
-      allow delete: if false;
+      allow delete: if administrador() && exclusaoFeriasValida(
+        getAfter(/databases/$(database)/documents/exclusoes_ferias/$(resource.data.evento)).data, id, resource.data.versao);
     }
     match /historico_ferias/{id} {
       allow read: if autorizado();

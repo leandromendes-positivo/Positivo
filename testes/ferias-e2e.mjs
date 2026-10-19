@@ -91,6 +91,28 @@ try {
  await page.click('[data-ferias="limpar"]');
  await page.evaluate(()=>carregarTudo());await page.waitForFunction(()=>E.status==='pronto');
  assert.equal(await page.evaluate(()=>E.ferias.length),3);
+ // Exclusion requires confirmation, rejects stale versions and clears live vacation views.
+ const exclusao=await page.evaluate(async()=>{
+  const antes=E.ferias.find(f=>f.matricula==='TESTE-C');
+  await salvarFerias({...antes,periodos:[{inicio:'2027-01-20',fim:'2027-02-08',retorno:''}]},antes.versao);
+  let desatualizado=false;try{await excluirCadastroFerias(antes);}catch(e){desatualizado=/outra sessão/.test(e.message);}
+  return {desatualizado,presente:!!E.ferias.find(f=>f.id===antes.id)};
+ });assert.deepEqual(exclusao,{desatualizado:true,presente:true});
+ await page.waitForFunction(()=>document.querySelectorAll('[data-ferias="excluir"]').length===3);
+ await page.locator(`[data-ferias="excluir"][data-id="${idC}"]`).click();
+ assert.match(await page.locator('.texto-modal').innerText(),/Colaborador Fictício C/);
+ await page.locator('.modal [data-fechar]').first().click();
+ assert.equal(await page.evaluate(()=>E.ferias.length),3);
+ await page.locator(`[data-ferias="excluir"][data-id="${idC}"]`).click();await page.click('[data-ok]');
+ await page.waitForFunction(()=>E.ferias.length===2 && document.querySelectorAll('.ferias-card').length===2);
+ const removido=await page.evaluate(async id=>({
+  ausente:!(await Armazem.ler(`ferias/${id}`)),
+  historico:(await Armazem.consultar('historico_ferias',{onde:[['id','==',id]]})).length>0,
+  auditoria:(await Armazem.consultar('exclusoes_ferias')).filter(e=>e.cadastroId===id).length,
+  naAgenda:agendaEquipeFerias().proximas.some(p=>p.registro.id===id),
+  nosAvisos:alertasOperacionais().filter(a=>a.id.startsWith('ferias_')).some(a=>a.detalhes.some(d=>d.includes('Colaborador Fictício C')))
+ }),idC);
+ assert.deepEqual(removido,{ausente:true,historico:true,auditoria:1,naAgenda:false,nosAvisos:false});
  for(const theme of ['light','dark']){
   await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
   await page.setViewportSize({width:320,height:844});
@@ -99,6 +121,8 @@ try {
  // A standard user can consult but cannot edit, even by calling the save function.
  const permissao=await page.evaluate(async()=>{Acesso.modo='firebase';Acesso.perfil={ativo:true,perfil:'usuario'};try{await salvarFerias(E.ferias[0]);return false;}catch{return true;}});assert.equal(permissao,true);
  await page.evaluate(()=>renderizar(true));assert.equal(await page.locator('[data-ferias="novo"]').count(),0);
+ const exclusaoNegada=await page.evaluate(async()=>{try{await excluirCadastroFerias(E.ferias[0]);return false;}catch{return true;}});assert.equal(exclusaoNegada,true);
+ assert.equal(await page.locator('[data-ferias="excluir"]').count(),0);
  assert.deepEqual(erros,[]);
  console.log('PASSOU: cadastro pela tela, cálculos inclusivos e ano bissexto, retorno ajustado, conflitos por UF, cancelamento, validação, concorrência, histórico, cadastro sem datas, retirada e reativação, mapa mensal, recarga, temas, celular, UFs predefinidas, área, localidade condicional, compatibilidade e restrição de edição.');
 } finally {await browser.close();}

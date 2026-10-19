@@ -395,3 +395,9 @@ Teste de férias e notificações, também sem acesso a produção:
 ```bash
 PW_PATH=/workspace/positivo-tools/node_modules/playwright CHROMIUM=/usr/bin/chromium node testes/ferias-notificacoes-e2e.mjs
 ```
+
+**Excluir cadastro**, disponível aos administradores no cartão do colaborador, remove
+definitivamente o cadastro de férias daquele ciclo e seus períodos, após confirmação.
+A exclusão atualiza calendário, destaques e avisos; outros ciclos e o cadastro de peças
+não são alterados. O histórico permanece preservado e a operação registra responsável
+e horário. Alterações simultâneas desatualizadas impedem a exclusão até atualizar a lista.

@@ -15,6 +15,8 @@ const UI = {
 };
 
 const PAGINAS = {
+  'meu-painel': {tecnico:true,titulo:'Minhas peças',icone:'caixa',render:renderPortalTecnico},
+  'respostas-tecnicos': {titulo:'Respostas dos técnicos',icone:'retorno',render:renderRespostasTecnicos,depois:carregarRespostasTecnicos},
   painel: { titulo: "Controle operacional", nav: "Visão geral", icone: "painel", render: renderPainel, depois: desenharPainel },
   cobrancas: { titulo: "Cobranças", icone: "sino", render: renderCobrancas },
   usadas: { titulo: "Peças usadas", icone: "retorno", render: renderUsadas },
@@ -33,7 +35,7 @@ const PAGINAS = {
 
 function paginasVizinhas() {
   if (UI.pagina === 'tecnicos' && UI.tid) return { anterior: 'tecnicos', proxima: null };
-  const paginas = Object.keys(PAGINAS).filter(id => !PAGINAS[id].admin || podeAdministrar());
+  const paginas = Object.keys(PAGINAS).filter(paginaPermitida);
   const atual = paginas.indexOf(UI.pagina);
   return { anterior: paginas[atual - 1], proxima: paginas[atual + 1] };
 }
@@ -57,7 +59,7 @@ function atualizarNavegacaoSecoes() {
 
 function irPara(pagina, { tid = null } = {}) {
   MenuLateral.fechar({ restaurarFoco: false });
-  if (!PAGINAS[pagina]) pagina = "painel";
+  if (!paginaPermitida(pagina)) pagina = perfilTecnico() ? "meu-painel" : "painel";
   UI.pagina = pagina;
   UI.tid = pagina === "tecnicos" ? tid : null;
   try { history.replaceState(null, "", "#" + pagina); } catch (_) { /* moldura sem histórico */ }
@@ -81,6 +83,7 @@ function renderizar(forcar = false) {
   }
   renderPendente = false;
   Pesquisas.fechar(conteudo);
+  if (!paginaPermitida(UI.pagina)) UI.pagina = perfilTecnico() ? 'meu-painel' : 'painel';
   atualizarMoldura();
   if (E.status === "carregando" && !E.usadas.length && !E.novas.length) {
     conteudo.innerHTML = `<div class="carregando"><div class="girando"></div><p>Carregando os dados…</p></div>`;
@@ -98,7 +101,7 @@ function renderizar(forcar = false) {
   const p = PAGINAS[UI.pagina];
   UI.posRender = null;
   conteudo.dataset.pagina = UI.pagina;
-  conteudo.innerHTML = cabecalhoSecao(UI.pagina, derivar()) + p.render();
+  conteudo.innerHTML = (perfilTecnico() || UI.pagina === 'respostas-tecnicos' ? '' : cabecalhoSecao(UI.pagina, derivar())) + p.render();
   Calendarios.preparar(conteudo);
   Pesquisas.preparar(conteudo);
   if (!podeAdministrar()) {
@@ -116,7 +119,7 @@ function renderizar(forcar = false) {
 function atualizarMoldura() {
   Notificacoes.atualizar();
   atualizarNavegacaoSecoes();
-  const D = E.status === "pronto" ? derivar() : null;
+  const D = E.status === "pronto" && !perfilTecnico() ? derivar() : null;
   document.getElementById("entrada-topo").closest("label").hidden = !podeAdministrar() || ["ferias", "colaboradores"].includes(UI.pagina);
   const p = PAGINAS[UI.pagina];
   const titulo = document.getElementById("titulo");
@@ -141,6 +144,7 @@ function atualizarMoldura() {
     cont.hidden = !n;
   }
   const fr = document.getElementById("rail-frescor");
+  if (fr && perfilTecnico()) fr.innerHTML = '';
   if (fr && D) {
     const regioes = [...new Set(D.frescor.map((f) => f.regiao))];
     fr.innerHTML = regioes.length ? `<span class="rail-rotulo">Planilhas</span>${regioes.map((r) => {
@@ -179,6 +183,10 @@ function itensSelecionados() {
 }
 
 const ACOES = {
+  'novo-acesso-tecnico': () => modalUsuario('', 'tecnico'),
+  'portal-informar': el => modalDeclaracaoTecnico(el.dataset.peca),
+  'portal-historico': () => modalEventosTecnico(),
+  'respostas-atualizar': () => { RespostasTecnicos.chave='';carregarRespostasTecnicos(); },
   "relatorios-exportar": el => exportarRelatorio(el.dataset.formato),
   "relatorios-pecas": () => modalPecasRelatorio(),
   "relatorios-atualizar": () => { relatorioHistorico.chave = ''; renderizar(true); },
@@ -407,6 +415,7 @@ function ligarEventos() {
   document.addEventListener("click", (ev) => {
     const alvo = ev.target.closest("[data-acao]");
     if (!alvo || alvo.disabled) return;
+    if (perfilTecnico() && !['tema','ir','sair','recarregar','menu-lateral','navegar-secao','portal-informar','portal-historico'].includes(alvo.dataset.acao)) return;
     const f = ACOES[alvo.dataset.acao];
     if (f) { ev.preventDefault(); Promise.resolve().then(()=>f(alvo, ev)).catch(e=>toast(e.code ? erroAmigavel(e).message : e.message,"erro")); }
   });
@@ -494,7 +503,7 @@ function ligarEventos() {
 }
 
 function montarMoldura() {
-  document.getElementById("nav").innerHTML = Object.entries(PAGINAS).filter(([,p])=>!p.admin || podeAdministrar()).map(([id, p]) =>
+  document.getElementById("nav").innerHTML = Object.entries(PAGINAS).filter(([id])=>paginaPermitida(id)).map(([id, p]) =>
     `${id === "painel" ? '<span class="nav-grupo">Monitoramento</span>' : id === "estoque" ? '<span class="nav-grupo">Recursos</span>' : id === "ferias" ? '<span class="nav-grupo">Pessoas</span>' : id === "relatorios" ? '<span class="nav-grupo">Análises</span>' : id === "importar" ? '<span class="nav-grupo">Administração</span>' : ""}<a href="#${id}" data-nav="${id}" data-acao="ir" data-pagina="${id}">${icone(p.icone)}<span>${esc(p.nav || p.titulo)}</span>${id === "cobrancas" ? `<b class="nav-contador" id="contador-cobrancas" hidden></b>` : ""}</a>`
   ).join("");
 }

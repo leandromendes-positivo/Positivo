@@ -112,7 +112,7 @@ function compararFoto(lido, hoje, agoraS, lote, foto = E) {
 }
 
 /** Saldo oficial e arquivo de saídas entram juntos no Firebase. */
-async function confirmarImportacaoNoBanco({ indice, registro, lote, devolvidas, movimentos, hoje }) {
+async function confirmarImportacaoNoBanco({ indice, registro, lote, devolvidas, movimentos, hoje, portal }) {
   const docs = [];
   if (devolvidas.length) dividirEmPartes(devolvidas).forEach((itens,n)=>docs.push([`devolucoes/${lote}-${n}`,{data:hoje,lote,itens,atualizadoEm:agoraISO()}]));
   if (movimentos.length) dividirEmPartes(movimentos).forEach((itens,n)=>docs.push([`movimentos/${lote}-${n}`,{data:hoje,lote,itens}]));
@@ -124,6 +124,7 @@ async function confirmarImportacaoNoBanco({ indice, registro, lote, devolvidas, 
       if ((atual.data()?.versao || 0) !== (indice.versao - 1)) throw Object.assign(new Error('Outra pessoa importou planilhas durante esta atualização. Recarregue e importe novamente.'), { amigavel: true });
       for (const [c,d] of docs) tx.set(Acesso.fs.doc(c),codificarFS(d));
       tx.set(Acesso.fs.doc(`importacoes/${lote}`),codificarFS(registro));
+      if (portal) tx.set(Acesso.fs.doc('portal/controle'),portal);
       tx.set(ref,codificarFS(indice),{merge:true});
     });
   } else {
@@ -189,6 +190,13 @@ async function importarLote(lidos, aoProgresso = () => {}) {
     }
   }
 
+  // Nomes normalizados não podem colidir com outro identificador já cadastrado.
+  const identidades = new Map();
+  for (const l of grupos.values()) for (const it of l.itens) {
+    const tid=idSeguro(it.tecChave), anterior=identidades.get(tid) || E.cadastro[tid]?.chave;
+    if (anterior && anterior!==it.tecChave) throw new Error('Dois técnicos geraram o mesmo identificador. Corrija os nomes na origem antes de importar.');
+    identidades.set(tid,it.tecChave);
+  }
   // novas fotos
   const resultados = [];
   const devolvidas = [];
@@ -242,7 +250,16 @@ async function importarLote(lidos, aoProgresso = () => {}) {
   aoProgresso("Atualizando o índice…");
   const versao = (indiceBase.versao || 0) + 1;
   const registro = { em: agoraS, por: E.usuario.id || '', arquivos: resultados, avisos, chaves: [...fotos.keys()], devolvidas: somar(devolvidas,d=>d[5]), desfeito: false };
-  const arquivo = await confirmarImportacaoNoBanco({ indice: { arquivos: entradasIndice, anterior: anteriores, versao, atualizadoEm: agoraS, origemSessao: Acesso.sessao }, registro, lote, devolvidas, movimentos, hoje });
+  aoProgresso('Preparando os saldos individuais dos técnicos…');
+  const fotoPortal = {usadas:[...fotoBase.usadas],novas:[...fotoBase.novas]};
+  for(const [chave,r] of fotos) {
+    const [tipo,regiao]=chave.split(':');
+    fotoPortal[tipo]=[...fotoPortal[tipo].filter(x=>x.regiao!==regiao),...r.linhas];
+  }
+  const cadastroPortal=structuredClone(E.cadastro);
+  for(const [tid,c] of Object.entries(novosTecs))cadastroPortal[tid]={...cadastroPortal[tid],...c};
+  const portal=await prepararSaldosTecnicos(fotoPortal.usadas,fotoPortal.novas,cadastroPortal,{...E.catalogo,...novosMats},versao);
+  const arquivo = await confirmarImportacaoNoBanco({ indice: { arquivos: entradasIndice, anterior: anteriores, versao, atualizadoEm: agoraS, origemSessao: Acesso.sessao }, registro, lote, devolvidas, movimentos, hoje, portal });
   E.existe.indice = true;
 
   // a partir daqui a nova foto é a oficial: atualiza a memória
@@ -293,6 +310,11 @@ async function desfazerImportacao(imp) {
   const indice = {arquivos,anterior,versao:versaoAnterior+1,atualizadoEm:agoraISO(),origemSessao:Acesso.sessao};
   const registro = {desfeito:true,desfeitoEm:agoraISO(),desfeitoPor:identidadeAtual()};
   if(Acesso.modo==='firebase') {
+    const fotoPortal={usadas:[],novas:[]};
+    for(const [chave,ent] of Object.entries({...E.indice.arquivos,...arquivos})) {
+      if(ent?.gen)fotoPortal[chave.split(':')[0]].push(...await lerArquivoDoIndice(chave,ent));
+    }
+    const portal=await prepararSaldosTecnicos(fotoPortal.usadas,fotoPortal.novas,E.cadastro,E.catalogo,indice.versao);
     await Acesso.fs.runTransaction(async tx=>{
       const ref = Acesso.fs.doc('dados/indice'), atual=await tx.get(ref);
       if((atual.data()?.versao||0)!==versaoAnterior) throw new Error('As planilhas foram atualizadas em outra sessão. Recarregue antes de desfazer.');
@@ -301,6 +323,7 @@ async function desfazerImportacao(imp) {
         if(doc.itens.length)tx.set(Acesso.fs.doc(c),codificarFS(doc));else tx.delete(Acesso.fs.doc(c));
       }
       for(const m of movs)tx.delete(Acesso.fs.doc(`movimentos/${m.id}`));
+      tx.set(Acesso.fs.doc('portal/controle'),portal);
       tx.set(Acesso.fs.doc(`importacoes/${imp.id}`),codificarFS(registro),{merge:true});
       tx.set(ref,codificarFS(indice),{merge:true});
     });

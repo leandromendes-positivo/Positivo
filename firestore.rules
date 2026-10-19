@@ -42,22 +42,100 @@ service cloud.firestore {
     function eventoCorreto(d) {
       return getAfter(/databases/$(database)/documents/auditoria_agendamentos/$(d.evento)).data == d;
     }
+    // Perfil técnico nunca integra autorizado(): os caminhos globais continuam restritos à operação.
+    function tecnico() { return identidade() && perfil().ativo == true && perfil().perfil == 'tecnico'; }
+    function meuEstoque(id) {
+      return tecnico() && perfil().tecnicoId == id
+        && get(/databases/$(database)/documents/vinculos_tecnicos/$(id)).data.email == email();
+    }
+    function geracaoAtual(gen) { return get(/databases/$(database)/documents/portal/controle).data.geracao == gen; }
+    function vinculoValido(d) {
+      let v = getAfter(/databases/$(database)/documents/vinculos_tecnicos/$(d.tecnicoId)).data;
+      return d.tecnicoId is string && v.email == d.email
+        && d.tecnicoId == v.regiao + '--' + v.tid
+        && v.regiao in ['PR','SC','TO','RS'] && v.tid.matches('^[A-Z0-9_.-]{1,120}$');
+    }
+    match /vinculos_tecnicos/{id} {
+      allow read: if administrador() || (tecnico() && perfil().tecnicoId == id && resource.data.email == email());
+      allow create, update: if administrador() && request.resource.data.keys().hasOnly(['email','tid','regiao'])
+        && id == request.resource.data.regiao + '--' + request.resource.data.tid
+        && request.resource.data.regiao in ['PR','SC','TO','RS']
+        && request.resource.data.tid.matches('^[A-Z0-9_.-]{1,120}$')
+        && (exists(/databases/$(database)/documents/vinculos_tecnicos/$(id))
+          || get(/databases/$(database)/documents/cadastro/tecnicos).data.t[request.resource.data.tid].regiao == request.resource.data.regiao)
+        && getAfter(/databases/$(database)/documents/usuarios/$(request.resource.data.email)).data.tecnicoId == id
+        && getAfter(/databases/$(database)/documents/usuarios/$(request.resource.data.email)).data.perfil == 'tecnico'
+        && (!exists(/databases/$(database)/documents/vinculos_tecnicos/$(id)) || resource.data.email == request.resource.data.email);
+      allow delete: if administrador() && (!('tecnicoId' in getAfter(/databases/$(database)/documents/usuarios/$(resource.data.email)).data)
+        || getAfter(/databases/$(database)/documents/usuarios/$(resource.data.email)).data.tecnicoId != id);
+    }
+    match /portal/controle {
+      allow get: if autorizado() || tecnico();
+      allow list: if false;
+      allow create, update: if administrador() && request.resource.data.keys().hasOnly(['geracao','versao','atualizadoEm'])
+        && request.resource.data.geracao is string && request.resource.data.geracao.matches('^[a-zA-Z0-9-]{20,80}$')
+        && request.resource.data.versao == getAfter(/databases/$(database)/documents/dados/indice).data.versao;
+      allow delete: if false;
+    }
+    match /saldos_tecnicos/{id}/geracoes/{gen} {
+      allow get: if autorizado() || (meuEstoque(id) && geracaoAtual(gen));
+      allow list: if administrador();
+      allow write: if administrador();
+      match /pecas/{peca} {
+        allow read: if autorizado() || (meuEstoque(id) && geracaoAtual(gen));
+        allow write: if administrador();
+      }
+    }
+    function declaracaoValida(d, id, peca) {
+      let p = get(/databases/$(database)/documents/saldos_tecnicos/$(id)/geracoes/$(d.geracao)/pecas/$(peca)).data;
+      return d.keys().hasAll(['tecnicoId','peca','geracao','mat','tipo','quantidadeDevolver','quantidadeRmdf','rmdf','previsao','protocolo','observacao','cancelado','uid','email','versao','evento','em'])
+        && d.keys().hasOnly(['tecnicoId','peca','geracao','mat','tipo','quantidadeDevolver','quantidadeRmdf','rmdf','previsao','protocolo','observacao','cancelado','uid','email','versao','evento','em'])
+        && meuEstoque(id) && d.tecnicoId == id && d.peca == peca && geracaoAtual(d.geracao)
+        && d.mat == p.mat && d.tipo == p.tipo && autor(d) && d.em == request.time
+        && d.evento is string && d.evento.matches('^[a-zA-Z0-9-]{20,80}$') && d.versao is int
+        && d.quantidadeDevolver is int && d.quantidadeDevolver >= 0
+        && d.quantidadeRmdf is int && d.quantidadeRmdf >= 0
+        && d.quantidadeDevolver + d.quantidadeRmdf <= p.quantidade
+        && d.cancelado is bool && ((d.cancelado && d.quantidadeDevolver + d.quantidadeRmdf == 0)
+          || (!d.cancelado && d.quantidadeDevolver + d.quantidadeRmdf > 0))
+        && dataValida(d.previsao) && ((d.quantidadeDevolver == 0 && d.previsao == '') || (d.quantidadeDevolver > 0 && d.previsao != ''))
+        && d.rmdf in ['nenhum','previsto','aplicado']
+        && ((d.quantidadeRmdf == 0 && d.rmdf == 'nenhum') || (d.quantidadeRmdf > 0 && d.tipo == 'novas' && d.rmdf in ['previsto','aplicado']))
+        && d.protocolo is string && d.protocolo.size() <= 100 && (d.rmdf != 'aplicado' || d.protocolo.size() > 0)
+        && d.observacao is string && d.observacao.size() <= 500;
+    }
+    match /declaracoes_tecnicos/{id}/itens/{peca} {
+      allow read: if autorizado() || meuEstoque(id);
+      allow create, update: if declaracaoValida(request.resource.data,id,peca)
+        && request.resource.data.versao == (exists(/databases/$(database)/documents/declaracoes_tecnicos/$(id)/itens/$(peca)) ? resource.data.versao + 1 : 1)
+        && getAfter(/databases/$(database)/documents/eventos_tecnicos/$(request.resource.data.evento)).data == request.resource.data;
+      allow delete: if false;
+    }
+    match /eventos_tecnicos/{id} {
+      allow read: if autorizado() || meuEstoque(resource.data.tecnicoId);
+      allow create: if request.resource.data.evento == id
+        && declaracaoValida(request.resource.data,request.resource.data.tecnicoId,request.resource.data.peca)
+        && getAfter(/databases/$(database)/documents/declaracoes_tecnicos/$(request.resource.data.tecnicoId)/itens/$(request.resource.data.peca)).data == request.resource.data;
+      allow update, delete: if false;
+    }
+
     match /usuarios/{id} {
       allow get: if identidade() && (id == email() || administrador());
       allow list: if administrador();
       function valido(d) {
         return d.keys().hasAll(['email','perfil','ativo','principal','criadoEm','criadoPor','atualizadoEm','atualizadoPor'])
-          && d.keys().hasOnly(['email','perfil','ativo','principal','criadoEm','criadoPor','atualizadoEm','atualizadoPor','nome'])
+          && d.keys().hasOnly(['email','perfil','ativo','principal','criadoEm','criadoPor','atualizadoEm','atualizadoPor','nome','tecnicoId'])
           && (!('nome' in d) || (d.nome is string && d.nome.size() > 0 && d.nome.size() <= 80
             && d.nome.matches('^\\S(.*\\S)?$') && d.nome.matches('^[^<>\\x00-\\x1F\\x7F]+$')))
           && d.email == id && id == id.lower() && id.size() <= 254 && id.matches('^[^ /@]+@[^ /@]+[.][^ /@]+$')
-          && d.perfil in ['usuario','administrador'] && d.ativo is bool && d.principal is bool
+          && d.perfil in ['usuario','administrador','tecnico']
+          && ((d.perfil == 'tecnico' && 'tecnicoId' in d && vinculoValido(d)) || (d.perfil != 'tecnico' && !('tecnicoId' in d))) && d.ativo is bool && d.principal is bool
           && d.atualizadoEm == request.time && porValido(d.atualizadoPor);
       }
       allow create: if administrador() && valido(request.resource.data)
         && request.resource.data.principal == false && request.resource.data.criadoEm == request.time
         && porValido(request.resource.data.criadoPor);
-      allow update: if autorizado() && valido(request.resource.data)
+      allow update: if (autorizado() || tecnico()) && valido(request.resource.data)
         && request.resource.data.criadoEm == resource.data.criadoEm
         && request.resource.data.criadoPor == resource.data.criadoPor
         && request.resource.data.principal == resource.data.principal
@@ -65,7 +143,7 @@ service cloud.firestore {
             && 'nome' in request.resource.data)
           // O principal é imutável para terceiros; nenhum administrador gerencia a própria permissão.
           || (administrador() && resource.data.principal == false && id != email()
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['perfil','ativo','atualizadoEm','atualizadoPor'])));
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['perfil','ativo','tecnicoId','atualizadoEm','atualizadoPor'])));
       allow delete: if false;
     }
     function feriasValidas(d) {
@@ -129,7 +207,7 @@ service cloud.firestore {
         && getAfter(/databases/$(database)/documents/ferias/$(request.resource.data.id)).data == request.resource.data;
       allow update, delete: if false;
     }
-    match /seguranca/{id} { allow read: if autorizado(); allow write: if false; }
+    match /seguranca/{id} { allow read: if autorizado() || (tecnico() && id == 'controle'); allow write: if false; }
     match /agendamentos/{id} {
       allow read: if autorizado();
       allow create: if autorizado() && agendaValida(request.resource.data, id)
@@ -177,7 +255,10 @@ service cloud.firestore {
     match /acompanhamento/{id} { allow read: if autorizado(); allow write: if false; }
     match /{colecao}/{id} {
       allow read: if autorizado() && colecao in ['config','cadastro','dados','devolucoes','movimentos','historico','importacoes','resumo'];
-      allow write: if administrador() && colecao in ['config','cadastro','dados','devolucoes','movimentos','historico','importacoes','resumo'];
+      allow write: if administrador() && colecao in ['config','cadastro','dados','devolucoes','movimentos','historico','importacoes','resumo']
+        && (colecao != 'dados' || id != 'indice' || (request.resource.data.versao is int
+          && getAfter(/databases/$(database)/documents/portal/controle).data.versao == request.resource.data.versao
+          && (!exists(/databases/$(database)/documents/dados/indice) || request.resource.data.versao == resource.data.get('versao',0) + 1)));
     }
   }
 }

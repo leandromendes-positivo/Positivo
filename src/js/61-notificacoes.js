@@ -101,7 +101,7 @@ const Notificacoes = (() => {
   let chave = '', lidos = {}, lista = [], modal = null, filtro = 'todas', persistente = true;
   let recebidos = {}, recebimentoPersistente = true;
   const ids = ['planilhas','previsoes','sem_previsao','sem_contato','estoque','respostas_pendentes','cobrancas_formais','respostas_confirmadas','ferias_proximas','ferias_hoje'];
-  const autorizado = () => E.status === 'pronto' && (Acesso.modo !== 'firebase' || Boolean(Acesso.usuario?.uid && Acesso.perfil?.ativo));
+  const autorizado = () => !perfilTecnico() && E.status === 'pronto' && (Acesso.modo !== 'firebase' || Boolean(Acesso.usuario?.uid && Acesso.perfil?.ativo));
   const chaveConta = () => `cp-notificacoes-v1-${hash36(`${Acesso.projeto || configFirebase()?.projectId || Acesso.modo}:${Acesso.usuario?.uid || E.usuario.id || 'local'}`)}`;
   const chaveRecebimentos = () => chave.replace('cp-notificacoes-v1-', 'cp-notificacoes-recebidas-v1-');
   const formatarRecebimento = em => {

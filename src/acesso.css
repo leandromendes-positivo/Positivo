@@ -92,3 +92,15 @@
 .acesso-apresentacao { position: relative; display: block; overflow: hidden; width: 100%; aspect-ratio: 1; border-radius: 12px; background: #1b1b1b; border: 1px solid var(--line-2); box-shadow: 0 24px 60px #00000012; }
 .login-video { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center; pointer-events: none; }
 @media(max-width:900px) { .acesso-apresentacao { aspect-ratio: 21 / 9; }.acesso-layout { gap: 20px; } }
+
+/* Portal técnico: mesma identidade, com foco exclusivo no estoque pessoal. */
+.portal-intro{padding:28px;border:1px solid var(--line);border-radius:16px;margin-bottom:24px;background:var(--surface)}
+.portal-intro h2{font-size:28px;margin:8px 0}.portal-intro p{max-width:850px;line-height:1.6}
+.portal-indicadores{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin:24px 0}
+.portal-indicadores article{border:1px solid var(--line);border-radius:12px;padding:24px}
+.portal-indicadores strong{display:block;font-size:32px;margin-top:8px}.portal-historico{max-width:100%;overflow-wrap:anywhere}
+.portal-historico li>div{min-width:0}.portal-historico p{white-space:pre-wrap}
+@media(max-width:650px){.portal-indicadores{grid-template-columns:1fr}.portal-intro{padding:20px}.portal-indicadores article{padding:16px}.portal-indicadores strong{font-size:26px}}
+
+.perfis-grade{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media(max-width:750px){.perfis-grade{grid-template-columns:1fr}}

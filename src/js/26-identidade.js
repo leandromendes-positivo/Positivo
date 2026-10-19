@@ -1,5 +1,5 @@
 /* Identidade e permissões. A interface orienta; o Firestore impõe as regras. */
-const PERFIS = { usuario: 'Usuário', administrador: 'Administrador' };
+const PERFIS = { usuario: 'Usuário', administrador: 'Administrador', tecnico: 'Técnico' };
 const LOCALIDADES = { '': 'Não informado', capital: 'Capital', interior: 'Interior' };
 function primeiroNomeEmail(email) {
   const parte = String(email || '').split('@')[0].split(/[._+\-\s]/)[0].replace(/\d+$/u, '');
@@ -121,19 +121,37 @@ async function carregarAcompanhamento() {
   combinarAcompanhamento();
 }
 
-async function salvarUsuario(email, perfil, ativo) {
+async function salvarUsuario(email, perfil, ativo, tecnicoId = '') {
   exigirAdministrador(); email = String(email || '').trim().toLowerCase();
   if (!emailValido(email) || !PERFIS[perfil] || typeof ativo !== 'boolean') throw new Error('Confira o e-mail e o perfil informado.');
   if (Acesso.modo !== 'firebase') throw new Error('O cadastro de acessos exige conexão com o Firebase.');
+  if (perfil === 'tecnico' && !tecnicoId) throw new Error('Selecione o técnico e a UF do estoque.');
   const ref = Acesso.fs.doc(`usuarios/${email}`);
   await Acesso.fs.runTransaction(async tx => {
     const atual = await tx.get(ref);
     if (atual.data()?.principal) throw new Error('O acesso do administrador principal é protegido e não pode ser alterado pelo painel.');
     if (email === Acesso.usuario.email.toLowerCase()) throw new Error('Você não pode alterar suas próprias permissões. Para editar seu nome, use Minha conta.');
+    const anteriorId = atual.data()?.tecnicoId;
+    const novoId = perfil === 'tecnico' ? tecnicoId : '';
+    const ids = [...new Set([anteriorId, novoId].filter(Boolean))];
+    const vinculos = await Promise.all(ids.map(id => tx.get(Acesso.fs.doc(`vinculos_tecnicos/${id}`))));
+    const anterior = id => vinculos[ids.indexOf(id)];
+    let vinculo;
+    if (novoId) {
+      const [regiao, ...partes] = novoId.split('--'), tid = partes.join('--');
+      chaveSaldoTecnico(tid, regiao);
+      const cadastro = await tx.get(Acesso.fs.doc('cadastro/tecnicos'));
+      if (ativo && (!cadastro.data()?.t?.[tid] || cadastro.data().t[tid].regiao !== regiao)) throw new Error('O cadastro ou a UF mudou. Atualize antes de vincular.');
+      if (anterior(novoId)?.exists && anterior(novoId).data().email !== email) throw new Error('Este estoque já está vinculado a outro e-mail. Desvincule o acesso anterior primeiro.');
+      vinculo = {email, tid, regiao};
+    }
     const por = identidadeAtual(), em = carimboServidor();
     const d = { email, perfil, ativo, principal: atual.data()?.principal || false, atualizadoEm: em, atualizadoPor: por,
       criadoEm: atual.exists ? atual.data().criadoEm : em, criadoPor: atual.exists ? atual.data().criadoPor : por };
     if (typeof atual.data()?.nome === 'string') d.nome = atual.data().nome;
+    if (novoId) d.tecnicoId = novoId;
+    if (anteriorId && anteriorId !== novoId && anterior(anteriorId)?.data()?.email === email) tx.delete(Acesso.fs.doc(`vinculos_tecnicos/${anteriorId}`));
+    if (novoId) tx.set(Acesso.fs.doc(`vinculos_tecnicos/${novoId}`), vinculo);
     tx.set(ref, d);
   });
   toast(ativo ? 'Acesso autorizado salvo.' : 'Acesso desativado.');
@@ -142,13 +160,15 @@ async function salvarUsuario(email, perfil, ativo) {
 function bloquearSessao(mensagem = 'Seu acesso foi desativado. Procure o administrador.') {
   OutlookCobranca.desconectar();
   MenuLateral.fechar({ restaurarFoco: false });
+  limparPortalTecnico();
+  RespostasTecnicos.eventos = [];
   Acesso.perfil = null;
   fecharModaisAdministrativos();
   limparHistoricoRanking();
   limparHistoricoRelatorio();
   Object.assign(UIinventario,{devolucoes:[],movimentos:[],chave:null,carregando:false,erro:''});
   for (const parar of E.ouvintes) parar(); E.ouvintes = [];
-  E.usadas = []; E.novas = []; E.cadastro = {}; E.acomp = {}; E.acompLegado = {};
+  E.ferias = []; E.usadas = []; E.novas = []; E.cadastro = {}; E.acomp = {}; E.acompLegado = {};
   E.agendamentos = []; E.contatos = []; E.anotacoes = []; E.usuarios = [];
   E.devolucoes = []; E.movimentos = []; E.historico = []; E.importacoes = [];
   E.catalogo = {}; E.indice = { arquivos: {}, anterior: {} }; E.config = { ...PADROES };

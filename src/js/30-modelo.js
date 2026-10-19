@@ -127,6 +127,12 @@ function decodificarDevolucao(l, doc) {
 }
 
 async function carregarTudo() {
+  if (perfilTecnico()) {
+    for (const parar of E.ouvintes) parar(); E.ouvintes = [];
+    E.status='carregando';mudou();
+    try { await carregarPortalTecnico(); } catch(e) { E.status='erro';E.erro=e.message;mudou(); }
+    return;
+  }
   E.status = "carregando";
   mudou();
   try {
@@ -163,7 +169,7 @@ async function carregarTudo() {
 function assinarMudancas() {
   for (const parar of E.ouvintes) parar();
   E.ouvintes = [];
-  if (!Armazem.online) return;
+  if (!Armazem.online || perfilTecnico()) return;
   E.ouvintes.push(Armazem.ouvirColecao("ferias", docs => { E.ferias = docs; mudou(); }));
   let versaoIndice = E.indice.versao || 0;
   E.ouvintes.push(Armazem.ouvirDoc("dados/indice", async (d) => {

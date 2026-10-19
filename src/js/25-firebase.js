@@ -242,16 +242,14 @@ async function iniciarFirebase(cfg) {
     Acesso.pararPerfil = ref.onSnapshot(s => {
       if (s.metadata.hasPendingWrites) return;
       if (!s.exists || !s.data().ativo || !PERFIS[s.data().perfil]) { bloquearSessao(); return; }
-      const mudouPerfil = Acesso.perfil?.perfil !== s.data().perfil;
+      const mudouPerfil = Acesso.perfil?.perfil !== s.data().perfil || Acesso.perfil?.tecnicoId !== s.data().tecnicoId;
       const mudouNome = Acesso.perfil?.nome !== s.data().nome;
       Acesso.perfil = decodificarFS(s.data());
       Acesso.usuario.nome = nomeDaConta().split(' ')[0];
-      if (mudouPerfil && E.status === 'pronto') {
-        E.usuarios = [];
-        if (!podeAdministrar()) fecharModaisAdministrativos();
-        assinarMudancas(); montarMoldura();
-        // Mudanças de permissão não aguardam a pessoa sair de um campo em edição.
-        renderizar(true);
+      if (mudouPerfil) {
+        bloquearSessao('As permissões desta conta mudaram. Recarregando o acesso…');
+        location.reload();
+        return;
       }
       if ((mudouPerfil || mudouNome) && E.status === 'pronto') mudou();
     }, () => bloquearSessao());

@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { initializeApp, cert } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { getSecurityRules } from 'firebase-admin/security-rules';
+import { prepararPortalExistente } from './portal.mjs';
 // Exibe pré-requisitos sem expor credenciais nos avisos públicos do GitHub.
 function falhaConfiguracao(mensagem) {
   console.error(`::error title=Configuração do acesso::${mensagem}`);
@@ -36,6 +37,7 @@ await db.runTransaction(async tx => {
   tx.set(ref,{email,perfil:'administrador',ativo:true,principal:true,criadoEm:snap.data()?.criadoEm||em,criadoPor:snap.data()?.criadoPor||por,atualizadoEm:em,atualizadoPor:por});
   tx.set(controle,{versao:2,administradorPrincipal:email,atualizadoEm:em});
 });
+await prepararPortalExistente(db);
 const source=await readFile(new URL('../firestore.rules',import.meta.url),'utf8');
 await getSecurityRules(app).releaseFirestoreRulesetFromSource(source);
 console.log('Regras de acesso publicadas e administrador principal validado.');

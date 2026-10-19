@@ -13,7 +13,7 @@ on:
         type: string
 
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
 
@@ -44,18 +44,6 @@ jobs:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           INITIAL_ADMIN_EMAIL: ${{ inputs.administrador_inicial || vars.INITIAL_ADMIN_EMAIL }}
         run: node publicar.mjs
-      - name: Cadastrar e conferir 26 colaboradores no Firestore
-        working-directory: seguranca
-        env:
-          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-        run: node cadastrar-ferias-inicial.mjs
-      - name: Registrar apenas contagens da conferência
-        run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add seguranca/cadastro-ferias.resultado.json
-          git commit -m 'Confirma cadastro inicial de 26 colaboradores no banco'
-          git push origin HEAD:main
       - name: Montar o painel
         run: python3 build.py
       - uses: actions/configure-pages@v6

@@ -359,8 +359,8 @@ quando as férias têm ao menos um dia em comum. Regiões ausentes exigem confer
 Dias incluem início e fim. Retorno padrão é o dia seguinte, ajustável para escala,
 folgas e feriados. O painel não determina aprovação do RH nem todas as exigências legais.
 
-Os dados iniciais foram extraídos uma única vez da relação enviada e são cadastrados
-no Firestore pela rotina administrativa de implantação, preservando registros existentes.
+Os 26 colaboradores e seus 33 períodos foram extraídos uma única vez da relação enviada,
+cadastrados no Firestore e conferidos após a gravação.
 O uso do sistema não depende de planilha, arquivo de importação ou link especial.
 Dados pessoais não ficam embutidos no HTML ou nos arquivos públicos do site.
 

@@ -57,7 +57,25 @@ async function carregarPortalTecnico() {
   if(!perfilTecnico() || !id) throw new Error('Seu acesso não está vinculado a um estoque. Procure o administrador.');
   const vigente=()=>seq===PortalTecnico.sequencia && perfilTecnico() && Acesso.perfil?.tecnicoId===id && Acesso.perfil?.ativo;
   UI.pagina='meu-painel';montarMoldura();
-  const erro=e=>{if(!vigente())return;PortalTecnico.erro='Não foi possível atualizar seu estoque com segurança. Verifique a conexão e recarregue.';E.status='erro';E.erro=PortalTecnico.erro;mudou();};
+  let verificandoAcesso=false;
+  const erro=async e=>{
+    if(!vigente())return;
+    // Negação de uma consulta também invalida os dados visíveis, mesmo se o
+    // listener do perfil ainda não recebeu a desativação feita em outra sessão.
+    PortalTecnico.pecas=[];PortalTecnico.saldo=null;
+    PortalTecnico.erro='Não foi possível atualizar seu estoque com segurança. Verifique a conexão e recarregue.';
+    E.status='erro';E.erro=PortalTecnico.erro;mudou();
+    if(e?.code!=='permission-denied' || verificandoAcesso)return;
+    verificandoAcesso=true;
+    try {
+      const perfil=await Acesso.fs.doc(`usuarios/${identidadeAtual().email}`).get({source:'server'});
+      if(!vigente())return;
+      const p=perfil.data();
+      if(!perfil.exists || !p.ativo || p.perfil!=='tecnico' || p.tecnicoId!==id)bloquearSessao();
+    }catch(falha){
+      if(vigente() && ['permission-denied','unauthenticated'].includes(falha.code))bloquearSessao('Sua sessão não tem mais acesso. Entre novamente.');
+    }finally{verificandoAcesso=false;}
+  };
   let pararPecas=()=>{};
   const pararControle=Acesso.fs.doc('portal/controle').onSnapshot({includeMetadataChanges:true},async snap=>{
     if(!vigente() || snap.metadata.hasPendingWrites || snap.metadata.fromCache)return;

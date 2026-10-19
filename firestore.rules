@@ -48,7 +48,11 @@ service cloud.firestore {
       return tecnico() && perfil().tecnicoId == id
         && get(/databases/$(database)/documents/vinculos_tecnicos/$(id)).data.email == email();
     }
-    function geracaoAtual(gen) { return get(/databases/$(database)/documents/portal/controle).data.geracao == gen; }
+    function geracaoAtual(gen) {
+      let c = get(/databases/$(database)/documents/portal/controle).data;
+      let versao = exists(/databases/$(database)/documents/dados/indice) ? get(/databases/$(database)/documents/dados/indice).data.get('versao',0) : 0;
+      return c.geracao == gen && c.versao == versao;
+    }
     function saldoPublicado(id) {
       let gen = get(/databases/$(database)/documents/portal/controle).data.geracao;
       return get(/databases/$(database)/documents/saldos_tecnicos/$(id)/geracoes/$(gen)).data;

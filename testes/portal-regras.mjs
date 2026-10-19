@@ -90,6 +90,11 @@ try{
  const avancar=admin.batch();avancar.set(admin.doc('dados/indice'),{versao:2});avancar.set(admin.doc('portal/controle'),{geracao:gen2,versao:2,atualizadoEm:'2026-10-20'});await sim(avancar.commit());
  await nao(enviar(ana,declaracao({versao:4})));await nao(ana.doc(`saldos_tecnicos/${id}/geracoes/${gen}/pecas/n-1`).get());
  await sim(enviar(ana,declaracao({versao:4,geracao:gen2})));
+ // Uma publicação antiga ou incompleta não pode exibir saldo divergente do índice oficial.
+ await env.withSecurityRulesDisabled(async c=>c.firestore().doc('dados/indice').set({versao:3}));
+ await nao(ana.doc(`saldos_tecnicos/${id}/geracoes/${gen2}/pecas/n-1`).get());
+ await nao(enviar(ana,declaracao({versao:5,geracao:gen2})));
+ await env.withSecurityRulesDisabled(async c=>c.firestore().doc('dados/indice').set({versao:2}));
  await sim(admin.doc('usuarios/ana@empresa.com').update({ativo:false,atualizadoPor:por,atualizadoEm:stamp()}));
  await nao(ana.doc(`saldos_tecnicos/${id}/geracoes/${gen2}/pecas/n-1`).get());
  await nao(ana.doc('portal/controle').get());await nao(enviar(ana,declaracao({versao:5,geracao:gen2})));

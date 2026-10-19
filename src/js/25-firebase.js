@@ -234,7 +234,7 @@ async function iniciarFirebase(cfg) {
     const ref = fs.doc(`usuarios/${usuario.email.toLowerCase()}`);
     const perfil = await ref.get({ source: 'server' });
     if (!usuario.emailVerified || !perfil.exists || !perfil.data().ativo || !PERFIS[perfil.data().perfil]) throw new Error('sem_permissao');
-    const versao = await fs.doc('seguranca/controle').get({ source: 'server' });
+    const versao = await fs.doc(perfil.data().perfil==='tecnico'?'seguranca/portal':'seguranca/controle').get({ source: 'server' });
     if (versao.data()?.versao !== 2) throw new Error('seguranca_pendente');
     Acesso.perfil = decodificarFS(perfil.data());
     Acesso.usuario.nome = nomeDaConta().split(' ')[0];

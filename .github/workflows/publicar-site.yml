@@ -42,6 +42,10 @@ jobs:
       - name: Preparar o teste de navegador
         run: |
           ./seguranca/node_modules/.bin/playwright install --with-deps chromium
+          mkdir -p /tmp/firebase-sdk-portal
+          for sdk in app auth firestore; do
+            curl --fail --silent --show-error "https://www.gstatic.com/firebasejs/10.14.1/firebase-${sdk}-compat.js" -o "/tmp/firebase-sdk-portal/firebase-${sdk}-compat.js"
+          done
           python3 build.py
           python3 -m http.server 8003 --bind 127.0.0.1 --directory dist > /tmp/portal-http.log 2>&1 &
       - name: Testar separação dos estoques
@@ -49,6 +53,7 @@ jobs:
       - name: Testar regras reais de acesso e isolamento
         env:
           PW_PATH: ${{ github.workspace }}/seguranca
+          FIREBASE_SDK_DIR: /tmp/firebase-sdk-portal
         run: ./seguranca/node_modules/.bin/firebase emulators:exec --only firestore,auth --project demo-controle-seguranca "node testes/verificar-acessos.mjs"
   publicar:
     needs: testar-acessos

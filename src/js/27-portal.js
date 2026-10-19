@@ -49,6 +49,19 @@ async function prepararSaldosTecnicos(usadas, novas, cadastro, catalogo, versao)
   if(n)await lote.commit();
   return {geracao,versao,atualizadoEm:agoraISO()};
 }
+// Leitura REST autenticada não reutiliza o alvo de um listener já encerrado pelo SDK.
+// É usada somente para confirmar a autorização após uma falha de acesso ao portal.
+async function lerPerfilPortalNoServidor() {
+  const token=await Acesso.auth.currentUser.getIdToken();
+  const emulador=window.__CP_FIREBASE_EMULADOR__ && /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
+  const base=emulador?'http://127.0.0.1:8080/v1':'https://firestore.googleapis.com/v1';
+  const url=`${base}/projects/${encodeURIComponent(Acesso.projeto)}/databases/(default)/documents/usuarios/${encodeURIComponent(identidadeAtual().email)}`;
+  const resposta=await fetch(url,{headers:{Authorization:`Bearer ${token}`},cache:'no-store'});
+  if(resposta.status===404)return null;
+  if(!resposta.ok)throw Object.assign(new Error('Não foi possível confirmar a autorização.'),{code:[401,403].includes(resposta.status)?'permission-denied':'unavailable'});
+  const campos=(await resposta.json()).fields||{};
+  return {ativo:campos.ativo?.booleanValue===true,perfil:campos.perfil?.stringValue||'',tecnicoId:campos.tecnicoId?.stringValue||''};
+}
 const PortalTecnico = { controle:null, saldo:null, pecas:[], declaracoes:[], eventos:[], erro:'', sequencia:0 };
 function limparPortalTecnico() { PortalTecnico.sequencia++;Object.assign(PortalTecnico,{controle:null,saldo:null,pecas:[],declaracoes:[],eventos:[],erro:''}); }
 async function carregarPortalTecnico() {
@@ -68,10 +81,9 @@ async function carregarPortalTecnico() {
     if(verificandoAcesso)return;
     verificandoAcesso=true;
     try {
-      const perfil=await Acesso.fs.doc(`usuarios/${identidadeAtual().email}`).get({source:'server'});
+      const p=await lerPerfilPortalNoServidor();
       if(!vigente())return;
-      const p=perfil.data();
-      if(!perfil.exists || !p.ativo || p.perfil!=='tecnico' || p.tecnicoId!==id)bloquearSessao();
+      if(!p || !p.ativo || p.perfil!=='tecnico' || p.tecnicoId!==id)bloquearSessao();
     }catch(falha){
       if(vigente() && ['permission-denied','unauthenticated'].includes(falha.code))bloquearSessao('Sua sessão não tem mais acesso. Entre novamente.');
     }finally{verificandoAcesso=false;}

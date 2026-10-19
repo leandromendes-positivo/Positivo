@@ -17,4 +17,5 @@ export async function prepararEmulador() {
     atualizadoPor:{mapValue:{fields:{uid:{stringValue:'bootstrap'},email:{stringValue:'teste@exemplo.com'}}}},
   });
   await doc('seguranca/controle',{versao:{integerValue:'2'}});
+  await doc('seguranca/portal',{versao:{integerValue:'2'}});
 }

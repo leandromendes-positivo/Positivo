@@ -217,7 +217,7 @@ service cloud.firestore {
         && getAfter(/databases/$(database)/documents/ferias/$(request.resource.data.id)).data == request.resource.data;
       allow update, delete: if false;
     }
-    match /seguranca/{id} { allow read: if autorizado() || (tecnico() && id == 'controle'); allow write: if false; }
+    match /seguranca/{id} { allow read: if autorizado() || (tecnico() && id == 'portal'); allow write: if false; }
     match /agendamentos/{id} {
       allow read: if autorizado();
       allow create: if autorizado() && agendaValida(request.resource.data, id)

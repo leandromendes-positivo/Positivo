@@ -37,6 +37,7 @@ await db.runTransaction(async tx => {
   tx.set(ref,{email,perfil:'administrador',ativo:true,principal:true,criadoEm:snap.data()?.criadoEm||em,criadoPor:snap.data()?.criadoPor||por,atualizadoEm:em,atualizadoPor:por});
   tx.set(controle,{versao:2,administradorPrincipal:email,atualizadoEm:em});
 });
+await db.doc('seguranca/portal').set({versao:2});
 await prepararPortalExistente(db);
 const source=await readFile(new URL('../firestore.rules',import.meta.url),'utf8');
 await getSecurityRules(app).releaseFirestoreRulesetFromSource(source);

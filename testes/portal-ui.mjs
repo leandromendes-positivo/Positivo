@@ -44,6 +44,7 @@ try{
   document.querySelectorAll('.modal-fundo').forEach(m=>m.remove());
   Acesso.perfil={perfil:'tecnico',ativo:true,tecnicoId:'PR--ANA'};
   Acesso.fs={doc:caminho=>caminho==='portal/controle'?{onSnapshot:(_opcoes,_next,erro)=>{window.__erroPortalTeste=erro;return()=>{};}}:{get:async()=>({exists:true,data:()=>({perfil:'tecnico',ativo:false,tecnicoId:'PR--ANA'})})},collection:()=>({onSnapshot:()=>()=>{}})};
+  lerPerfilPortalNoServidor=async()=>({perfil:'tecnico',ativo:false,tecnicoId:'PR--ANA'});
   await carregarTudo();PortalTecnico.pecas=[{id:'protegida',quantidade:2}];E.status='pronto';
   await window.__erroPortalTeste({code:'permission-denied'});
   return {status:E.status,perfil:Acesso.perfil,pecas:PortalTecnico.pecas.length};

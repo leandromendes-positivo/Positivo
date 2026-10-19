@@ -31,14 +31,14 @@ try{
   await db.doc(`vinculos_tecnicos/${id}`).set({email:'ana@empresa.com',tid:'ANA',regiao:'PR'});
   await db.doc(`vinculos_tecnicos/${outroId}`).set({email:'bruno@empresa.com',tid:'ANA',regiao:'SC'});
   await db.doc('dados/indice').set({versao:1});await db.doc('portal/controle').set({versao:1,geracao:gen,atualizadoEm:'2026-10-19T09:00:00'});
-  await db.doc('seguranca/controle').set({versao:2});
+  await db.doc('seguranca/controle').set({versao:2,administradorPrincipal:'admin@empresa.com'});await db.doc('seguranca/portal').set({versao:2});
   for(const t of [id,outroId,'RS--ANA'])for(const g of [gen,gen2]){
    await db.doc(`saldos_tecnicos/${t}/geracoes/${g}`).set({nome:'Ana',regiao:t.split('--')[0],tid:'ANA',total:2});
    await db.doc(`saldos_tecnicos/${t}/geracoes/${g}/pecas/n-1`).set(peca());
    await db.doc(`saldos_tecnicos/${t}/geracoes/${g}/pecas/u-1`).set(peca('usadas'));
   }
  });
- await sim(ana.doc('usuarios/ana@empresa.com').get());await sim(ana.doc('seguranca/controle').get());await sim(ana.doc('portal/controle').get());
+ await sim(ana.doc('usuarios/ana@empresa.com').get());await sim(ana.doc('seguranca/portal').get());await nao(ana.doc('seguranca/controle').get());await sim(ana.doc('portal/controle').get());
  await sim(ana.doc(`vinculos_tecnicos/${id}`).get());await sim(ana.doc(`saldos_tecnicos/${id}/geracoes/${gen}`).get());
  await sim(ana.collection(`saldos_tecnicos/${id}/geracoes/${gen}/pecas`).get());
  assert.equal((await bruno.collection(`saldos_tecnicos/${outroId}/geracoes/${gen}/pecas`).get()).size,2);

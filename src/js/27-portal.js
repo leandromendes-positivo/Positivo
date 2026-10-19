@@ -59,7 +59,7 @@ async function carregarPortalTecnico() {
   UI.pagina='meu-painel';montarMoldura();
   const erro=e=>{if(!vigente())return;PortalTecnico.erro='Não foi possível atualizar seu estoque com segurança. Verifique a conexão e recarregue.';E.status='erro';E.erro=PortalTecnico.erro;mudou();};
   let pararPecas=()=>{};
-  const pararControle=Acesso.fs.doc('portal/controle').onSnapshot(async snap=>{
+  const pararControle=Acesso.fs.doc('portal/controle').onSnapshot({includeMetadataChanges:true},async snap=>{
     if(!vigente() || snap.metadata.hasPendingWrites || snap.metadata.fromCache)return;
     const c=snap.data();
     pararPecas();PortalTecnico.pecas=[];PortalTecnico.saldo=null;PortalTecnico.controle=c||null;E.status='carregando';mudou();
@@ -69,7 +69,7 @@ async function carregarPortalTecnico() {
       const ref=Acesso.fs.doc(`saldos_tecnicos/${id}/geracoes/${gen}`), meta=await ref.get({source:'server'});
       if(!vigente() || PortalTecnico.controle?.geracao!==gen)return;
       PortalTecnico.saldo=meta.data()||null;
-      pararPecas=ref.collection('pecas').onSnapshot(s=>{
+      pararPecas=ref.collection('pecas').onSnapshot({includeMetadataChanges:true},s=>{
         if(!vigente() || PortalTecnico.controle?.geracao!==gen || s.metadata.fromCache)return;
         PortalTecnico.pecas=s.docs.map(d=>({id:d.id,...d.data()}));E.status='pronto';mudou();
       },e=>{if(PortalTecnico.controle?.geracao===gen)erro(e);});

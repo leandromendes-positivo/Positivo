@@ -71,3 +71,21 @@ await processarTestesFerias(a,false);assert.equal(agenda.dados.get('testes_lembr
 agenda.dados.set('testes_lembretes_ferias/gestor',{uid:'gestor',pedido:'pedido-teste-3234567890',solicitadoEm:new Date()});agenda.dados.get('usuarios/gestor@exemplo.com').ativo=false;
 await processarTestesFerias(a,true);assert.equal(agenda.dados.get('testes_lembretes_ferias/gestor').estado,'falhou');assert.equal(lista.length,3,'conta revogada não recebe teste');
 console.log('Horários individuais, antecedência configurável e testes privados/concorrentes/revogação passaram.');
+// Retomada do teste inicial só ocorre se nenhum SMTP pôde ser tentado.
+const {solicitarTesteProprietario,diagnosticarFilaTestes}=await import('../aviso/testes-ferias.mjs');
+agenda.dados.set('seguranca/controle',{administradorPrincipal:'gestor@exemplo.com'});
+agenda.dados.set('operacoes_lembretes_ferias/teste-proprietario-2026-10-20',{criadoEm:new Date().toISOString()});
+agenda.dados.set('testes_lembretes_ferias/gestor',{uid:'gestor',pedido:'teste-sem-remetente-12345',estado:'indisponivel',solicitadoEm:new Date()});
+agenda.dados.get('usuarios/gestor@exemplo.com').ativo=true;
+await solicitarTesteProprietario(agenda);assert.equal(agenda.dados.get('testes_lembretes_ferias/gestor').estado,'indisponivel');
+await solicitarTesteProprietario(agenda,{retomarIndisponivel:true});assert.equal(agenda.dados.get('testes_lembretes_ferias/gestor').estado,undefined);
+const pedidoFila=agenda.dados.get('testes_lembretes_ferias/gestor').pedido;
+await solicitarTesteProprietario(agenda,{retomarIndisponivel:true});assert.equal(agenda.dados.get('testes_lembretes_ferias/gestor').pedido,pedidoFila);
+assert.equal((await diagnosticarFilaTestes(agenda)).aguardando,1);
+await processarTestesFerias(a,true);assert.equal(lista.length,4);
+await solicitarTesteProprietario(agenda,{retomarIndisponivel:true});await processarTestesFerias(a,true);assert.equal(lista.length,4,'retomar não repete e-mail aceito');
+agenda.dados.set('testes_lembretes_ferias/gestor',{uid:'gestor',pedido:'teste-recusa-1234567890',solicitadoEm:new Date()});
+await processarTestesFerias({...a,transporte:{sendMail:async()=>{throw Object.assign(new Error('Não registrar detalhes do SMTP'),{code:'EENVELOPE'});}}},true);
+assert.equal(agenda.dados.get('testes_lembretes_ferias/gestor').codigo,'EENVELOPE');
+assert.equal(agenda.dados.get('testes_lembretes_ferias/gestor').estado,'falhou');
+console.log('Retomada segura de remetente indisponível, preservação da fila e diagnóstico sem dados pessoais passaram.');

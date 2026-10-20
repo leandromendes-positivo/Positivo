@@ -31,3 +31,7 @@ node testes/lembretes-ferias.mjs
 ```
 
 Os testes de regras e navegador, incluídos no bloqueio de publicação, validam privacidade entre usuários, bloqueio de técnicos, edição, persistência, desativação e layout nos dois temas. A implantação só ocorre depois da aprovação desses testes.
+
+O modal diferencia pedido na fila de processamento e permite abrir o workflow para que o responsável use **Run workflow** quando o agendamento atrasar. O intervalo de cinco minutos é a programação, não um prazo de entrega. As execuções registram contagens agregadas de testes/estados como anotações, sem destinatários. Recusa de destinatário e falha de autenticação mostram causas distintas, usando somente códigos SMTP permitidos; respostas brutas do servidor não são expostas.
+
+Se o teste inicial do proprietário estava `indisponivel` (nenhuma tentativa SMTP), uma publicação com remetente habilitado pode retomá-lo. Pedidos já na fila, enviados ou incertos nunca são substituídos por essa retomada.

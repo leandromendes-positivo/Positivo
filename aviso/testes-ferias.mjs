@@ -19,16 +19,19 @@ export async function processarTestesFerias({db,transporte,remetente},habilitado
   });
   if(!reserva)continue;
   if(reserva.estado!=='em_envio'){contagem[reserva.estado==='indisponivel'?'indisponiveis':'falhas']++;continue;}
-  let estado='incerto';
+  let estado='incerto',codigo='resultado_nao_confirmado';
   try{
    const info=await transporte.sendMail({from:{name:'Férias da equipe',address:remetente},to:{address:reserva.email},subject:'Teste dos lembretes de férias — Positivo',text:'Este é o e-mail de teste solicitado no painel Férias da equipe. O remetente está funcionando. Os lembretes automáticos seguem o horário de Brasília e a antecedência escolhidos na sua inscrição. Você pode alterar ou desativar a inscrição em Férias da equipe → Lembretes por e-mail. Este teste não altera os lembretes programados.',messageId:`<teste-ferias-${reserva.pedido}@${remetente.split('@')[1]}>`});
    if(!info.accepted?.some(e=>String(e).toLowerCase()===reserva.email))throw Object.assign(new Error('Recusado'),{code:'EENVELOPE'});
-   estado='enviado';
-  }catch(e){if(['EAUTH','EENVELOPE','EMESSAGE'].includes(e.code)||Number(e.responseCode)>=400)estado='falhou';}
+   estado='enviado';codigo='smtp_aceito';
+  }catch(e){
+   if(['EAUTH','EENVELOPE','EMESSAGE'].includes(e.code)||Number(e.responseCode)>=400)estado='falhou';
+   codigo=['EAUTH','EENVELOPE','EMESSAGE','ETIMEDOUT','ECONNECTION','ESOCKET'].includes(e.code)?e.code:(Number(e.responseCode)>=400?'smtp_rejeitado':'resultado_nao_confirmado');
+  }
   // Falha de gravação depois de SMTP deixa em_envio: nunca repetir automaticamente.
   await db.runTransaction(async tx=>{
    const atual=(await tx.get(ref)).data();
-   if(atual?.pedido===reserva.pedido)tx.set(ref,{uid:reserva.uid,pedido:reserva.pedido,solicitadoEm:reserva.solicitadoEm,estado,atualizadoEm:new Date().toISOString()});
+   if(atual?.pedido===reserva.pedido)tx.set(ref,{uid:reserva.uid,pedido:reserva.pedido,solicitadoEm:reserva.solicitadoEm,estado,codigo,atualizadoEm:new Date().toISOString()});
   });
   contagem[estado==='enviado'?'enviados':'falhas']++;
  }
@@ -36,7 +39,7 @@ export async function processarTestesFerias({db,transporte,remetente},habilitado
 }
 // Pedido único desta solicitação do proprietário; nunca percorre endereços de
 // terceiros. Só usa a inscrição vinculada à conta principal já cadastrada.
-export async function solicitarTesteProprietario(db){
+export async function solicitarTesteProprietario(db,{retomarIndisponivel=false}={}){
  const operacao=db.doc('operacoes_lembretes_ferias/teste-proprietario-2026-10-20');
  const titular=(await db.doc('seguranca/controle').get()).data()?.administradorPrincipal;
  if(!titular)return false;
@@ -44,10 +47,20 @@ export async function solicitarTesteProprietario(db){
  const s=inscricoes.docs.find(s=>s.data().uid===s.id&&emailLembreteValido(s.data().email));
  if(!s)return false;
  return db.runTransaction(async tx=>{
-  if((await tx.get(operacao)).exists)return true;
+  const anterior=await tx.get(operacao);
   const ref=db.doc(`testes_lembretes_ferias/${s.id}`),ant=(await tx.get(ref)).data();
+  if(anterior.exists&&!(retomarIndisponivel&&ant?.estado==='indisponivel'))return true;
+  // Nunca substitui um pedido já na fila ou uma tentativa sem confirmação.
+  if(ant&&!ant.estado)return true;
   if(ant&&['em_envio','incerto'].includes(ant.estado))return false;
   tx.set(ref,{uid:s.id,pedido:randomUUID(),solicitadoEm:new Date(),origem:'pedido-proprietario'});
   tx.set(operacao,{criadoEm:new Date().toISOString()});return true;
  });
+}
+
+export async function diagnosticarFilaTestes(db){
+ const pedidos=await db.collection('testes_lembretes_ferias').get();
+ const resumo={aguardando:0,enviado:0,em_envio:0,incerto:0,falhou:0,indisponivel:0};
+ for(const s of pedidos.docs){const d=s.data();if(!d.estado)resumo.aguardando++;else if(Object.hasOwn(resumo,d.estado))resumo[d.estado]++;}
+ return resumo;
 }

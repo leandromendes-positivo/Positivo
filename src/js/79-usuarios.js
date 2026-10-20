@@ -55,7 +55,7 @@ function renderConta() {
         <p class="nota">Seus registros permanecem vinculados à sua conta e ao seu e-mail.</p><details class="acesso-diagnostico"><summary>Diagnóstico de acesso</summary><pre>${esc(diagnosticoSessao(Acesso.auth))}</pre><p>Sem e-mail, senha ou tokens de acesso.</p></details>
       </aside>
     </div>
-    <div class="conta-acoes">${podeAdministrar()?'<button class="btn" data-acao="ir" data-pagina="usuarios">Gerenciar usuários</button>':''}<button class="btn perigo" data-acao="sair">${icone('sair')}Sair desta conta</button></div><p class="nota">Em computadores compartilhados, saia ao terminar. A sessão pode ser reutilizada em outras abas deste navegador.</p>`;
+    <div class="conta-acoes">${podeAdministrar()?'<button class="btn" data-acao="ir" data-pagina="usuarios">Gerenciar usuários</button>':''}<button class="btn perigo" data-acao="sair">Sair desta conta</button></div><p class="nota">Em computadores compartilhados, saia ao terminar. A sessão pode ser reutilizada em outras abas deste navegador.</p>`;
 }
 async function salvarMinhaConta(form) {
   if (UIconta.salvando || !form.reportValidity()) return;

@@ -188,6 +188,7 @@ function pedirLogin(auth, firebase, mensagem = '') {
         <small class="acesso-microsoft">Outlook, Hotmail ou conta corporativa do Microsoft 365.</small><details class="acesso-diagnostico"><summary>Diagnóstico de acesso</summary><pre></pre><p>Este diagnóstico não contém e-mail, senha nem tokens de acesso.</p></details><div class="acesso-restrito">${icone('info')}Somente e-mails cadastrados podem acessar. Não há cadastro público.</div>
       </div></div><footer class="acesso-rodape">Positivo Tecnologia · Controle de Peças</footer>`;
     const diagnostico = tela.querySelector('.acesso-diagnostico');
+    diagnostico.querySelector('pre').textContent = diagnosticoSessao(auth);
     diagnostico.addEventListener('toggle', () => { if (diagnostico.open) diagnostico.querySelector('pre').textContent = diagnosticoSessao(auth); });
     Tema.atualizarBotoes(); tela.querySelector('.acesso-erro').textContent = mensagem;
     const video = tela.querySelector('.login-video'), eventosVideo = new AbortController();

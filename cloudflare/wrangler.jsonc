@@ -1,5 +1,5 @@
 {
-  "name": "positivo-lembretes",
+  "name": "positivo",
   "main": "worker.mjs",
   "compatibility_date": "2026-10-20",
   "compatibility_flags": [
@@ -14,7 +14,8 @@
     "FIREBASE_PROJECT_ID": "controle-pecas-positivo",
     "EMAIL_PROVEDOR": "gmail",
     "PAINEL_URL": "https://positivo.pages.dev/",
-    "FIREBASE_API_KEY": "AIzaSyATBG67mJHNo7gh8qlOJt2sfAjnsbE8xH4"
+    "FIREBASE_API_KEY": "AIzaSyATBG67mJHNo7gh8qlOJt2sfAjnsbE8xH4",
+    "WORKER_URL": "https://positivo.leandromendes-positivo.workers.dev/"
   },
   "keep_vars": true
 }

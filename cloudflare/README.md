@@ -9,7 +9,7 @@ ainda depende do Gmail; não há garantia de entrega instantânea ou no segundo 
 ## 1. Criar o Worker conectado ao GitHub
 
 No Cloudflare: Workers & Pages → Create application → Continue with GitHub.
-Escolha `leandromendes-positivo/Positivo`, branch `main`, nome `positivo-lembretes`.
+Escolha `leandromendes-positivo/Positivo`, branch `main`, nome `positivo`.
 Mantenha a raiz do repositório (não limite o checkout à pasta cloudflare).
 
 - Build command: `npm ci --prefix cloudflare --ignore-scripts --no-audit --no-fund`
@@ -19,7 +19,7 @@ Mantenha a raiz do repositório (não limite o checkout à pasta cloudflare).
 - A rota `/testar` usa Firebase Authentication; não coloque uma tela de Cloudflare
   Access na frente dessa rota, pois o navegador precisa chamar a API autenticada.
 
-Copie a URL estável `https://positivo-lembretes.<sua-conta>.workers.dev/`.
+Copie a URL estável `https://positivo.leandromendes-positivo.workers.dev/`.
 O primeiro deploy permanece inativo, mesmo se houver cron configurado.
 `npm --prefix cloudflare run check` faz apenas o empacotamento, sem publicar/enviar.
 
@@ -53,7 +53,7 @@ No Worker → Settings → Variables and Secrets, em produção, cadastre:
 
 | Nome | Tipo | Conteúdo |
 |---|---|---|
-| `WORKER_URL` | Variable | URL estável do Worker, com `/` final |
+| `WORKER_URL` | Variable | Já versionada: `https://positivo.leandromendes-positivo.workers.dev/` |
 | `EMAIL_REMETENTE` | Variable | Gmail atual autorizado no passo anterior |
 | `ATIVAR_SERVICO` | Variable | `false` durante a configuração |
 | `FIREBASE_SERVICE_ACCOUNT` | Secret | JSON completo da conta de serviço do projeto correto |
@@ -68,7 +68,7 @@ somente no backend. Não a coloque no código, no Pages, no HTML ou no chat.
 Secrets existentes no GitHub não podem ser recuperados pela interface após salvos;
 use seu arquivo original seguro ou crie uma credencial específica para o Worker.
 
-A configuração versionada já contém `PAINEL_URL`, projeto e chave pública Firebase.
+A configuração versionada já contém `WORKER_URL`, `PAINEL_URL`, projeto e chave pública Firebase.
 `keep_vars` mantém as variáveis acima ao publicar novas versões. Os secrets
 continuam no Cloudflare. Nunca salve esses valores em arquivos versionados.
 

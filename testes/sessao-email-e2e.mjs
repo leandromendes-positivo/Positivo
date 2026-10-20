@@ -23,6 +23,32 @@ async function pagina(ctx,email,fragmento='ferias'){
 const pronto=p=>p.waitForFunction(()=>typeof E!=='undefined'&&E.status==='pronto');
 const bloqueado=p=>p.waitForFunction(()=>typeof E!=='undefined'&&E.erroCodigo==='sem_permissao');
 try{
+ // Reproduz uma aba ainda carregada com a persistência SESSION da versão antiga.
+ // A fixture só autentica uma vez; recarregar testa migração real, sem novo login.
+ const legadoCtx=await contexto(),legado=await legadoCtx.newPage();
+ legado.on('pageerror',e=>erros.push(e.message));
+ const htmlLegado=fs.readFileSync('dist/pagina-completa.html','utf8').replace(
+  'await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);',
+  'await auth.setPersistence(firebase.auth.Auth.Persistence.SESSION);');
+ assert.ok(htmlLegado.includes('await auth.setPersistence(firebase.auth.Auth.Persistence.SESSION);'));
+ await legado.route(link.href.split('#')[0],r=>r.fulfill({body:htmlLegado,contentType:'text/html'}),{times:1});
+ await legado.addInitScript(()=>{
+  if(!sessionStorage.getItem('fixture-legado-usada')){
+   sessionStorage.setItem('fixture-legado-usada','1');
+   window.__CP_LOGIN_TESTE__={sub:'sessao-teste@exemplo.com',email:'teste@exemplo.com',email_verified:true};
+  }
+ });
+ await legado.goto(link.href);await pronto(legado);
+ const legadoUid=await legado.evaluate(()=>Acesso.usuario.uid);
+ const linkLegado=await pagina(legadoCtx);await linkLegado.locator('#entrar-google').waitFor();
+ assert.equal(await linkLegado.evaluate(()=>Acesso.auth.currentUser),null,'sessão antiga é isolada por aba');
+ await legado.reload();await pronto(legado);
+ assert.equal(await legado.evaluate(()=>window.__CP_LOGIN_TESTE__),undefined,'atualização não pode autenticar pela fixture');
+ assert.equal(await legado.evaluate(()=>Acesso.usuario.uid),legadoUid);
+ await pronto(linkLegado);
+ assert.equal(await linkLegado.evaluate(()=>Acesso.usuario.uid),legadoUid);
+ assert.equal(await linkLegado.evaluate(()=>UI.pagina),'ferias');
+ await legadoCtx.close();
  const ctx=await contexto(),original=await pagina(ctx,'teste@exemplo.com');await pronto(original);
  assert.equal(await original.evaluate(()=>UI.pagina),'ferias');const uid=await original.evaluate(()=>Acesso.usuario.uid);
  const nova=await pagina(ctx);await pronto(nova);

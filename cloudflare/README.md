@@ -150,3 +150,27 @@ externas de 100% de largura; só o texto tem largura de leitura limitada. Há te
 Lotes de até 20 saídas evitam que o Gmail corte o HTML antes do rodapé. Datas,
 critérios, inscrições e deduplicação são os mesmos; avisos já enviados não são
 repetidos só por uma mudança visual.
+
+## Atualizações depois do primeiro lembrete
+
+Após um envio aceito, `acompanhamento_lembretes_ferias` guarda, por destinatário e
+cadastro, a programação que foi avisada. Somente o servidor acessa essa coleção.
+Uma mudança de dados de negócio gera um e-mail **Programação atualizada**, com
+os campos alterados e a programação anterior e atual. Isso inclui fim, retorno,
+venda de dias, situação, cancelamento, retirada e exclusão. A atualização alcança
+apenas endereços ativos que já receberam aquele cadastro e respeita o horário de
+Brasília da inscrição, mesmo se a nova saída estiver fora da antecedência.
+A verificação do Worker acontece a cada minuto; mudanças feitas antes do horário
+escolhido aguardam esse horário. Várias edições entre duas verificações são
+consolidadas na programação mais recente. Salvar sem mudar dados ou reordenar
+períodos não gera repetição.
+
+A reserva transacional impede duplicação entre trabalhadores concorrentes e
+reconfere inscrição/perfil e férias antes de reservar. O estado anterior só é
+substituído após o aceite do provedor. Rejeições inequívocas permitem tentar de
+novo; timeout ou resultado incerto exigem conferência, sem repetição automática.
+Registros antigos não guardavam o conteúdo enviado: a migração evita reenviar
+tudo e usa a data da última edição para detectar alterações posteriores ao envio
+antigo. Nesses casos o e-mail pode mostrar apenas a programação atual, pois não
+há dados suficientes para reconstruir a anterior. A assinatura do agendador foi
+versionada para executar essa conferência na implantação, após o horário devido.

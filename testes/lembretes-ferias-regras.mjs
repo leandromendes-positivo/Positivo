@@ -12,7 +12,7 @@ const novo=()=>({uid:'pessoa',titular:'pessoa@empresa.com',email:'destino@empres
 try{
  await env.clearFirestore();await env.withSecurityRulesDisabled(async c=>{
   const db=c.firestore();for(const[email,perfil,ativo]of [['dono@empresa.com','administrador',true],['pessoa@empresa.com','usuario',true],['outro@empresa.com','usuario',true],['tecnico@empresa.com','tecnico',true]])await db.doc(`usuarios/${email}`).set({email,perfil,ativo});
-  await db.doc('servicos/lembretes-ferias').set({habilitado:true});await db.doc('envios_lembretes_ferias/teste').set({email:'destino@empresa.com'});
+  await db.doc('servicos/lembretes-ferias').set({habilitado:true});await db.doc('envios_lembretes_ferias/teste').set({email:'destino@empresa.com'});await db.doc('acompanhamento_lembretes_ferias/teste').set({email:'destino@empresa.com',programacao:{nome:'Privado'}});
  });
  await assertSucceeds(pessoa.doc('lembretes_ferias/pessoa').get());
  await assertSucceeds(pessoa.doc('servicos/lembretes-ferias').get());
@@ -31,7 +31,7 @@ try{
  await assertSucceeds(pessoa.doc('lembretes_ferias/pessoa').update({versao:2,ativo:false,atualizadoEm:stamp()}));
  await assertSucceeds(pessoa.doc('lembretes_ferias/pessoa').update({versao:3,email:'pessoa+equipe@empresa.com',ativo:true,atualizadoEm:stamp()}));
  for(const db of [pessoa,dono,tecnico]){
-  await assertFails(db.doc('envios_lembretes_ferias/teste').get());await assertFails(db.doc('envios_lembretes_ferias/teste').set({estado:'enviado'}));await assertFails(db.doc('caixa_lembretes_ferias/teste').set({estado:'enviado'}));await assertFails(db.doc('servicos/lembretes-ferias').set({habilitado:true}));
+  await assertFails(db.doc('envios_lembretes_ferias/teste').get());await assertFails(db.doc('envios_lembretes_ferias/teste').set({estado:'enviado'}));await assertFails(db.doc('caixa_lembretes_ferias/teste').set({estado:'enviado'}));await assertFails(db.doc('acompanhamento_lembretes_ferias/teste').get());await assertFails(db.doc('acompanhamento_lembretes_ferias/teste').set({estado:'enviado'}));await assertFails(db.doc('servicos/lembretes-ferias').set({habilitado:true}));
  }
  for(const extra of [{horario:'24:00'},{horario:'8:00'},{antecedencia:0},{antecedencia:91},{antecedencia:1.5}])await assertFails(pessoa.doc('lembretes_ferias/pessoa').update({...extra,versao:4,atualizadoEm:stamp()}));
  await assertSucceeds(pessoa.doc('lembretes_ferias/pessoa').update({horario:'23:59',antecedencia:90,versao:4,atualizadoEm:stamp()}));

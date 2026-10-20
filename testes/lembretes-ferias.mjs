@@ -34,7 +34,7 @@ const sim=await processarLembretes({...args,simular:true});assert.equal(sim.dest
 await Promise.all([processarLembretes(args),processarLembretes(args)]);assert.equal(mensagens.length,1,'concorrência e inscrições repetidas não duplicam mensagem');assert.equal(mensagens[0].to.address,'caixa@exemplo.com');assert.equal(mensagens[0].cc,undefined);assert.equal(mensagens[0].bcc,undefined);
 await processarLembretes({...args,hoje:'2026-12-23'});assert.equal(mensagens.length,2,'somente saída que entrou hoje na janela é nova');
 await processarLembretes({...args,hoje:'2026-12-23'});assert.equal(mensagens.length,2,'reexecução não repete saída');
-// Uma nova data dentro do prazo recebe novo aviso; mudanças de observação não.
+// Uma nova data dentro do prazo recebe uma atualização; reexecutar não duplica.
 add('ferias/exata',f('exata','2026-12-28'));
 await processarLembretes(args);assert.equal(mensagens.length,3);await processarLembretes(args);assert.equal(mensagens.length,3);
 // Desativar todos os interessados no endereço interrompe os próximos envios.
@@ -101,3 +101,58 @@ for(const m of mensagensLotes){assert.ok(Buffer.byteLength(m.html,'utf8')<90000)
 assert.equal([...dbLotes.dados].filter(([p,d])=>p.startsWith('envios_lembretes_ferias/')&&d.estado==='enviado').length,21);
 const inseguro=montarLembreteFerias(saidas,'javascript:alert(1)');assert.doesNotMatch(inseguro.html,/<(?:a|img)\b/);
 console.log('E-mail: lotes sem cortar conteúdo, logo, link seguro e 21 saídas preservadas passaram.');
+
+// Atualizações usam a última programação aceita pelo provedor, não só a saída.
+const mudancas=banco(),avisosMudancas=[];
+mudancas.dados.set('usuarios/gestor@exemplo.com',{perfil:'usuario',ativo:true});
+mudancas.dados.set('lembretes_ferias/gestor',{uid:'gestor',titular:'gestor@exemplo.com',email:'gestor@exemplo.com',ativo:true,horario:'12:00',antecedencia:10});
+const salvarMudanca=d=>mudancas.dados.set('ferias/pessoa',structuredClone(d));
+let atual=f('pessoa','2027-01-01');salvarMudanca(atual);
+const am={db:mudancas,hoje,horario:'12:00',painel:'https://example.test/',remetente:'origem@exemplo.com',transporte:{verify:async()=>{},sendMail:async m=>{avisosMudancas.push(m);return {accepted:[m.to.address]};}}};
+await processarLembretes(am);assert.equal(avisosMudancas.length,1);
+atual.periodos[0].fim='2027-01-10';atual.periodos[0].retorno='2027-01-11';salvarMudanca(atual);
+await Promise.all([processarLembretes(am),processarLembretes(am)]);assert.equal(avisosMudancas.length,2,'mesma saída com fim/retorno alterados avisa uma vez mesmo com concorrência');
+assert.match(avisosMudancas[1].subject,/programação atualizada/);assert.match(avisosMudancas[1].text,/Antes:/);assert.match(avisosMudancas[1].text,/Agora:/);assert.match(avisosMudancas[1].text,/10\/01\/2027/);
+await processarLembretes(am);assert.equal(avisosMudancas.length,2);
+atual.atualizadoEm=new Date();atual.versao=40;salvarMudanca(atual);await processarLembretes(am);assert.equal(avisosMudancas.length,2,'metadados técnicos não repetem aviso');
+atual.periodos=[{inicio:'2027-03-01',fim:'2027-03-20',retorno:'2027-03-21'}];salvarMudanca(atual);
+await processarLembretes({...am,horario:'11:59'});assert.equal(avisosMudancas.length,2,'atualizações respeitam horário e inscrição');
+await processarLembretes(am);assert.equal(avisosMudancas.length,3,'mudança para fora da janela também avisa quem já recebeu');
+atual.status='cancelado';salvarMudanca(atual);await processarLembretes(am);assert.equal(avisosMudancas.length,4);assert.match(avisosMudancas.at(-1).text,/Cancelado/);
+await processarLembretes(am);assert.equal(avisosMudancas.length,4,'cancelamento não repete');
+atual.status='confirmado';atual.arquivado=true;salvarMudanca(atual);await processarLembretes(am);assert.equal(avisosMudancas.length,5);assert.match(avisosMudancas.at(-1).text,/Retirado da lista/);
+atual.arquivado=false;salvarMudanca(atual);await processarLembretes(am);assert.equal(avisosMudancas.length,6,'restaurar programação também é alteração');
+mudancas.dados.delete('ferias/pessoa');await processarLembretes(am);assert.equal(avisosMudancas.length,7);assert.match(avisosMudancas.at(-1).text,/Cadastro excluído/);
+await processarLembretes(am);assert.equal(avisosMudancas.length,7,'exclusão não repete');
+salvarMudanca(atual);await processarLembretes(am);assert.equal(avisosMudancas.length,8,'restaurar após exclusão avisa');
+atual.obs='Novo detalhe';salvarMudanca(atual);
+await processarLembretes({...am,transporte:{verify:async()=>{},sendMail:async()=>{throw Object.assign(new Error('rejeitado'),{code:'EENVELOPE'});}}});
+await processarLembretes(am);assert.equal(avisosMudancas.length,9,'atualização rejeitada pode tentar novamente');
+atual.status='planejado';salvarMudanca(atual);
+await processarLembretes({...am,transporte:{verify:async()=>{},sendMail:async()=>{throw Object.assign(new Error('incerto'),{code:'ETIMEDOUT'});}}});
+await processarLembretes(am);assert.equal(avisosMudancas.length,9,'atualização incerta não é duplicada');
+// Privacidade: quem nunca recebeu aquele colaborador ou saiu da inscrição não recebe atualização.
+mudancas.dados.set('ferias/nunca',f('nunca','2027-05-01',{status:'cancelado'}));
+mudancas.dados.get('lembretes_ferias/gestor').ativo=false;atual.nome='Nome alterado';salvarMudanca(atual);await processarLembretes(am);assert.equal(avisosMudancas.length,9);
+// Migração: um envio antigo sem snapshot não deve disparar todos os lembretes de novo.
+const migracao=banco();migracao.dados.set('usuarios/gestor@exemplo.com',{perfil:'usuario',ativo:true});migracao.dados.set('lembretes_ferias/gestor',{uid:'gestor',titular:'gestor@exemplo.com',email:'gestor@exemplo.com',ativo:true});
+const {createHash}=await import('node:crypto');const antiga=saidasParaLembrar([f('legado','2027-01-01')],hoje)[0];
+migracao.dados.set('envios_lembretes_ferias/'+createHash('sha256').update('gestor@exemplo.com|'+antiga.chave).digest('hex'),{email:'gestor@exemplo.com',feriasId:'legado',inicio:'2027-01-01',estado:'enviado',atualizadoEm:'2026-12-22T10:00:00.000Z'});
+migracao.dados.set('ferias/legado',f('legado','2027-01-01',{atualizadoEm:new Date('2026-12-22T09:00:00.000Z')}));
+const antesMigracao=avisosMudancas.length;await processarLembretes({...am,db:migracao});assert.equal(avisosMudancas.length,antesMigracao);
+migracao.dados.get('ferias/legado').periodos[0].fim='2027-01-05';await processarLembretes({...am,db:migracao});assert.equal(avisosMudancas.length,antesMigracao+1);
+// Se a edição já ocorreu depois do envio legado, a implantação envia a atualização.
+for(const p of [...migracao.dados.keys()])if(p.startsWith('acompanhamento_lembretes_ferias/'))migracao.dados.delete(p);
+migracao.dados.get('ferias/legado').atualizadoEm=new Date('2026-12-22T10:00:00.001Z');
+await processarLembretes({...am,db:migracao});assert.equal(avisosMudancas.length,antesMigracao+2);
+const alteracaoMaliciosa=montarLembreteFerias([],'https://example.test/',[{antes:null,depois:{...atual,nome:'<img src=x onerror=alert(1)>',regiao:'<script>x</script>'}}]);assert.doesNotMatch(alteracaoMaliciosa.html,/<img[^>]*onerror/);assert.match(alteracaoMaliciosa.html,/&lt;script&gt;/);
+console.log('Alterações: fim/retorno sem mudar saída, fora da janela, cancelamento, retirada, exclusão/restauração, concorrência, migração, privacidade e SMTP passaram.');
+// Lotes de atualizações continuam abaixo do corte do Gmail, sem perder colaboradores.
+for(let i=0;i<21;i++)dbLotes.dados.get('ferias/lote-'+i).status='planejado';
+await processarLembretes({db:dbLotes,hoje,horario:'12:00',painel:'https://example.test/',remetente:'origem@exemplo.com',transporte:{verify:async()=>{},sendMail:async m=>{mensagensLotes.push(m);return {accepted:[m.to.address]};}}});
+assert.equal(mensagensLotes.length,4);for(const m of mensagensLotes.slice(2)){assert.match(m.subject,/programação atualizada/);assert.ok(Buffer.byteLength(m.html,'utf8')<90000);}
+// A ordem dos períodos não importa; voltar a uma versão anterior é uma nova alteração.
+const ordem=banco(),mailsOrdem=[];ordem.dados.set('usuarios/gestor@exemplo.com',{perfil:'usuario',ativo:true});ordem.dados.set('lembretes_ferias/gestor',{uid:'gestor',titular:'gestor@exemplo.com',email:'gestor@exemplo.com',ativo:true});
+ordem.dados.set('ferias/varios',structuredClone(varios));const ao={...am,db:ordem,transporte:{verify:async()=>{},sendMail:async m=>{mailsOrdem.push(m);return{accepted:[m.to.address]};}}};
+await processarLembretes(ao);ordem.dados.get('ferias/varios').periodos.reverse();await processarLembretes(ao);assert.equal(mailsOrdem.length,1);
+ordem.dados.get('ferias/varios').status='planejado';await processarLembretes(ao);ordem.dados.get('ferias/varios').status='confirmado';await processarLembretes(ao);assert.equal(mailsOrdem.length,3);

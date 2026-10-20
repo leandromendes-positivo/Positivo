@@ -37,7 +37,7 @@ export async function deveProcessarLembretes(db,agora=new Date()){
  if(!elegiveis.length)return null;
  const ref=db.doc('operacoes_lembretes_ferias/cloudflare-agendamento');
  const [revisao,ultimo]=await Promise.all([db.revisaoFerias(),ref.get()]);
- const assinatura=createHash('sha256').update(JSON.stringify([hoje,elegiveis,revisao])).digest('hex');
+ const assinatura=createHash('sha256').update(JSON.stringify(['alteracoes-v1',hoje,elegiveis,revisao])).digest('hex');
  return ultimo.data()?.assinatura===assinatura?null:{ref,assinatura,hoje,horario};
 }
 async function abrir(env){

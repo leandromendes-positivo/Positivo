@@ -145,8 +145,8 @@ Lembretes e testes usam fundo branco, cabeçalho e rodapé pretos, com tipografi
 Helvetica/Arial, tabelas e estilos inline. O layout solicita esquema claro para
 preservar essa identidade; clientes que forçam inversão podem alterar as cores.
 Datas continuam em texto, sem depender de imagens. O banner preto com a marca
-Positivo é servido pelo Pages em `positivo-email-footer.png`, ocupa toda a largura
-do rodapé e se adapta à tela. Há texto alternativo para imagens bloqueadas.
+Positivo é servido pelo Pages em `positivo-email-footer.png`, fica centralizado com largura máxima de 240 px. Cabeçalho e rodapé usam faixas
+externas de 100% de largura; só o texto tem largura de leitura limitada. Há texto alternativo para imagens bloqueadas.
 Lotes de até 20 saídas evitam que o Gmail corte o HTML antes do rodapé. Datas,
 critérios, inscrições e deduplicação são os mesmos; avisos já enviados não são
 repetidos só por uma mudança visual.

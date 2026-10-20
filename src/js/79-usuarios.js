@@ -52,10 +52,10 @@ function renderConta() {
         <div class="conta-bloco-titulo">${icone('calendario')}<div><h3 id="conta-acesso-titulo">Cadastro e acesso</h3><p>Informações da sua conta no painel.</p></div></div>
         <dl><div><dt>Cadastrado em</dt><dd data-conta-cadastro>${p?.criadoEm?`<time datetime="${esc(p.criadoEm.slice(0,10))}">${cadastro}</time>`:cadastro}</dd></div><div><dt>Perfil de acesso</dt><dd>${esc(p?.principal?'Administrador principal':PERFIS[p?.perfil]||'Sem acesso')}</dd></div></dl>
         <p class="conta-acesso-nota">${podeAdministrar()?'Você administra acessos, cadastros e regras, além de acompanhar a operação.':perfilTecnico()?'Você acessa somente suas peças e informa devoluções e RMDF. Seu vínculo e seu saldo são gerenciados pela operação.':'Você pode consultar o painel, agendar devoluções e registrar contatos e observações.'}</p>
-        <p class="nota">Seus registros permanecem vinculados à sua conta e ao seu e-mail.</p>
+        <p class="nota">Seus registros permanecem vinculados à sua conta e ao seu e-mail.</p><details class="acesso-diagnostico"><summary>Diagnóstico de acesso</summary><pre>${esc(diagnosticoSessao(Acesso.auth))}</pre><p>Sem e-mail, senha ou tokens de acesso.</p></details>
       </aside>
     </div>
-    <div class="conta-acoes">${podeAdministrar()?'<button class="btn" data-acao="ir" data-pagina="usuarios">Gerenciar usuários</button>':''}<button class="btn" data-acao="sair">${icone('sair')}Sair desta conta</button></div><p class="nota">Em computadores compartilhados, saia ao terminar. A sessão fica limitada a esta aba do navegador.</p>`;
+    <div class="conta-acoes">${podeAdministrar()?'<button class="btn" data-acao="ir" data-pagina="usuarios">Gerenciar usuários</button>':''}<button class="btn" data-acao="sair">${icone('sair')}Sair desta conta</button></div><p class="nota">Em computadores compartilhados, saia ao terminar. A sessão pode ser reutilizada em outras abas deste navegador.</p>`;
 }
 async function salvarMinhaConta(form) {
   if (UIconta.salvando || !form.reportValidity()) return;

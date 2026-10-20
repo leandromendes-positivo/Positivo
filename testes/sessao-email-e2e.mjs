@@ -5,10 +5,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {prepararEmulador} from './emulador.mjs';
 const require=createRequire(`${process.env.PW_PATH||'/workspace/Positivo/seguranca'}/package.json`);
-const {chromium}=require('playwright'),{initializeTestEnvironment}=require('@firebase/rules-unit-testing');
+const navegador=require('playwright')[process.env.PW_BROWSER||'chromium'],{initializeTestEnvironment}=require('@firebase/rules-unit-testing');
 const env=await initializeTestEnvironment({projectId:'demo-controle-pecas',firestore:{host:'127.0.0.1',port:8080,rules:fs.readFileSync('firestore.rules','utf8')}});
 await prepararEmulador();
-const browser=await chromium.launch({executablePath:process.env.CHROMIUM||undefined}),erros=[];
+const browser=await navegador.launch({executablePath:process.env.CHROMIUM||undefined}),erros=[];
 const link=new URL(process.env.URL_PAINEL_TESTE||'http://127.0.0.1:8003/pagina-completa.html');link.hash='ferias';
 async function contexto(){
  const ctx=await browser.newContext({viewport:{width:1280,height:900}});

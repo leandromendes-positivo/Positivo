@@ -170,7 +170,7 @@ function diagnosticoSessao(auth) {
     'Endereço: ' + location.origin + location.pathname,
     'Destino: ' + (location.hash === '#ferias' ? 'Férias da equipe' : 'Painel'),
     'Armazenamento local: ' + armazenamento,
-    'Sessão reconhecida nesta aba: ' + (auth.currentUser ? 'sim' : 'não'),
+    'Sessão reconhecida nesta aba: ' + (auth?.currentUser ? 'sim' : 'não'),
     'Janela incorporada: ' + (window.top !== window.self ? 'sim' : 'não'),
   ].join('\n');
 }

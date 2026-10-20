@@ -156,6 +156,25 @@ function criarDbFirestore(fs) {
   return { doc: docRef, collection: colRef };
 }
 
+// Relatório limitado a sinais técnicos; nunca lê ou exibe credenciais armazenadas.
+function diagnosticoSessao(auth) {
+  let armazenamento = 'bloqueado';
+  const chave = 'cp-diagnostico-' + crypto.randomUUID();
+  try {
+    localStorage.setItem(chave, '1');
+    armazenamento = localStorage.getItem(chave) === '1' ? 'disponível' : 'bloqueado';
+  } catch (_) { /* apenas informa a disponibilidade */ }
+  finally { try { localStorage.removeItem(chave); } catch (_) {} }
+  return [
+    'Versão: /*__VERSAO_ACESSO__*/',
+    'Endereço: ' + location.origin + location.pathname,
+    'Destino: ' + (location.hash === '#ferias' ? 'Férias da equipe' : 'Painel'),
+    'Armazenamento local: ' + armazenamento,
+    'Sessão reconhecida nesta aba: ' + (auth.currentUser ? 'sim' : 'não'),
+    'Janela incorporada: ' + (window.top !== window.self ? 'sim' : 'não'),
+  ].join('\n');
+}
+
 /** Entrada federada; a autorização é verificada no banco antes de carregar dados. */
 function pedirLogin(auth, firebase, mensagem = '') {
   return new Promise(resolver => {
@@ -166,8 +185,10 @@ function pedirLogin(auth, firebase, mensagem = '') {
       <div class="acesso-cartao"><span class="logo-positivo" role="img" aria-label="Positivo Tecnologia"></span><span class="acesso-etiqueta">ACESSO À OPERAÇÃO</span><h1>Entre na sua conta</h1><p>Use o e-mail autorizado pelo administrador.</p><p class="acesso-erro" role="alert" ${mensagem ? '' : 'hidden'}></p>
         <button class="btn grande acesso-provedor" id="entrar-google"><span class="marca-google" aria-hidden="true">G</span>Entrar com Google${icone('direita')}</button>
         <button class="btn grande acesso-provedor" id="entrar-microsoft"><span class="marca-microsoft" aria-hidden="true"><i></i><i></i><i></i><i></i></span>Entrar com Microsoft${icone('direita')}</button>
-        <small class="acesso-microsoft">Outlook, Hotmail ou conta corporativa do Microsoft 365.</small><div class="acesso-restrito">${icone('info')}Somente e-mails cadastrados podem acessar. Não há cadastro público.</div>
+        <small class="acesso-microsoft">Outlook, Hotmail ou conta corporativa do Microsoft 365.</small><details class="acesso-diagnostico"><summary>Diagnóstico de acesso</summary><pre></pre><p>Este diagnóstico não contém e-mail, senha nem tokens de acesso.</p></details><div class="acesso-restrito">${icone('info')}Somente e-mails cadastrados podem acessar. Não há cadastro público.</div>
       </div></div><footer class="acesso-rodape">Positivo Tecnologia · Controle de Peças</footer>`;
+    const diagnostico = tela.querySelector('.acesso-diagnostico');
+    diagnostico.addEventListener('toggle', () => { if (diagnostico.open) diagnostico.querySelector('pre').textContent = diagnosticoSessao(auth); });
     Tema.atualizarBotoes(); tela.querySelector('.acesso-erro').textContent = mensagem;
     const video = tela.querySelector('.login-video'), eventosVideo = new AbortController();
     const reproduzir = () => {

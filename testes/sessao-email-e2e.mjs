@@ -66,6 +66,12 @@ try{
  const compartilhada=await pagina(ctx);await pronto(compartilhada);
  await restaurada.evaluate(()=>Acesso.auth.signOut());await Promise.all([bloqueado(restaurada),bloqueado(compartilhada)]);
  const depoisSair=await pagina(ctx);await depoisSair.locator('#entrar-google').waitFor();assert.equal(await depoisSair.evaluate(()=>Acesso.auth.currentUser),null);assert.equal(await depoisSair.locator('.ferias').count(),0);
+ await depoisSair.locator('.acesso-diagnostico summary').click();
+ const diagnostico=await depoisSair.locator('.acesso-diagnostico pre').innerText();
+ assert.match(diagnostico,/Armazenamento local: disponível/);
+ assert.match(diagnostico,/Sessão reconhecida nesta aba: não/);
+ assert.match(diagnostico,/Versão: [a-f0-9]{12}/);
+ assert.equal(diagnostico.includes('teste@exemplo.com'),false);
  // Técnico conserva a própria sessão, mas o link de férias não amplia sua permissão.
  await env.withSecurityRulesDisabled(async c=>{
   const db=c.firestore();await db.doc('usuarios/tecnico@teste.com').set({email:'tecnico@teste.com',perfil:'tecnico',ativo:true,tecnicoId:'PR--TEC'});

@@ -56,7 +56,7 @@ jobs:
         env:
           PW_PATH: ${{ github.workspace }}/seguranca
           FIREBASE_SDK_DIR: /tmp/firebase-sdk-portal
-        run: ./seguranca/node_modules/.bin/firebase emulators:exec --only firestore,auth --project demo-controle-seguranca "node testes/verificar-acessos.mjs && PW_BROWSER=firefox node testes/sessao-email-e2e.mjs && PW_BROWSER=webkit node testes/sessao-email-e2e.mjs"
+        run: ./seguranca/node_modules/.bin/firebase emulators:exec --only firestore,auth --project demo-controle-seguranca "node testes/verificar-acessos.mjs && PW_BROWSER=firefox node testes/verificar-sessao.mjs && PW_BROWSER=webkit node testes/verificar-sessao.mjs"
   publicar:
     needs: testar-acessos
     runs-on: ubuntu-latest

@@ -39,8 +39,8 @@ try{
  for(const c of COLECOES_PECAS)assert.equal((await db.collection(c).get()).size,0);
  assert.equal((await db.doc('saldos_tecnicos/PR--TEC/geracoes/antiga/pecas/P').get()).exists,false);
  assert.equal((await db.doc('declaracoes_tecnicos/PR--TEC/itens/P').get()).exists,false);
- const indice=(await db.doc('dados/indice').get()).data();assert.equal(indice.versao,13);assert.deepEqual(indice.arquivos,{});assert.deepEqual(indice.anterior,{});
- assert.equal((await db.doc('portal/controle').get()).data().versao,13);
+ const indice=(await db.doc('dados/indice').get()).data();assert.equal(indice.versao,14);assert.deepEqual(indice.arquivos,{});assert.deepEqual(indice.anterior,{});
+ assert.equal((await db.doc('portal/controle').get()).data().versao,14);
  assert.deepEqual((await db.doc('dados/catalogo').get()).data(),{m:{}});
  assert.equal((await db.doc('resumo/atual').get()).data().estoque.totalNovas,0);
  assert.equal((await db.doc('cadastro/tecnicos').get()).data().t.TEC.nome,'Preservar técnico');
@@ -51,6 +51,6 @@ try{
  await db.doc('dados/n-PR-nova-0').set({itens:['nova-importacao']});
  const repetida=await limparPecasUmaVez(args);assert.equal(repetida.jaConcluida,true);
  assert.equal((await db.doc('dados/n-PR-nova-0').get()).exists,true);
- assert.equal((await db.doc('dados/indice').get()).data().versao,13);
+ assert.equal((await db.doc('dados/indice').get()).data().versao,14);
  console.log('Limpeza real no emulador: trava de escrita, leitura preservada, exclusão recursiva, cadastros/férias/acessos intactos, saldos zerados e execução única passaram.');
 }finally{await deleteApp(app);await env.cleanup();}

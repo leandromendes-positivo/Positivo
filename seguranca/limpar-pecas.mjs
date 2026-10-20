@@ -55,6 +55,12 @@ export async function limparPecasUmaVez({db,regras,source,esperar=ms=>new Promis
  const dados=await arvore(db.collection('dados'));
  if(dados.length!==2||dados.some(([p])=>!['dados/indice','dados/catalogo'].includes(p)))throw new Error('Há partes de planilhas remanescentes.');
  if(preservados!==await preservar(db))throw new Error('A verificação dos cadastros preservados falhou.');
+ // Uma segunda versão avisa as telas abertas depois da exclusão do histórico.
+ await db.runTransaction(async tx=>{
+  const indice=await tx.get(db.doc('dados/indice')),versao=indice.data().versao+1;
+  tx.set(db.doc('dados/indice'),{arquivos:{},anterior:{},versao,atualizadoEm:agora(),origemSessao:OPERACAO_LIMPEZA});
+  tx.set(db.doc('portal/controle'),{geracao,versao,atualizadoEm:agora()});
+ });
  const resultado={documentosRemovidos:Object.values(antes).reduce((a,b)=>a+b,0),colecoesZeradas:COLECOES_PECAS.length,cadastrosPreservados:true};
  await registro.set({estado:'concluida',concluidaEm:agora(),resultado},{merge:true});
  await regras.releaseFirestoreRulesetFromSource(source);

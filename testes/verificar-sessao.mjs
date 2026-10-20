@@ -4,5 +4,5 @@ try {
 } catch(e) {
   const detalhe=String(e.stack||e).replaceAll('%','%25').replaceAll('\r','%0D').replaceAll('\n','%0A');
   console.error(`::error title=Sessão ${process.env.PW_BROWSER||'chromium'}::${detalhe}`);
-  process.exitCode=1;
+  process.exit(1);
 }

@@ -97,7 +97,7 @@ def main() -> int:
               .replace("<!--__BOTAO_TEMA__-->", botao_tema))
     config = config_firebase()
     (DIST / "site").mkdir(parents=True, exist_ok=True)
-    shutil.copyfile(SRC / "assets" / "positivo-claro.png", DIST / "site" / "positivo-email.png")
+    shutil.copyfile(SRC / "assets" / "positivo-email-footer.png", DIST / "site" / "positivo-email-footer.png")
     # Geradores carregados sob demanda, servidos pelo próprio site (sem CDN).
     for destino in (DIST / "vendor", DIST / "site" / "vendor"):
         if destino.exists():

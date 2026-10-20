@@ -1,7 +1,7 @@
 /* Estoques publicados por proprietário e UF. Nunca conceder ao técnico leitura dos documentos globais. */
 function perfilTecnico() { return Acesso.modo === 'firebase' && Acesso.perfil?.perfil === 'tecnico'; }
 function paginaPermitida(id) {
-  if (!PAGINAS[id]) return false;
+  if (!Object.hasOwn(PAGINAS, id)) return false;
   if (perfilTecnico()) return ['meu-painel','conta'].includes(id);
   return !PAGINAS[id].tecnico && (!PAGINAS[id].admin || podeAdministrar());
 }

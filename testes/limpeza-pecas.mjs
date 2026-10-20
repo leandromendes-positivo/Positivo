@@ -25,7 +25,7 @@ try{
  await assertSucceeds(usuario.doc('ferias/colaborador').get());
  await db.doc('manutencao/limpeza-pecas').delete();
  await db.doc('dados/indice').set({versao:12,arquivos:{'usadas:PR':{gen:'antiga',partes:1}},anterior:{arquivo:'antigo'}});
- await db.doc('dados/u-PR-antiga-0').set({itens:[['peca-antiga']]});await db.doc('dados/catalogo').set({m:{M:'Material antigo'}});
+ await db.doc('dados/u-PR-antiga-0').set({itens:[{cp_lista:['peca-antiga']}]});await db.doc('dados/catalogo').set({m:{M:'Material antigo'}});
  await db.doc('resumo/atual').set({estoque:{totalNovas:99}});
  for(const c of COLECOES_PECAS)await db.doc(`${c}/antigo`).set({antigo:true});
  // Pais ausentes também devem ser limpos, incluindo os saldos publicados e declarações.

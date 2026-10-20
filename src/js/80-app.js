@@ -517,7 +517,7 @@ async function iniciar() {
   Notificacoes.iniciar();
   aoMudar.add(debounce(() => renderizar(), 40));
   const inicial = (location.hash || "").replace("#", "");
-  if (PAGINAS[inicial]) UI.pagina = inicial;
+  if (Object.hasOwn(PAGINAS, inicial)) UI.pagina = inicial;
   renderizar(true);
   try { await Armazem.iniciar(); }
   catch (e) { E.status = 'erro'; E.erro = 'Não foi possível conectar com segurança. Confira a conexão e tente novamente.'; mudou(); return; }

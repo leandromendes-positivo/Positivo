@@ -15,10 +15,10 @@ async function contexto(){
  await ctx.route('https://www.gstatic.com/firebasejs/**',r=>r.fulfill({path:path.resolve(process.env.FIREBASE_SDK_DIR||'seguranca/node_modules/firebase',r.request().url().split('/').at(-1)),contentType:'application/javascript'}));
  await ctx.addInitScript(()=>{window.CP_FIREBASE={apiKey:'chave-de-teste',projectId:'demo-controle-pecas',authDomain:'demo-controle-pecas.firebaseapp.com'};window.__CP_FIREBASE_EMULADOR__=true;});return ctx;
 }
-async function pagina(ctx,email){
+async function pagina(ctx,email,fragmento='ferias'){
  const p=await ctx.newPage();p.on('pageerror',e=>erros.push(e.message));
  if(email)await p.addInitScript(email=>{window.__CP_LOGIN_TESTE__={sub:'sessao-'+email,email,email_verified:true};},email);
- await p.goto(link.href);return p;
+ const destino=new URL(link.href);destino.hash=fragmento;await p.goto(destino.href);return p;
 }
 const pronto=p=>p.waitForFunction(()=>typeof E!=='undefined'&&E.status==='pronto');
 const bloqueado=p=>p.waitForFunction(()=>typeof E!=='undefined'&&E.erroCodigo==='sem_permissao');
@@ -29,14 +29,17 @@ try{
  assert.equal(await nova.evaluate(()=>window.__CP_LOGIN_TESTE__),undefined,'segunda aba não deve autenticar por fixture');
  assert.equal(await nova.evaluate(()=>Acesso.usuario.uid),uid);assert.equal(await nova.evaluate(()=>UI.pagina),'ferias');
  assert.equal(await nova.locator('#acesso').isVisible(),false);assert.equal(new URL(nova.url()).search,'');
+ const invalida=await pagina(ctx,undefined,'__proto__');await pronto(invalida);assert.equal(await invalida.evaluate(()=>UI.pagina),'painel');await invalida.close();
  // A persistência não concede acesso: revogação deve limpar as duas abas e impedir outra abertura.
  await env.withSecurityRulesDisabled(c=>c.firestore().doc('usuarios/teste@exemplo.com').update({ativo:false}));
  await Promise.all([bloqueado(original),bloqueado(nova)]);
  for(const p of [original,nova])assert.deepEqual(await p.evaluate(()=>[E.ferias.length,E.usadas.length,E.novas.length]),[0,0,0]);
  const revogada=await pagina(ctx);await bloqueado(revogada);assert.equal(await revogada.locator('.ferias').count(),0);
+ await Promise.all([original.close(),nova.close(),revogada.close()]);
  await env.withSecurityRulesDisabled(c=>c.firestore().doc('usuarios/teste@exemplo.com').update({ativo:true}));
  const restaurada=await pagina(ctx);await pronto(restaurada);assert.equal(await restaurada.evaluate(()=>UI.pagina),'ferias');
- await restaurada.evaluate(()=>Acesso.auth.signOut());await bloqueado(restaurada);
+ const compartilhada=await pagina(ctx);await pronto(compartilhada);
+ await restaurada.evaluate(()=>Acesso.auth.signOut());await Promise.all([bloqueado(restaurada),bloqueado(compartilhada)]);
  const depoisSair=await pagina(ctx);await depoisSair.locator('#entrar-google').waitFor();assert.equal(await depoisSair.evaluate(()=>Acesso.auth.currentUser),null);assert.equal(await depoisSair.locator('.ferias').count(),0);
  // Técnico conserva a própria sessão, mas o link de férias não amplia sua permissão.
  await env.withSecurityRulesDisabled(async c=>{

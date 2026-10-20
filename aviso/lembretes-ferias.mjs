@@ -1,3 +1,4 @@
+import {layoutEmailFerias} from './layout-email-ferias.mjs';
 import {createHash,randomUUID} from 'node:crypto';
 import {hojeBrasilia} from './data-brasilia.mjs';
 export const emailLembreteValido=e=>typeof e==='string' && e.length<=254 && /^[a-z0-9.!#$%&'*+\-=?^_`{|}~]+@[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?\.[a-z]{2,}$/i.test(e);
@@ -26,7 +27,16 @@ export function montarLembreteFerias(saidas,painel=''){
   const assunto=`Férias da equipe — ${saidas.length} ${saidas.length===1?'saída próxima':'saídas próximas'}`;
   const linhas=saidas.map(s=>`${s.nome} · ${s.uf} · ${s.status==='confirmado'?'Confirmado':'Planejado'}\nSaída: ${data(s.inicio)} (em ${s.antecedencia} ${s.antecedencia===1?'dia':'dias'})\nPeríodo: ${data(s.inicio)} a ${data(s.fim)} · ${s.dias} dias corridos\nRetorno: ${data(s.retorno)}`);
   const texto=[assunto,'','Você solicitou lembretes das férias da equipe.',...linhas.flatMap(l=>['',l]),'','O aviso segue a antecedência escolhida na sua inscrição. Inscrições, alterações de data ou retomada do serviço dentro desse prazo são avisadas na próxima verificação, antes da saída.','As informações refletem a programação atual. Consulte o painel para acompanhar alterações.','Para alterar o endereço ou desativar o recebimento, abra Férias da equipe → Lembretes por e-mail.',...(painel?['',painel+'#ferias']:[])].join('\n');
-  const html=`<div style="font-family:Arial,sans-serif;color:#182323;line-height:1.6;max-width:680px"><h2>${esc(assunto)}</h2><p>Você solicitou lembretes das férias da equipe.</p>${linhas.map(l=>`<div style="padding:16px 0;border-bottom:1px solid #ddd">${esc(l).replaceAll('\n','<br>')}</div>`).join('')}<p>O aviso segue a antecedência escolhida na sua inscrição. Inscrições, alterações ou retomada do serviço dentro desse prazo são avisadas na próxima verificação, antes da saída.</p><p>Consulte a programação atual no painel. Para alterar o endereço ou desativar os lembretes, abra <strong>Férias da equipe → Lembretes por e-mail</strong>.</p>${/^https:\/\//.test(painel)?`<p><a href="${esc(painel+'#ferias')}">Abrir programação de férias</a></p>`:''}</div>`;
+  const cartoes=saidas.map(s=>`<table role="presentation" width="100%" class="email-cartao" bgcolor="#ffffff" style="width:100%;background-color:#ffffff;border:1px solid #dce4eb;border-top:4px solid #26766f;border-radius:10px"><tr><td class="email-card" style="padding:24px">
+    <p style="margin:0 0 14px;font-size:12px;line-height:1.8"><span class="${s.antecedencia===1?'email-urgente':'email-selo'}" style="display:inline-block;padding:4px 10px;border-radius:5px;background-color:${s.antecedencia===1?'#fff1df':'#e6f3ef'};color:${s.antecedencia===1?'#773900':'#175b50'};font-weight:bold">${s.antecedencia===1?'SAÍDA AMANHÃ':`SAÍDA EM ${esc(s.antecedencia)} DIAS`}</span></p>
+    <h2 class="email-pessoa email-texto" style="margin:0 0 6px;color:#172b3a;font-size:20px;line-height:1.4;overflow-wrap:anywhere;word-break:break-word">${esc(s.nome)}</h2>
+    <p class="email-secundario" style="margin:0 0 20px;color:#526577;font-size:13px;line-height:1.6">${esc(s.uf)} &nbsp;·&nbsp; ${s.status==='confirmado'?'Confirmado':'Planejado'}</p>
+    <table role="presentation" width="100%" style="width:100%;table-layout:fixed"><tr>
+    <td width="50%" valign="top" style="padding:0 12px 0 0"><p class="email-secundario" style="margin:0 0 5px;color:#526577;font-size:11px;font-weight:bold;letter-spacing:1px">SAÍDA</p><p class="email-data email-texto" style="margin:0;color:#172b3a;font-size:23px;font-weight:bold;line-height:1.4">${esc(data(s.inicio))}</p></td>
+    <td width="50%" valign="top" style="padding:0 0 0 12px"><p class="email-secundario" style="margin:0 0 5px;color:#526577;font-size:11px;font-weight:bold;letter-spacing:1px">RETORNO</p><p class="email-data email-texto" style="margin:0;color:#172b3a;font-size:23px;font-weight:bold;line-height:1.4">${esc(data(s.retorno))}</p></td>
+    </tr></table><p class="email-secundario email-linha" style="margin:20px 0 0;padding-top:16px;border-top:1px solid #dce4eb;color:#526577;font-size:13px;line-height:1.7">Período: <strong>${esc(data(s.inicio))} a ${esc(data(s.fim))}</strong><br>${esc(s.dias)} ${s.dias===1?'dia corrido':'dias corridos'} de férias</p>
+    </td></tr></table><table role="presentation" width="100%"><tr><td height="16" style="height:16px;font-size:1px;line-height:1px">&nbsp;</td></tr></table>`).join('');
+  const html=layoutEmailFerias({titulo:'Férias da equipe',resumo:`${saidas.length} ${saidas.length===1?'colaborador com saída próxima.':'colaboradores com saída próxima.'} Confira as datas para planejar a cobertura da equipe.`,painel,conteudo:cartoes+'<p class="email-secundario" style="margin:4px 0 0;color:#526577;font-size:13px;line-height:1.7">O aviso segue a antecedência escolhida na sua inscrição, em dias corridos. Inscrições, alterações de data ou retomada do serviço dentro desse prazo são avaliadas na próxima verificação, antes da saída.</p>'});
   return {assunto,texto,html};
 }
 export async function destinatariosLembretes(db){
@@ -62,8 +72,9 @@ export async function processarLembretes({db,transporte,remetente,hoje=hojeBrasi
     const snapshotsAtuais=db.getAll?await db.getAll(...refsAtuais):await Promise.all(refsAtuais.map(r=>r.get()));
     const atuais=snapshotsAtuais.map(s=>s.exists?{...s.data(),id:s.id}:null);
     const elegiveis=saidasParaLembrar(atuais.filter(Boolean),hoje,Math.max(...validas)).filter(s=>saidas.some(p=>p.chave===s.chave));
-    for(let inicio=0;inicio<elegiveis.length;inicio+=100){
-      const grupo=elegiveis.slice(inicio,inicio+100),lote=randomUUID(),outbox=db.doc(`caixa_lembretes_ferias/${lote}`);
+    // Limita o HTML por mensagem para o Gmail não cortar o rodapé/logo.
+    for(let inicio=0;inicio<elegiveis.length;inicio+=20){
+      const grupo=elegiveis.slice(inicio,inicio+20),lote=randomUUID(),outbox=db.doc(`caixa_lembretes_ferias/${lote}`);
       const reservados=await db.runTransaction(async tx=>{
         const refs=grupo.map(s=>db.doc(`envios_lembretes_ferias/${hash(email+'|'+s.chave)}`));
         const snapshots=tx.getAll?await tx.getAll(...refs):await Promise.all(refs.map(r=>tx.get(r)));

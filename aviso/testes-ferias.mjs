@@ -1,8 +1,9 @@
+import {montarTesteFerias} from './layout-email-ferias.mjs';
 import {randomUUID} from 'node:crypto';
 import {emailLembreteValido} from './lembretes-ferias.mjs';
 // Apenas o servidor define os resultados. Pedidos são reservados antes do SMTP e
 // resultados incertos não voltam à fila automaticamente.
-export async function processarTestesFerias({db,transporte,remetente},habilitado){
+export async function processarTestesFerias({db,transporte,remetente,painel=''},habilitado){
  const pedidos=await db.collection('testes_lembretes_ferias').get();
  const contagem={enviados:0,falhas:0,indisponiveis:0};
  for(const s of pedidos.docs){
@@ -21,7 +22,7 @@ export async function processarTestesFerias({db,transporte,remetente},habilitado
   if(reserva.estado!=='em_envio'){contagem[reserva.estado==='indisponivel'?'indisponiveis':'falhas']++;continue;}
   let estado='incerto',codigo='resultado_nao_confirmado';
   try{
-   const info=await transporte.sendMail({from:{name:'Férias da equipe',address:remetente},to:{address:reserva.email},subject:'Teste dos lembretes de férias — Positivo',text:'Este é o e-mail de teste solicitado no painel Férias da equipe. O remetente está funcionando. Os lembretes automáticos seguem o horário de Brasília e a antecedência escolhidos na sua inscrição. Você pode alterar ou desativar a inscrição em Férias da equipe → Lembretes por e-mail. Este teste não altera os lembretes programados.',messageId:`<teste-ferias-${reserva.pedido}@${remetente.split('@')[1]}>`});
+   const info=await transporte.sendMail({from:{name:'Férias da equipe',address:remetente},to:{address:reserva.email},subject:'Teste dos lembretes de férias — Positivo',text:'Este é o e-mail de teste solicitado no painel Férias da equipe. O remetente está funcionando. Os lembretes automáticos seguem o horário de Brasília e a antecedência escolhidos na sua inscrição. Você pode alterar ou desativar a inscrição em Férias da equipe → Lembretes por e-mail. Este teste não altera os lembretes programados.',html:montarTesteFerias(painel),messageId:`<teste-ferias-${reserva.pedido}@${remetente.split('@')[1]}>`});
    if(!info.accepted?.some(e=>String(e).toLowerCase()===reserva.email))throw Object.assign(new Error('Recusado'),{code:'EENVELOPE'});
    estado='enviado';codigo='smtp_aceito';
   }catch(e){

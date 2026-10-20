@@ -138,3 +138,14 @@ O Cloudflare publica o Pages e o Worker pelas conexões ao repositório. O workf
 Publicar painel mantém os testes e as verificações do Firebase. A publicação no
 GitHub Pages só acontece se a variável de repositório `PUBLICAR_GITHUB_PAGES` for
 explicitamente `true`, para não reativar o endereço antigo após Unpublish site.
+
+## Identidade visual dos e-mails
+
+Lembretes e testes usam o mesmo cabeçalho e rodapé, HTML com tabelas/estilos inline,
+versão de texto simples e ajustes para modo escuro onde o cliente suporta. Datas
+continuam em texto, sem depender de imagens. A logo oficial é servida pelo Pages
+em `positivo-email.png`, com placa branca para preservar contraste em ambos os
+temas e texto alternativo caso o destinatário bloqueie imagens. O build copia o
+arquivo oficial sem alterar a marca. Lotes de até 20 saídas evitam que o Gmail
+corte o HTML antes do rodapé. Datas, critérios, inscrições e deduplicação são os
+mesmos; avisos já enviados não são repetidos só por uma mudança visual.

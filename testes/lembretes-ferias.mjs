@@ -10,7 +10,7 @@ assert.equal(saidas.find(s=>s.feriasId==='exata').antecedencia,10);assert.equal(
 const varios=f('varios','2027-01-01',{periodos:[{inicio:'2027-01-01',fim:'2027-01-10',retorno:'2027-01-12'},{inicio:'2026-12-25',fim:'2026-12-26',retorno:''}]});
 assert.equal(saidasParaLembrar([varios],hoje).length,2);assert.equal(saidasParaLembrar([varios],hoje).find(s=>s.inicio==='2027-01-01').retorno,'2027-01-12');
 const chaves=saidasParaLembrar([varios],hoje).map(s=>s.chave);assert.deepEqual(saidasParaLembrar([{...varios,periodos:[...varios.periodos].reverse()}],hoje).map(s=>s.chave),chaves,'reordenar períodos não cria novo envio');
-const aviso=montarLembreteFerias(saidas.map(s=>({...s,nome:'<img src=x onerror=alert(1)>'})),'https://example.test/');assert.doesNotMatch(aviso.html,/<img/);assert.match(aviso.html,/&lt;img/);assert.match(aviso.texto,/01\/01\/2027/);assert.match(aviso.texto,/desativar/);
+const aviso=montarLembreteFerias(saidas.map(s=>({...s,nome:'<img src=x onerror=alert(1)>'})),'https://example.test/');assert.doesNotMatch(aviso.html,/<img[^>]*onerror/);assert.match(aviso.html,/&lt;img/);assert.match(aviso.texto,/01\/01\/2027/);assert.match(aviso.texto,/desativar/);
 // Banco em memória com transações serializadas para exercitar dois trabalhadores concorrentes.
 function banco(){
  const dados=new Map();let fila=Promise.resolve();
@@ -89,3 +89,15 @@ await processarTestesFerias({...a,transporte:{sendMail:async()=>{throw Object.as
 assert.equal(agenda.dados.get('testes_lembretes_ferias/gestor').codigo,'EENVELOPE');
 assert.equal(agenda.dados.get('testes_lembretes_ferias/gestor').estado,'falhou');
 console.log('Retomada segura de remetente indisponível, preservação da fila e diagnóstico sem dados pessoais passaram.');
+
+// Lotes curtos mantêm todas as saídas e deixam o HTML abaixo do corte do Gmail.
+const dbLotes=banco(),mensagensLotes=[];
+dbLotes.dados.set('usuarios/gestor@exemplo.com',{ativo:true,perfil:'usuario'});
+dbLotes.dados.set('lembretes_ferias/lotes',{uid:'lotes',titular:'gestor@exemplo.com',email:'caixa@exemplo.com',ativo:true});
+for(let i=0;i<21;i++)dbLotes.dados.set('ferias/lote-'+i,f('lote-'+i,'2027-01-01'));
+await processarLembretes({db:dbLotes,hoje,horario:'12:00',painel:'https://example.test/',remetente:'origem@exemplo.com',transporte:{verify:async()=>{},sendMail:async m=>{mensagensLotes.push(m);return {accepted:[m.to.address]};}}});
+assert.equal(mensagensLotes.length,2);
+for(const m of mensagensLotes){assert.ok(Buffer.byteLength(m.html,'utf8')<90000);assert.match(m.html,/alt="Positivo Tecnologia"/);}
+assert.equal([...dbLotes.dados].filter(([p,d])=>p.startsWith('envios_lembretes_ferias/')&&d.estado==='enviado').length,21);
+const inseguro=montarLembreteFerias(saidas,'javascript:alert(1)');assert.doesNotMatch(inseguro.html,/<(?:a|img)\b/);
+console.log('E-mail: lotes sem cortar conteúdo, logo, link seguro e 21 saídas preservadas passaram.');

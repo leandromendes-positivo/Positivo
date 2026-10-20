@@ -43,7 +43,7 @@ export async function deveProcessarLembretes(db,agora=new Date()){
 async function abrir(env){
  const cred=JSON.parse(env.FIREBASE_SERVICE_ACCOUNT||'null');
  if(!cred||cred.project_id!==env.FIREBASE_PROJECT_ID)throw new Error('Projeto inválido');
- return {db:firestoreREST(env.FIREBASE_PROJECT_ID,await tokenServico(cred)),transporte:transporteEmail(env),remetente:env.EMAIL_REMETENTE};
+ return {db:firestoreREST(env.FIREBASE_PROJECT_ID,await tokenServico(cred)),transporte:transporteEmail(env),remetente:env.EMAIL_REMETENTE,painel:env.PAINEL_URL};
 }
 async function disponivel(env,servico){
  if(env.ATIVAR_SERVICO!=='true')throw new Error('Serviço não ativado');

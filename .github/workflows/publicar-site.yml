@@ -52,7 +52,10 @@ jobs:
         env:
           WRANGLER_SEND_METRICS: 'false'
         run: |
-          npm ci --prefix cloudflare --no-audit --no-fund
+          fase_worker=dependencias
+          trap 'echo "::error title=Pacote Cloudflare::Falha na etapa $fase_worker do empacotamento do Worker."' ERR
+          npm ci --prefix cloudflare --ignore-scripts --no-audit --no-fund
+          fase_worker=compilacao
           npm --prefix cloudflare run check
       - name: Testar separação dos estoques
         run: |

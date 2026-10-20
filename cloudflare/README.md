@@ -12,7 +12,7 @@ No Cloudflare: Workers & Pages → Create application → Continue with GitHub.
 Escolha `leandromendes-positivo/Positivo`, branch `main`, nome `positivo-lembretes`.
 Mantenha a raiz do repositório (não limite o checkout à pasta cloudflare).
 
-- Build command: `npm ci --prefix cloudflare --no-audit --no-fund`
+- Build command: `npm ci --prefix cloudflare --ignore-scripts --no-audit --no-fund`
 - Deploy command: `npm --prefix cloudflare run deploy`
 - Não habilite Preview builds para este Worker de produção: previews não devem
   executar cron de produção nem receber as credenciais do remetente.

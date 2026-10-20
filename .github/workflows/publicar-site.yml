@@ -80,6 +80,13 @@ jobs:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           INITIAL_ADMIN_EMAIL: ${{ inputs.administrador_inicial || vars.INITIAL_ADMIN_EMAIL }}
         run: node publicar.mjs
+      - name: Executar limpeza única autorizada das peças
+        if: github.event_name == 'push' && startsWith(github.event.head_commit.message, 'Executar limpeza autorizada das peças 2026-10-20')
+        working-directory: seguranca
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          LIMPEZA_PECAS_OPERACAO: pecas-reinicio-2026-10-20
+        run: node limpar-pecas.mjs
       - name: Instalar serviço de lembretes
         working-directory: aviso
         run: npm ci --no-audit --no-fund

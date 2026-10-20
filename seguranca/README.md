@@ -96,3 +96,11 @@ A publicação só libera regras e site depois dos testes das regras reais e do 
 node testes/portal-projecao.mjs
 PW_PATH="$PWD/seguranca" ./seguranca/node_modules/.bin/firebase emulators:exec --only firestore,auth --project demo-controle-seguranca "node testes/verificar-acessos.mjs"
 ```
+
+## Reinício autorizado da base de peças — 20/10/2026
+
+A operação `pecas-reinicio-2026-10-20` foi solicitada para zerar novas/usadas, devoluções, movimentos/RMDF, importações, cobranças, previsões e os respectivos históricos. Mantém cadastros, usuários, vínculos de acesso, férias e configurações. O workflow só chama `limpar-pecas.mjs` no push cujo título começa com `Executar limpeza autorizada das peças 2026-10-20`, passando a identificação explícita da operação. Publicações normais não executam a limpeza.
+
+Antes da exclusão, publica regras temporárias que bloqueiam gravações do cliente enquanto existe `manutencao/limpeza-pecas`, mantendo as leituras. Após a propagação, publica uma geração vazia e elimina recursivamente somente as coleções autorizadas, incluindo subcoleções sem documento pai. Verifica o esvaziamento e a integridade dos cadastros preservados, registra o resultado privado em `operacoes_manutencao/pecas-reinicio-2026-10-20`, restaura as regras e remove a trava. Logs públicos contêm apenas contagens.
+
+Se interrompida, a operação pode ser retomada; não libere gravações nem importe dados até concluir. Depois de `concluida`, reexecutar não apaga novas importações. Não apague esse registro para reaplicar a limpeza. Os testes usam somente o emulador local e aprovam a rotina antes de sua execução no projeto real.

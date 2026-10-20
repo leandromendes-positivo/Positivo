@@ -1,0 +1,40 @@
+// Integração REST com transações reais, exclusivamente no emulador.
+import assert from 'node:assert/strict';
+import {createRequire} from 'node:module';
+import {firestoreREST} from '../cloudflare/firestore.mjs';
+import {limitarTeste} from '../cloudflare/worker.mjs';
+import {processarTestesFerias} from '../aviso/testes-ferias.mjs';
+const host=process.env.FIRESTORE_EMULATOR_HOST;
+if(!/^(127\.0\.0\.1|localhost):[0-9]+$/.test(host||''))throw new Error('Integração permitida apenas no emulador.');
+const require=createRequire(`${process.env.PW_PATH||'/workspace/Positivo/seguranca'}/package.json`);
+const {initializeTestEnvironment}=require('@firebase/rules-unit-testing');
+const env=await initializeTestEnvironment({projectId:'demo-worker-ferias',firestore:{host:'127.0.0.1',port:8080,rules:'rules_version = "2"; service cloud.firestore { match /databases/{database}/documents { match /{document=**} { allow read, write: if false; } } }'}});
+const db=firestoreREST('demo-worker-ferias','owner',async(url,init)=>{
+ assert.ok(url.startsWith('https://firestore.googleapis.com/v1/projects/demo-worker-ferias/'));
+ return fetch(url.replace('https://firestore.googleapis.com','http://'+host),init);
+});
+try{
+ await env.clearFirestore();
+ await db.doc('usuarios/pessoa@exemplo.com').set({ativo:true,perfil:'usuario'});
+ const solicitadoEm=new Date('2026-10-20T12:00:00Z');
+ for(const uid of ['pessoa','outra']){
+  await db.doc('lembretes_ferias/'+uid).set({uid,titular:'pessoa@exemplo.com',email:'destino@exemplo.com',ativo:true});
+  await db.doc('testes_lembretes_ferias/'+uid).set({uid,pedido:'pedido-'+uid,solicitadoEm});
+ }
+ assert.equal((await db.collection('lembretes_ferias').where('ativo','==',true).get()).docs.length,2);
+ const mensagens=[],servico={db:limitarTeste(db,'pessoa'),remetente:'origem@exemplo.com',transporte:{sendMail:async m=>{mensagens.push(m);return {accepted:[m.to.address]};}}};
+ await Promise.all([processarTestesFerias(servico,true),processarTestesFerias(servico,true)]);
+ assert.equal(mensagens.length,1,'reserva real impede envio concorrente duplicado');
+ assert.equal((await db.doc('testes_lembretes_ferias/pessoa').get()).data().estado,'enviado');
+ assert.deepEqual((await db.doc('testes_lembretes_ferias/pessoa').get()).data().solicitadoEm,solicitadoEm,'timestamp preservado para o limite de frequência');
+ assert.equal((await db.doc('testes_lembretes_ferias/outra').get()).data().estado,undefined,'endpoint não processa terceiro');
+ await db.doc('servicos/lembretes-ferias').set({executor:'cloudflare',habilitado:true});
+ await db.doc('servicos/lembretes-ferias').set({ultimoProcessamento:'agora'},{merge:true});
+ assert.equal((await db.doc('servicos/lembretes-ferias').get()).data().executor,'cloudflare','merge preserva configuração');
+ const batch=db.batch();batch.update(db.doc('servicos/lembretes-ferias'),{habilitado:false});await batch.commit();
+ assert.equal((await db.doc('servicos/lembretes-ferias').get()).data().habilitado,false);
+ assert.equal((await db.doc('ferias/inexistente').get()).exists,false);
+ const lote=await db.getAll(db.doc('testes_lembretes_ferias/outra'),db.doc('ferias/inexistente'));assert.deepEqual(lote.map(s=>[s.id,s.exists]),[['outra',true],['inexistente',false]]);
+ await db.runTransaction(async tx=>{const l=await tx.getAll(db.doc('usuarios/pessoa@exemplo.com'),db.doc('ferias/inexistente'));assert.deepEqual(l.map(s=>s.exists),[true,false]);});
+ console.log('Worker REST: transações reais, concorrência, isolamento por UID, timestamps, consultas e merge passaram. Nenhum e-mail real enviado.');
+}finally{await env.cleanup();}

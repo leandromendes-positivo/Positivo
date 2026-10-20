@@ -10,6 +10,8 @@ export async function abrirServicoFerias(env=process.env){
   return {db:getFirestore(app),transporte:env.GMAIL_USUARIO&&env.GMAIL_SENHA_APP?nodemailer.createTransport({service:'gmail',connectionTimeout:15000,greetingTimeout:15000,socketTimeout:30000,auth:{user:env.GMAIL_USUARIO,pass:env.GMAIL_SENHA_APP}}):null,remetente:env.GMAIL_USUARIO};
 }
 export async function verificarServicoFerias(servico){
+  const atual=(await servico.db.doc('servicos/lembretes-ferias').get()).data();
+  if(atual?.executor==='cloudflare')return {habilitado:!!atual.habilitado,externo:true};
   let habilitado=false,motivo='credenciais_ausentes';
   if(servico.transporte){try{await servico.transporte.verify();habilitado=true;motivo='disponivel';}catch{motivo='falha_conexao_ou_autenticacao';}}
   await servico.db.doc('servicos/lembretes-ferias').set({habilitado,motivo,verificadoEm:new Date().toISOString()},{merge:true});

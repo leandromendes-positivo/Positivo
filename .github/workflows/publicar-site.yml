@@ -48,10 +48,17 @@ jobs:
           done
           python3 build.py
           python3 -m http.server 8003 --bind 127.0.0.1 --directory dist > /tmp/portal-http.log 2>&1 &
+      - name: Conferir pacote do Worker sem publicar
+        env:
+          WRANGLER_SEND_METRICS: 'false'
+        run: |
+          npm ci --prefix cloudflare --no-audit --no-fund
+          npm --prefix cloudflare run check
       - name: Testar separação dos estoques
         run: |
           node testes/portal-projecao.mjs
           node testes/lembretes-ferias.mjs
+          node testes/cloudflare-ferias.mjs
       - name: Testar regras reais de acesso e isolamento
         env:
           PW_PATH: ${{ github.workspace }}/seguranca

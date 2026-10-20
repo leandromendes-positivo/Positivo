@@ -18,12 +18,8 @@ const ddmm = (iso) => (iso ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}` : "");
 const pecas = (n) => `${n} ${n === 1 ? "peça" : "peças"}`;
 const escHtml = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
-/** Data de hoje em Brasília, AAAA-MM-DD. */
-export function hojeBrasilia(agora = new Date()) {
-  const p = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(agora);
-  const v = Object.fromEntries(p.map((x) => [x.type, x.value]));
-  return `${v.year}-${v.month}-${v.day}`;
-}
+import {hojeBrasilia} from './data-brasilia.mjs';
+export {hojeBrasilia};
 
 // o painel guarda listas dentro de listas como {cp_lista: [...]}
 function decodificar(v) {

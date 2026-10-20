@@ -1,0 +1,20 @@
+{
+  "name": "positivo-lembretes",
+  "main": "worker.mjs",
+  "compatibility_date": "2026-10-20",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "triggers": {
+    "crons": [
+      "* * * * *"
+    ]
+  },
+  "vars": {
+    "FIREBASE_PROJECT_ID": "controle-pecas-positivo",
+    "EMAIL_PROVEDOR": "gmail",
+    "PAINEL_URL": "https://positivo.pages.dev/",
+    "FIREBASE_API_KEY": "AIzaSyATBG67mJHNo7gh8qlOJt2sfAjnsbE8xH4"
+  },
+  "keep_vars": true
+}

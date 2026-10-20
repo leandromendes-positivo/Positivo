@@ -1,5 +1,5 @@
 import {createHash,randomUUID} from 'node:crypto';
-import {hojeBrasilia} from './enviar-aviso.mjs';
+import {hojeBrasilia} from './data-brasilia.mjs';
 export const emailLembreteValido=e=>typeof e==='string' && e.length<=254 && /^[a-z0-9.!#$%&'*+\-=?^_`{|}~]+@[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?\.[a-z]{2,}$/i.test(e);
 const hash=s=>createHash('sha256').update(s).digest('hex');
 const diaMs=86400000;
@@ -58,13 +58,15 @@ export async function processarLembretes({db,transporte,remetente,hoje=hojeBrasi
     }));
     if(!validas.some(Boolean))continue;
     // Releitura impede enviar períodos cancelados, retirados ou alterados desde a seleção inicial.
-    const atuais=await Promise.all([...new Set(saidas.map(s=>s.feriasId))].map(async id=>{const s=await db.doc(`ferias/${id}`).get();return s.exists?{...s.data(),id}:null;}));
+    const refsAtuais=[...new Set(saidas.map(s=>s.feriasId))].map(id=>db.doc(`ferias/${id}`));
+    const snapshotsAtuais=db.getAll?await db.getAll(...refsAtuais):await Promise.all(refsAtuais.map(r=>r.get()));
+    const atuais=snapshotsAtuais.map(s=>s.exists?{...s.data(),id:s.id}:null);
     const elegiveis=saidasParaLembrar(atuais.filter(Boolean),hoje,Math.max(...validas)).filter(s=>saidas.some(p=>p.chave===s.chave));
     for(let inicio=0;inicio<elegiveis.length;inicio+=100){
       const grupo=elegiveis.slice(inicio,inicio+100),lote=randomUUID(),outbox=db.doc(`caixa_lembretes_ferias/${lote}`);
       const reservados=await db.runTransaction(async tx=>{
         const refs=grupo.map(s=>db.doc(`envios_lembretes_ferias/${hash(email+'|'+s.chave)}`));
-        const snapshots=await Promise.all(refs.map(r=>tx.get(r)));
+        const snapshots=tx.getAll?await tx.getAll(...refs):await Promise.all(refs.map(r=>tx.get(r)));
         const novos=grupo.map((s,i)=>({s,ref:refs[i],existente:snapshots[i]})).filter(x=>!x.existente.exists || x.existente.data().estado==='falhou');
         const pendentes=snapshots.filter(s=>s.exists&&['em_envio','incerto'].includes(s.data().estado)).length;
         if(!novos.length)return {novos:[],pendentes};

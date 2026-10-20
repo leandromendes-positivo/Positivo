@@ -4,3 +4,8 @@ aviso/node_modules/
 seguranca/node_modules/
 *.csv
 !exemplos/*.csv
+
+cloudflare/node_modules/
+cloudflare/.wrangler/
+cloudflare/.dev.vars*
+cloudflare/.env*

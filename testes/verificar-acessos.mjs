@@ -6,6 +6,7 @@ try {
   await import('./lembretes-ferias-regras.mjs');
   await import('./lembretes-ferias-e2e.mjs');
   await import('./limpeza-pecas.mjs');
+  await import('./cloudflare-firestore.mjs');
   await import('./sessao-email-e2e.mjs');
   await import('./ferias-planejamento-e2e.mjs');
 } catch(e) {

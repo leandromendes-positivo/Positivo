@@ -87,6 +87,13 @@ jobs:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           LIMPEZA_PECAS_OPERACAO: pecas-reinicio-2026-10-20
         run: node limpar-pecas.mjs
+      - name: Limpar cadastro operacional remanescente autorizado
+        if: github.event_name == 'push' && startsWith(github.event.head_commit.message, 'Concluir limpeza do cadastro de peças 2026-10-20')
+        working-directory: seguranca
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          LIMPEZA_CADASTRO_OPERACAO: cadastro-pecas-reinicio-2026-10-20
+        run: node limpar-cadastro-pecas.mjs
       - name: Instalar serviço de lembretes
         working-directory: aviso
         run: npm ci --no-audit --no-fund

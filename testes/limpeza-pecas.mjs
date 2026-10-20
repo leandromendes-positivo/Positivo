@@ -2,6 +2,7 @@
 import {createRequire} from 'node:module';
 import {readFile} from 'node:fs/promises';
 import assert from 'node:assert/strict';
+import {limparCadastroPecas} from '../seguranca/limpar-cadastro-pecas.mjs';
 import {limparPecasUmaVez,bloquearGravacoes,COLECOES_PECAS} from '../seguranca/limpar-pecas.mjs';
 const require=createRequire(`${process.env.PW_PATH||'/workspace/Positivo/seguranca'}/package.json`);
 const {initializeTestEnvironment,assertSucceeds,assertFails}=require('@firebase/rules-unit-testing');
@@ -52,5 +53,20 @@ try{
  const repetida=await limparPecasUmaVez(args);assert.equal(repetida.jaConcluida,true);
  assert.equal((await db.doc('dados/n-PR-nova-0').get()).exists,true);
  assert.equal((await db.doc('dados/indice').get()).data().versao,14);
+ // Complemento solicitado: remove só o cadastro operacional remanescente.
+ await db.doc('dados/indice').set({arquivos:{novo:{gen:'novo'}}},{merge:true});
+ await assert.rejects(()=>limparCadastroPecas(db),/Novas importações/);
+ assert.equal((await db.doc('cadastro/tecnicos').get()).data().t.TEC.nome,'Preservar técnico');
+ await db.doc('dados/indice').set({arquivos:{}});
+ const protegidos=['usuarios/admin@teste.com','vinculos_tecnicos/PR--TEC','ferias/colaborador','historico_ferias/evento','lembretes_ferias/usuario','config/geral'];
+ const antesProtegidos=await Promise.all(protegidos.map(async p=>(await db.doc(p).get()).data()));
+ const complemento=await limparCadastroPecas(db);
+ assert.equal(complemento.cadastrosOperacionaisRemovidos,1);
+ assert.deepEqual((await db.doc('cadastro/tecnicos').get()).data(),{t:{}});
+ assert.deepEqual(await Promise.all(protegidos.map(async p=>(await db.doc(p).get()).data())),antesProtegidos);
+ await db.doc('cadastro/tecnicos').set({t:{NOVO:{nome:'Novo cadastro'}}});
+ assert.equal((await limparCadastroPecas(db)).jaConcluida,true);
+ assert.equal((await db.doc('cadastro/tecnicos').get()).data().t.NOVO.nome,'Novo cadastro');
+ console.log('Complemento: cadastro operacional zerado; contas, vínculos, férias e configurações preservados; novas importações protegidas; reexecução sem exclusões passaram.');
  console.log('Limpeza real no emulador: trava de escrita, leitura preservada, exclusão recursiva, cadastros/férias/acessos intactos, saldos zerados e execução única passaram.');
 }finally{await deleteApp(app);await env.cleanup();}

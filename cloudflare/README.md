@@ -83,7 +83,9 @@ continuam no Cloudflare. Nunca salve esses valores em arquivos versionados.
 3. Reabra o modal de lembretes no painel. Ele passa a informar Cloudflare e
    verificação por minuto. A inscrição, o e-mail, a antecedência, o horário e o
    histórico de envios permanecem os mesmos.
-4. Clique em **Enviar e-mail de teste**. Confira o status de aceite e a caixa de
+4. Preencha o e-mail e clique em **Enviar e-mail de teste**. O botão salva as
+   preferências preenchidas antes de registrar o pedido, sem exigir outro clique
+   em Salvar lembretes. A opção de recebimento ativo respeita a caixa marcada. Confira o status de aceite e a caixa de
    entrada/spam. O teste chama `/testar` com o ID token do Firebase e processa
    exclusivamente o pedido já autorizado daquela conta. Não aceita UID/endereço
    de destino no corpo da requisição. A conta precisa permanecer ativa e possuir
@@ -129,3 +131,10 @@ haja uma decisão futura de trocar de provedor; não é necessário configurá-l
   `endpointTeste`. Reative o workflow **Lembretes de férias**. Não apague os
   registros de reserva/envio. Confira tentativas `em_envio`/`incerto` antes de
   qualquer reenvio manual.
+
+## Publicação do painel após a migração
+
+O Cloudflare publica o Pages e o Worker pelas conexões ao repositório. O workflow
+Publicar painel mantém os testes e as verificações do Firebase. A publicação no
+GitHub Pages só acontece se a variável de repositório `PUBLICAR_GITHUB_PAGES` for
+explicitamente `true`, para não reativar o endereço antigo após Unpublish site.

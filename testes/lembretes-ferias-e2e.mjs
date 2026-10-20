@@ -26,7 +26,7 @@ try{
  await p.locator('[data-ferias="lembretes"]').click();await p.locator('#lembretes-ferias-form').waitFor();assert.equal(await p.locator('#lembretes-ferias-form [name="ativo"]').isChecked(),false);
  await p.locator('[data-lembretes-excluir]').click();await p.locator('#lembretes-ferias-form').waitFor({state:'detached'});
  await env.withSecurityRulesDisabled(async c=>{assert.equal((await c.firestore().collection('lembretes_ferias').get()).size,0);assert.equal((await c.firestore().collection('testes_lembretes_ferias').get()).size,0);});
- await p.locator('[data-ferias="lembretes"]').click();await p.locator('#lembretes-ferias-form').waitFor();assert.equal(await p.locator('[data-lembretes-excluir]').count(),0);assert.equal(await p.locator('[data-lembretes-testar]').count(),0);await p.locator('.modal [data-fechar]').first().click();
+ await p.locator('[data-ferias="lembretes"]').click();await p.locator('#lembretes-ferias-form').waitFor();assert.equal(await p.locator('[data-lembretes-excluir]').isVisible(),false);assert.equal(await p.locator('[data-lembretes-testar]').isVisible(),true);await p.locator('.modal [data-fechar]').first().click();
  // Modo Cloudflare chama a API autenticada logo após registrar o próprio pedido.
  let chamadasWorker=0;
  const uidWorker=await p.evaluate(()=>Acesso.usuario.uid);
@@ -34,6 +34,8 @@ try{
  await p.route('https://worker-teste.workers.dev/testar',async r=>{
   if(r.request().method()==='OPTIONS')return r.fulfill({status:204,headers:{'Access-Control-Allow-Origin':'http://127.0.0.1:8003','Access-Control-Allow-Headers':'Authorization','Access-Control-Allow-Methods':'POST'}});
   chamadasWorker++;
+  const assinaturaWorker=await env.withSecurityRulesDisabled(async c=>(await c.firestore().doc('lembretes_ferias/'+uidWorker).get()).data());
+  assert.equal(assinaturaWorker.email,chamadasWorker===1?'direto@exemplo.com':'alterado@exemplo.com','teste usa o endereço digitado, salvo antes da chamada');
   assert.equal(r.request().method(),'POST');assert.match(r.request().headers().authorization,/^Bearer /);
   assert.equal(r.request().postData(),null,'cliente não escolhe UID ou destino no corpo');
   await env.withSecurityRulesDisabled(c=>c.firestore().doc('testes_lembretes_ferias/'+uidWorker).update({estado:'enviado',atualizadoEm:new Date().toISOString()}));
@@ -41,11 +43,19 @@ try{
  });
  await p.locator('[data-ferias="lembretes"]').click();await p.locator('#lembretes-ferias-form').waitFor();
  assert.match(await p.locator('#lembretes-ferias-form').innerText(),/Cloudflare verifica/);
- await p.locator('[data-lembretes-salvar]').click();await p.locator('#lembretes-ferias-form').waitFor({state:'detached'});
- await p.locator('[data-ferias="lembretes"]').click();await p.locator('[data-lembretes-testar]').click();
+ await p.locator('[name=email]').fill('email-invalido');await p.locator('[data-lembretes-testar]').click();assert.equal(chamadasWorker,0);
+ await p.locator('[name=email]').fill('direto@exemplo.com');await p.locator('[name=ativo]').uncheck();await p.locator('[data-lembretes-testar]').click();
  await p.locator('[data-lembretes-acao]').filter({hasText:'Solicitação processada'}).waitFor();
  await p.locator('[data-lembretes-teste]').filter({hasText:'aceito pelo servidor'}).waitFor();assert.equal(chamadasWorker,1);
  assert.equal(await p.locator('[data-lembretes-fila]').isVisible(),false);
+ assert.equal(await p.locator('[data-lembretes-excluir]').isVisible(),true);
+ // Mesmo modal: novo endereço é persistido sem conflito de versão e sem ativar inscrição desmarcada.
+ await env.withSecurityRulesDisabled(c=>c.firestore().doc('testes_lembretes_ferias/'+uidWorker).update({solicitadoEm:new Date(Date.now()-120000)}));
+ await p.locator('[name=email]').fill('alterado@exemplo.com');await p.locator('[data-lembretes-testar]').click();
+ await p.waitForFunction(()=>document.querySelector('[data-lembretes-acao]')?.textContent==='Solicitação processada. Confira o resultado do teste.');
+ await p.waitForFunction(()=>!document.querySelector('[data-lembretes-testar]').disabled);assert.equal(chamadasWorker,2);
+ await env.withSecurityRulesDisabled(async c=>{const d=(await c.firestore().doc('lembretes_ferias/'+uidWorker).get()).data();assert.equal(d.email,'alterado@exemplo.com');assert.equal(d.ativo,false);assert.equal(d.versao,2);});
+
  await p.locator('.modal [data-fechar]').first().click();
  // Inscrição não depende de permissão administrativa; cada usuário gerencia somente a própria.
  await env.withSecurityRulesDisabled(async c=>{

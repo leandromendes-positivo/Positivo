@@ -4,6 +4,7 @@ import {createRequire} from 'node:module';
 import {firestoreREST} from '../cloudflare/firestore.mjs';
 import {limitarTeste,deveProcessarLembretes} from '../cloudflare/worker.mjs';
 import {processarTestesFerias} from '../aviso/testes-ferias.mjs';
+import {processarLembretes} from '../aviso/lembretes-ferias.mjs';
 const host=process.env.FIRESTORE_EMULATOR_HOST;
 if(!/^(127\.0\.0\.1|localhost):[0-9]+$/.test(host||''))throw new Error('Integração permitida apenas no emulador.');
 const require=createRequire(`${process.env.PW_PATH||'/workspace/Positivo/seguranca'}/package.json`);
@@ -49,5 +50,14 @@ try{
 
  const lote=await db.getAll(db.doc('testes_lembretes_ferias/outra'),db.doc('ferias/inexistente'));assert.deepEqual(lote.map(s=>[s.id,s.exists]),[['outra',true],['inexistente',false]]);
  await db.runTransaction(async tx=>{const l=await tx.getAll(db.doc('usuarios/pessoa@exemplo.com'),db.doc('ferias/inexistente'));assert.deepEqual(l.map(s=>s.exists),[true,false]);});
- console.log('Worker REST: transações reais, concorrência, isolamento por UID, timestamps, consultas e merge passaram. Nenhum e-mail real enviado.');
+ // Acompanhamento das alterações passa pelo mesmo adaptador REST da produção.
+ const programacao={nome:'Pessoa REST',regiao:'PR',status:'confirmado',periodos:[{inicio:'2026-10-30',fim:'2026-11-08',retorno:'2026-11-09'}],atualizadoEm:new Date('2026-10-20T12:00:00Z')};
+ await db.doc('ferias/real').set(programacao);
+ const enviados=[],args={db,remetente:'origem@exemplo.com',hoje:'2026-10-20',horario:'12:00',painel:'https://example.test/',transporte:{verify:async()=>{},sendMail:async m=>{enviados.push(m);return{accepted:[m.to.address]};}}};
+ await Promise.all([processarLembretes(args),processarLembretes(args)]);assert.equal(enviados.length,1,'concorrência real não repete lembrete');
+ await db.doc('ferias/real').set({...programacao,periodos:[{inicio:'2026-10-30',fim:'2026-11-18',retorno:'2026-11-19'}]});
+ await Promise.all([processarLembretes(args),processarLembretes(args)]);assert.equal(enviados.length,2,'concorrência real não repete atualização');assert.match(enviados[1].text,/18\/11\/2026/);
+ await db.doc('ferias/real').set({...programacao,status:'cancelado'});await processarLembretes(args);assert.equal(enviados.length,3);assert.match(enviados[2].text,/Cancelado/);
+ await processarLembretes(args);assert.equal(enviados.length,3,'snapshot REST evita repetição do cancelamento');
+ console.log('Worker REST: transações reais, concorrência, atualizações/cancelamentos, isolamento por UID, timestamps, consultas e merge passaram. Nenhum e-mail real enviado.');
 }finally{await env.cleanup();}

@@ -27,11 +27,6 @@ try{
  // A fixture só autentica uma vez; recarregar testa migração real, sem novo login.
  const legadoCtx=await contexto(),legado=await legadoCtx.newPage();
  legado.on('pageerror',e=>erros.push(e.message));
- const htmlLegado=fs.readFileSync('dist/pagina-completa.html','utf8').replace(
-  'await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);',
-  'await auth.setPersistence(firebase.auth.Auth.Persistence.SESSION);');
- assert.ok(htmlLegado.includes('await auth.setPersistence(firebase.auth.Auth.Persistence.SESSION);'));
- await legado.route(link.href.split('#')[0],r=>r.fulfill({body:htmlLegado,contentType:'text/html'}),{times:1});
  await legado.addInitScript(()=>{
   if(!sessionStorage.getItem('fixture-legado-usada')){
    sessionStorage.setItem('fixture-legado-usada','1');
@@ -43,6 +38,7 @@ try{
   throw new Error('Inicialização da fixture de sessão: '+JSON.stringify(await legado.evaluate(()=>({status:typeof E==='undefined'?'ausente':E.status,codigo:typeof E==='undefined'?'':E.erroCodigo,fixture:!!window.__CP_LOGIN_TESTE__,sdk:!!window.firebase,login:!!document.querySelector('#entrar-google'),texto:document.body.innerText.slice(-700)})))+'; pageerrors='+JSON.stringify(erros),{cause:e});
  }
  const legadoUid=await legado.evaluate(()=>Acesso.usuario.uid);
+ await legado.evaluate(()=>Acesso.auth.setPersistence(firebase.auth.Auth.Persistence.SESSION));
  const linkLegado=await pagina(legadoCtx);await linkLegado.locator('#entrar-google').waitFor();
  assert.equal(await linkLegado.evaluate(()=>Acesso.auth.currentUser),null,'sessão antiga é isolada por aba');
  await legado.reload();await pronto(legado);

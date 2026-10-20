@@ -5,7 +5,7 @@ const hash=s=>createHash('sha256').update(s).digest('hex');
 const diaMs=86400000;
 function dataValida(s){return typeof s==='string' && /^\d{4}-\d{2}-\d{2}$/.test(s) && Number.isFinite(Date.parse(s+'T00:00:00Z')) && new Date(s+'T00:00:00Z').toISOString().slice(0,10)===s;}
 const somarDias=(s,n)=>new Date(Date.parse(s+'T00:00:00Z')+n*diaMs).toISOString().slice(0,10);
-export function saidasParaLembrar(ferias,hoje=hojeBrasilia()){
+export function saidasParaLembrar(ferias,hoje=hojeBrasilia(),limite=10){
   if(!dataValida(hoje))throw new Error('Data de processamento inválida.');
   const saidas=new Map();
   for(const f of ferias){
@@ -13,7 +13,7 @@ export function saidasParaLembrar(ferias,hoje=hojeBrasilia()){
     for(const p of f.periodos||[]){
       if(!p||!dataValida(p.inicio)||!dataValida(p.fim)||p.fim<p.inicio)continue;
       const antecedencia=Math.round((Date.parse(p.inicio+'T00:00:00Z')-Date.parse(hoje+'T00:00:00Z'))/diaMs);
-      if(antecedencia<1||antecedencia>10)continue;
+      if(antecedencia<1||antecedencia>limite)continue;
       const chave=hash(JSON.stringify([f.id,p.inicio]));
       saidas.set(chave,{chave,feriasId:f.id,nome:f.nome,uf:f.regiao||'Não informada',ciclo:f.ciclo||'',status:f.status,inicio:p.inicio,fim:p.fim,retorno:dataValida(p.retorno)&&p.retorno>p.fim?p.retorno:somarDias(p.fim,1),dias:Math.round((Date.parse(p.fim+'T00:00:00Z')-Date.parse(p.inicio+'T00:00:00Z'))/diaMs)+1,antecedencia});
     }
@@ -25,8 +25,8 @@ const data=s=>s.split('-').reverse().join('/');
 export function montarLembreteFerias(saidas,painel=''){
   const assunto=`Férias da equipe — ${saidas.length} ${saidas.length===1?'saída próxima':'saídas próximas'}`;
   const linhas=saidas.map(s=>`${s.nome} · ${s.uf} · ${s.status==='confirmado'?'Confirmado':'Planejado'}\nSaída: ${data(s.inicio)} (em ${s.antecedencia} ${s.antecedencia===1?'dia':'dias'})\nPeríodo: ${data(s.inicio)} a ${data(s.fim)} · ${s.dias} dias corridos\nRetorno: ${data(s.retorno)}`);
-  const texto=[assunto,'','Você solicitou lembretes das férias da equipe.',...linhas.flatMap(l=>['',l]),'','O aviso é previsto para 10 dias antes. Inscrições, alterações de data ou retomada do serviço dentro desse prazo são avisadas na próxima verificação, antes da saída.','As informações refletem a programação atual. Consulte o painel para acompanhar alterações.','Para alterar o endereço ou desativar o recebimento, abra Férias da equipe → Lembretes por e-mail.',...(painel?['',painel+'#ferias']:[])].join('\n');
-  const html=`<div style="font-family:Arial,sans-serif;color:#182323;line-height:1.6;max-width:680px"><h2>${esc(assunto)}</h2><p>Você solicitou lembretes das férias da equipe.</p>${linhas.map(l=>`<div style="padding:16px 0;border-bottom:1px solid #ddd">${esc(l).replaceAll('\n','<br>')}</div>`).join('')}<p>O aviso é previsto para 10 dias antes. Inscrições, alterações ou retomada do serviço dentro desse prazo são avisadas na próxima verificação, antes da saída.</p><p>Consulte a programação atual no painel. Para alterar o endereço ou desativar os lembretes, abra <strong>Férias da equipe → Lembretes por e-mail</strong>.</p>${/^https:\/\//.test(painel)?`<p><a href="${esc(painel+'#ferias')}">Abrir programação de férias</a></p>`:''}</div>`;
+  const texto=[assunto,'','Você solicitou lembretes das férias da equipe.',...linhas.flatMap(l=>['',l]),'','O aviso segue a antecedência escolhida na sua inscrição. Inscrições, alterações de data ou retomada do serviço dentro desse prazo são avisadas na próxima verificação, antes da saída.','As informações refletem a programação atual. Consulte o painel para acompanhar alterações.','Para alterar o endereço ou desativar o recebimento, abra Férias da equipe → Lembretes por e-mail.',...(painel?['',painel+'#ferias']:[])].join('\n');
+  const html=`<div style="font-family:Arial,sans-serif;color:#182323;line-height:1.6;max-width:680px"><h2>${esc(assunto)}</h2><p>Você solicitou lembretes das férias da equipe.</p>${linhas.map(l=>`<div style="padding:16px 0;border-bottom:1px solid #ddd">${esc(l).replaceAll('\n','<br>')}</div>`).join('')}<p>O aviso segue a antecedência escolhida na sua inscrição. Inscrições, alterações ou retomada do serviço dentro desse prazo são avisadas na próxima verificação, antes da saída.</p><p>Consulte a programação atual no painel. Para alterar o endereço ou desativar os lembretes, abra <strong>Férias da equipe → Lembretes por e-mail</strong>.</p>${/^https:\/\//.test(painel)?`<p><a href="${esc(painel+'#ferias')}">Abrir programação de férias</a></p>`:''}</div>`;
   return {assunto,texto,html};
 }
 export async function destinatariosLembretes(db){
@@ -43,9 +43,9 @@ export async function destinatariosLembretes(db){
 }
 // O SMTP não participa da transação do Firestore. Uma tentativa de resultado incerto
 // permanece reservada para conferência, evitando reenvio automático de e-mail já aceito.
-export async function processarLembretes({db,transporte,remetente,hoje=hojeBrasilia(),painel='',simular=false,agora=()=>new Date().toISOString()}){
+export async function processarLembretes({db,transporte,remetente,hoje=hojeBrasilia(),painel='',simular=false,agora=()=>new Date().toISOString(),horario=new Intl.DateTimeFormat('en-GB',{timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date())}){
   const ferias=await db.collection('ferias').get();
-  const saidas=saidasParaLembrar(ferias.docs.map(s=>({...s.data(),id:s.id})),hoje);
+  const saidas=saidasParaLembrar(ferias.docs.map(s=>({...s.data(),id:s.id})),hoje,90);
   const destinatarios=await destinatariosLembretes(db);
   const resultado={destinatarios:destinatarios.size,saidas:saidas.length,enviados:0,ignorados:0,pendentes:0,falhas:0};
   if(!saidas.length||!destinatarios.size||simular)return resultado;
@@ -54,12 +54,12 @@ export async function processarLembretes({db,transporte,remetente,hoje=hojeBrasi
     // Um e-mail pode ter sido desativado durante o processamento: reconfere antes de reservar.
     const validas=await Promise.all(inscricoes.map(async s=>{
       const [atual,p]=await Promise.all([db.doc(`lembretes_ferias/${s.id}`).get(),db.doc(`usuarios/${s.titular}`).get()]);
-      const d=atual.data(),perfil=p.data();return d?.ativo && d.email?.toLowerCase()===email && d.titular===s.titular && perfil?.ativo && ['usuario','administrador'].includes(perfil.perfil);
+      const d=atual.data(),perfil=p.data();return d?.ativo && d.email?.toLowerCase()===email && d.titular===s.titular && perfil?.ativo && ['usuario','administrador'].includes(perfil.perfil) && horario>=(d.horario||'07:55') ? (Number.isInteger(d.antecedencia)&&d.antecedencia>=1&&d.antecedencia<=90?d.antecedencia:10) : 0;
     }));
     if(!validas.some(Boolean))continue;
     // Releitura impede enviar períodos cancelados, retirados ou alterados desde a seleção inicial.
     const atuais=await Promise.all([...new Set(saidas.map(s=>s.feriasId))].map(async id=>{const s=await db.doc(`ferias/${id}`).get();return s.exists?{...s.data(),id}:null;}));
-    const elegiveis=saidasParaLembrar(atuais.filter(Boolean),hoje).filter(s=>saidas.some(p=>p.chave===s.chave));
+    const elegiveis=saidasParaLembrar(atuais.filter(Boolean),hoje,Math.max(...validas)).filter(s=>saidas.some(p=>p.chave===s.chave));
     for(let inicio=0;inicio<elegiveis.length;inicio+=100){
       const grupo=elegiveis.slice(inicio,inicio+100),lote=randomUUID(),outbox=db.doc(`caixa_lembretes_ferias/${lote}`);
       const reservados=await db.runTransaction(async tx=>{

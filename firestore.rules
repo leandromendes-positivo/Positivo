@@ -157,12 +157,32 @@ service cloud.firestore {
       allow delete: if false;
     }
     match /servicos/lembretes-ferias { allow get: if autorizado(); allow list, write: if false; }
+    match /testes_lembretes_ferias/{id} {
+      allow get: if autorizado() && id == request.auth.uid;
+      allow list, delete: if false;
+      function pedidoValido() {
+        return autorizado() && id == request.auth.uid
+          && request.resource.data.keys().hasAll(['uid','pedido','solicitadoEm'])
+          && request.resource.data.keys().hasOnly(['uid','pedido','solicitadoEm'])
+          && request.resource.data.uid == id
+          && request.resource.data.pedido is string
+          && request.resource.data.pedido.matches('^[a-zA-Z0-9-]{20,80}$')
+          && request.resource.data.solicitadoEm == request.time
+          && exists(/databases/$(database)/documents/lembretes_ferias/$(id));
+      }
+      allow create: if pedidoValido();
+      allow update: if pedidoValido()
+        && resource.data.estado in ['enviado','falhou','indisponivel']
+        && request.time > resource.data.solicitadoEm + duration.value(60, 's');
+    }
     match /lembretes_ferias/{id} {
       allow get: if autorizado() && id == request.auth.uid;
       allow list: if false;
       function valida(d) {
         return d.keys().hasAll(['uid','titular','email','ativo','versao','criadoEm','atualizadoEm'])
-          && d.keys().hasOnly(['uid','titular','email','ativo','versao','criadoEm','atualizadoEm'])
+          && d.keys().hasOnly(['uid','titular','email','ativo','versao','criadoEm','atualizadoEm','horario','antecedencia'])
+          && (!('horario' in d) || (d.horario is string && d.horario.matches('^([01][0-9]|2[0-3]):[0-5][0-9]$')))
+          && (!('antecedencia' in d) || (d.antecedencia is int && d.antecedencia >= 1 && d.antecedencia <= 90))
           && d.uid == id && id == request.auth.uid && d.titular == email()
           && d.email is string && d.email.size() <= 254 && d.email == d.email.lower()
           && d.email.matches('^[a-z0-9.!#$%&\'*+/?=^_`{|}~-]+@[a-z0-9-]+([.][a-z0-9-]+)+$')

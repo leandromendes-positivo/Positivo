@@ -15,8 +15,12 @@ try{
  await p.addInitScript(()=>{window.CP_FIREBASE={apiKey:'chave-de-teste',projectId:'demo-controle-pecas',authDomain:'demo-controle-pecas.firebaseapp.com'};window.__CP_FIREBASE_EMULADOR__=true;window.__CP_LOGIN_TESTE__={sub:'lembretes-teste',email:'teste@exemplo.com',email_verified:true};});
  await p.goto(process.env.URL_PAINEL_TESTE||'http://127.0.0.1:8003/pagina-completa.html');await p.waitForFunction(()=>E.status==='pronto');await p.evaluate(()=>irPara('ferias'));
  await p.locator('.ferias-abertura [data-ferias="lembretes"]').click();await p.locator('#lembretes-ferias-form').waitFor();assert.equal(await p.locator('#lembretes-ferias-form [name="email"]').inputValue(),'teste@exemplo.com');
- await p.locator('#lembretes-ferias-form [name="email"]').fill('equipe@exemplo.com');await p.locator('[data-lembretes-salvar]').click();await p.locator('#lembretes-ferias-form').waitFor({state:'detached'});
+ await p.locator('#lembretes-ferias-form [name="email"]').fill('equipe@exemplo.com');await p.locator('[name=horario]').fill('16:45');await p.locator('[name=antecedencia]').fill('15');await p.locator('[data-lembretes-salvar]').click();await p.locator('#lembretes-ferias-form').waitFor({state:'detached'});
  await p.locator('[data-ferias="lembretes"]').click();await p.locator('#lembretes-ferias-form').waitFor();assert.equal(await p.locator('#lembretes-ferias-form [name="email"]').inputValue(),'equipe@exemplo.com');assert.match(await p.locator('#lembretes-ferias-form').innerText(),/inscrição está ativa/);
+ assert.equal(await p.locator('[name=horario]').inputValue(),'16:45');assert.equal(await p.locator('[name=antecedencia]').inputValue(),'15');
+ await p.locator('[data-lembretes-testar]').click();await p.locator('[data-lembretes-teste]').filter({hasText:'Teste solicitado'}).waitFor();
+ await env.withSecurityRulesDisabled(async c=>{const db=c.firestore();const docs=await db.collection('testes_lembretes_ferias').get();for(const d of docs.docs)await d.ref.update({estado:'enviado',atualizadoEm:new Date().toISOString()});});
+ await p.locator('[data-lembretes-teste]').filter({hasText:'aceito pelo servidor'}).waitFor();
  await p.locator('[data-lembretes-parar]').click();await p.locator('#lembretes-ferias-form').waitFor({state:'detached'});
  await p.locator('[data-ferias="lembretes"]').click();await p.locator('#lembretes-ferias-form').waitFor();assert.equal(await p.locator('#lembretes-ferias-form [name="ativo"]').isChecked(),false);await p.locator('.modal [data-fechar]').first().click();
  // Inscrição não depende de permissão administrativa; cada usuário gerencia somente a própria.

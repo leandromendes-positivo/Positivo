@@ -83,7 +83,7 @@ jobs:
       - name: Instalar serviço de lembretes
         working-directory: aviso
         run: npm ci --no-audit --no-fund
-      - name: Conferir o remetente dos lembretes sem enviar e-mails
+      - name: Conferir remetente e processar testes solicitados
         working-directory: aviso
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}

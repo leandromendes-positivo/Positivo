@@ -29,7 +29,7 @@ for(const [uid,titular,email,perfil,ativo]of [['u1','pessoa@exemplo.com','caixa@
 }
 const mensagens=[];let verificacoes=0;
 const transporte={verify:async()=>{verificacoes++;},sendMail:async m=>{mensagens.push(m);return{accepted:[m.to.address]};}};
-const args={db,transporte,remetente:'remetente@exemplo.com',hoje,painel:'https://example.test/'};
+const args={db,transporte,remetente:'remetente@exemplo.com',hoje,horario:'12:00',painel:'https://example.test/'};
 const sim=await processarLembretes({...args,simular:true});assert.equal(sim.destinatarios,1);assert.equal(mensagens.length,0);assert.equal(verificacoes,0);
 await Promise.all([processarLembretes(args),processarLembretes(args)]);assert.equal(mensagens.length,1,'concorrência e inscrições repetidas não duplicam mensagem');assert.equal(mensagens[0].to.address,'caixa@exemplo.com');assert.equal(mensagens[0].cc,undefined);assert.equal(mensagens[0].bcc,undefined);
 await processarLembretes({...args,hoje:'2026-12-23'});assert.equal(mensagens.length,2,'somente saída que entrou hoje na janela é nova');
@@ -50,3 +50,24 @@ add('ferias/rejeitada',f('rejeitada','2027-01-01'));
 await processarLembretes({...args,transporte:{verify:async()=>{},sendMail:async()=>{throw Object.assign(new Error('rejeitado'),{code:'EENVELOPE'});}}});
 await processarLembretes(args);assert.equal(mensagens.length,apos+1);
 console.log('Lembretes: 10 dias corridos/Brasília, virada de ano, vários períodos, cancelamento, retirada, opt-out, perfis, privacidade, concorrência, deduplicação e falhas de SMTP passaram; nenhum e-mail real enviado.');
+// Horário e antecedência são aplicados por inscrição, sem antecipar o envio.
+const agenda=banco();agenda.dados.set('usuarios/gestor@exemplo.com',{perfil:'usuario',ativo:true});
+agenda.dados.set('lembretes_ferias/gestor',{uid:'gestor',titular:'gestor@exemplo.com',email:'gestor@exemplo.com',ativo:true,horario:'14:35',antecedencia:20});
+agenda.dados.set('ferias/futura',f('futura','2027-01-11'));
+const lista=[];const a={db:agenda,transporte:{verify:async()=>{},sendMail:async m=>{lista.push(m);return{accepted:[m.to.address]};}},remetente:'remetente@exemplo.com',hoje};
+await processarLembretes({...a,horario:'14:34'});assert.equal(lista.length,0);
+await processarLembretes({...a,horario:'14:35'});assert.equal(lista.length,1);
+await processarLembretes({...a,horario:'23:59'});assert.equal(lista.length,1);
+agenda.dados.get('lembretes_ferias/gestor').antecedencia=1;agenda.dados.set('ferias/curta',f('curta','2026-12-24'));
+await processarLembretes({...a,horario:'15:00'});assert.equal(lista.length,1,'dois dias não entra em antecedência de um dia');
+await processarLembretes({...a,hoje:'2026-12-23',horario:'15:00'});assert.equal(lista.length,2);
+const {processarTestesFerias}=await import('../aviso/testes-ferias.mjs');
+agenda.dados.set('testes_lembretes_ferias/gestor',{uid:'gestor',pedido:'pedido-teste-1234567890',solicitadoEm:new Date()});
+await Promise.all([processarTestesFerias(a,true),processarTestesFerias(a,true)]);
+assert.equal(lista.length,3,'pedidos de teste concorrentes são enviados uma vez');assert.equal(agenda.dados.get('testes_lembretes_ferias/gestor').estado,'enviado');
+await processarTestesFerias(a,true);assert.equal(lista.length,3,'teste não repete nem interfere na programação');
+agenda.dados.set('testes_lembretes_ferias/gestor',{uid:'gestor',pedido:'pedido-teste-2234567890',solicitadoEm:new Date()});
+await processarTestesFerias(a,false);assert.equal(agenda.dados.get('testes_lembretes_ferias/gestor').estado,'indisponivel');assert.equal(lista.length,3);
+agenda.dados.set('testes_lembretes_ferias/gestor',{uid:'gestor',pedido:'pedido-teste-3234567890',solicitadoEm:new Date()});agenda.dados.get('usuarios/gestor@exemplo.com').ativo=false;
+await processarTestesFerias(a,true);assert.equal(agenda.dados.get('testes_lembretes_ferias/gestor').estado,'falhou');assert.equal(lista.length,3,'conta revogada não recebe teste');
+console.log('Horários individuais, antecedência configurável e testes privados/concorrentes/revogação passaram.');

@@ -33,6 +33,20 @@ try{
  for(const db of [pessoa,dono,tecnico]){
   await assertFails(db.doc('envios_lembretes_ferias/teste').get());await assertFails(db.doc('envios_lembretes_ferias/teste').set({estado:'enviado'}));await assertFails(db.doc('caixa_lembretes_ferias/teste').set({estado:'enviado'}));await assertFails(db.doc('servicos/lembretes-ferias').set({habilitado:true}));
  }
+ for(const extra of [{horario:'24:00'},{horario:'8:00'},{antecedencia:0},{antecedencia:91},{antecedencia:1.5}])await assertFails(pessoa.doc('lembretes_ferias/pessoa').update({...extra,versao:4,atualizadoEm:stamp()}));
+ await assertSucceeds(pessoa.doc('lembretes_ferias/pessoa').update({horario:'23:59',antecedencia:90,versao:4,atualizadoEm:stamp()}));
+ const pedido={uid:'pessoa',pedido:'teste-pedido-1234567890123',solicitadoEm:stamp()};
+ await assertFails(pessoa.doc('testes_lembretes_ferias/pessoa').set({...pedido,estado:'enviado'}));
+ await assertSucceeds(pessoa.doc('testes_lembretes_ferias/pessoa').set(pedido));
+ await assertSucceeds(pessoa.doc('testes_lembretes_ferias/pessoa').get());
+ await assertFails(pessoa.doc('testes_lembretes_ferias/pessoa').set(pedido));
+ for(const db of [outro,dono,tecnico]){
+  await assertFails(db.doc('testes_lembretes_ferias/pessoa').get());
+  await assertFails(db.doc('testes_lembretes_ferias/pessoa').set(pedido));
+ }
+ await assertFails(pessoa.collection('testes_lembretes_ferias').get());
+ await env.withSecurityRulesDisabled(c=>c.firestore().doc('testes_lembretes_ferias/pessoa').update({estado:'enviado',solicitadoEm:firebase.firestore.Timestamp.fromMillis(Date.now()-120000)}));
+ await assertSucceeds(pessoa.doc('testes_lembretes_ferias/pessoa').set(pedido));
  await env.withSecurityRulesDisabled(c=>c.firestore().doc('usuarios/pessoa@empresa.com').update({ativo:false}));
  await assertFails(pessoa.doc('lembretes_ferias/pessoa').get());await assertFails(pessoa.doc('lembretes_ferias/pessoa').delete());
  console.log('Regras dos lembretes: inscrição privada, autoria, validação, versões, opt-out, revogação e bloqueio de técnicos/auditoria passaram.');

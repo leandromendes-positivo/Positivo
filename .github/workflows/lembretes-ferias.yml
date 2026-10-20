@@ -1,7 +1,7 @@
 name: Lembretes de férias
 on:
   schedule:
-    - cron: "55 10 * * *" # Todos os dias, 7h55 em Brasília, inclusive sábados e domingos.
+    - cron: "*/5 * * * *" # Verifica horários individuais e pedidos de teste; sujeito a atrasos do GitHub.
   workflow_dispatch:
 permissions:
   contents: read

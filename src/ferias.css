@@ -10,3 +10,5 @@
 
 .lembretes-ferias-situacao{padding:14px 16px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2);line-height:1.6}
 #lembretes-ferias-form{gap:18px}#lembretes-ferias-form .nota{line-height:1.6}#lembretes-ferias-form [role="alert"]{color:var(--crit-ink)}
+
+.lembretes-ferias-retorno{flex:1 0 100%;margin:0;line-height:1.5;overflow-wrap:anywhere}.lembretes-ferias-retorno:empty{display:none}

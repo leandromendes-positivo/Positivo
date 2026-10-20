@@ -18,11 +18,14 @@ try{
  await p.locator('#lembretes-ferias-form [name="email"]').fill('equipe@exemplo.com');await p.locator('[name=horario]').fill('16:45');await p.locator('[name=antecedencia]').fill('15');await p.locator('[data-lembretes-salvar]').click();await p.locator('#lembretes-ferias-form').waitFor({state:'detached'});
  await p.locator('[data-ferias="lembretes"]').click();await p.locator('#lembretes-ferias-form').waitFor();assert.equal(await p.locator('#lembretes-ferias-form [name="email"]').inputValue(),'equipe@exemplo.com');assert.match(await p.locator('#lembretes-ferias-form').innerText(),/inscrição está ativa/);
  assert.equal(await p.locator('[name=horario]').inputValue(),'16:45');assert.equal(await p.locator('[name=antecedencia]').inputValue(),'15');
- await p.locator('[data-lembretes-testar]').click();await p.locator('[data-lembretes-teste]').filter({hasText:'Teste solicitado'}).waitFor();
+ await p.locator('[data-lembretes-testar]').click();await p.locator('[data-lembretes-acao]').filter({hasText:'Pedido registrado'}).waitFor();
  await env.withSecurityRulesDisabled(async c=>{const db=c.firestore();const docs=await db.collection('testes_lembretes_ferias').get();for(const d of docs.docs)await d.ref.update({estado:'enviado',atualizadoEm:new Date().toISOString()});});
  await p.locator('[data-lembretes-teste]').filter({hasText:'aceito pelo servidor'}).waitFor();
- await p.locator('[data-lembretes-parar]').click();await p.locator('#lembretes-ferias-form').waitFor({state:'detached'});
- await p.locator('[data-ferias="lembretes"]').click();await p.locator('#lembretes-ferias-form').waitFor();assert.equal(await p.locator('#lembretes-ferias-form [name="ativo"]').isChecked(),false);await p.locator('.modal [data-fechar]').first().click();
+ await p.locator('[name=ativo]').uncheck();await p.locator('[data-lembretes-salvar]').click();await p.locator('#lembretes-ferias-form').waitFor({state:'detached'});
+ await p.locator('[data-ferias="lembretes"]').click();await p.locator('#lembretes-ferias-form').waitFor();assert.equal(await p.locator('#lembretes-ferias-form [name="ativo"]').isChecked(),false);
+ await p.locator('[data-lembretes-excluir]').click();await p.locator('#lembretes-ferias-form').waitFor({state:'detached'});
+ await env.withSecurityRulesDisabled(async c=>{assert.equal((await c.firestore().collection('lembretes_ferias').get()).size,0);assert.equal((await c.firestore().collection('testes_lembretes_ferias').get()).size,0);});
+ await p.locator('[data-ferias="lembretes"]').click();await p.locator('#lembretes-ferias-form').waitFor();assert.equal(await p.locator('[data-lembretes-excluir]').count(),0);assert.equal(await p.locator('[data-lembretes-testar]').count(),0);await p.locator('.modal [data-fechar]').first().click();
  // Inscrição não depende de permissão administrativa; cada usuário gerencia somente a própria.
  await env.withSecurityRulesDisabled(async c=>{
   await c.firestore().doc('usuarios/teste@exemplo.com').update({perfil:'usuario',principal:false});

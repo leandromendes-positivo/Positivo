@@ -47,6 +47,15 @@ try{
  await assertFails(pessoa.collection('testes_lembretes_ferias').get());
  await env.withSecurityRulesDisabled(c=>c.firestore().doc('testes_lembretes_ferias/pessoa').update({estado:'enviado',solicitadoEm:firebase.firestore.Timestamp.fromMillis(Date.now()-120000)}));
  await assertSucceeds(pessoa.doc('testes_lembretes_ferias/pessoa').set(pedido));
+ for(const db of [outro,dono,tecnico])await assertFails(db.doc('testes_lembretes_ferias/pessoa').delete());
+ for(const estado of ['em_envio','incerto']){
+  await env.withSecurityRulesDisabled(c=>c.firestore().doc('testes_lembretes_ferias/pessoa').update({estado}));
+  await assertFails(pessoa.doc('testes_lembretes_ferias/pessoa').delete());
+ }
+ await env.withSecurityRulesDisabled(c=>c.firestore().doc('testes_lembretes_ferias/pessoa').update({estado:'enviado'}));
+ await assertSucceeds(pessoa.doc('testes_lembretes_ferias/pessoa').delete());
+ await assertSucceeds(pessoa.doc('testes_lembretes_ferias/pessoa').set(pedido));
+ await assertSucceeds(pessoa.doc('testes_lembretes_ferias/pessoa').delete());
  await env.withSecurityRulesDisabled(c=>c.firestore().doc('usuarios/pessoa@empresa.com').update({ativo:false}));
  await assertFails(pessoa.doc('lembretes_ferias/pessoa').get());await assertFails(pessoa.doc('lembretes_ferias/pessoa').delete());
  console.log('Regras dos lembretes: inscrição privada, autoria, validação, versões, opt-out, revogação e bloqueio de técnicos/auditoria passaram.');

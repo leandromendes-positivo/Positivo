@@ -31,7 +31,7 @@ try{
   await c.firestore().doc('usuarios/teste@exemplo.com').update({perfil:'usuario',principal:false});
   await c.firestore().doc('servicos/lembretes-ferias').set({habilitado:false});
  });
- await p.waitForFunction(()=>E.status==='pronto'&&Acesso.perfil?.perfil==='usuario');await p.evaluate(()=>irPara('ferias'));await p.locator('[data-ferias="lembretes"]').click();await p.locator('#lembretes-ferias-form').waitFor();assert.match(await p.locator('#lembretes-ferias-form').innerText(),/aguarda configuração/);await p.locator('.modal [data-fechar]').first().click();
+ await p.waitForFunction(()=>typeof E!=='undefined'&&typeof Acesso!=='undefined'&&E.status==='pronto'&&Acesso.perfil?.perfil==='usuario');await p.evaluate(()=>irPara('ferias'));await p.locator('[data-ferias="lembretes"]').click();await p.locator('#lembretes-ferias-form').waitFor();assert.match(await p.locator('#lembretes-ferias-form').innerText(),/aguarda configuração/);await p.locator('.modal [data-fechar]').first().click();
  fs.mkdirSync('capturas/lembretes-ferias',{recursive:true});
  for(const tema of ['light','dark'])for(const largura of [1440,390,320]){
   await p.setViewportSize({width:largura,height:1000});await p.evaluate(t=>document.documentElement.dataset.theme=t,tema);await p.locator('[data-ferias="lembretes"]').click();await p.locator('#lembretes-ferias-form').waitFor();assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);await p.screenshot({path:`capturas/lembretes-ferias/${tema}-${largura}.png`});await p.locator('.modal [data-fechar]').first().click();

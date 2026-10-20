@@ -85,6 +85,12 @@ try{
   assert.equal(await p.evaluate(()=>UI.pagina),'meu-painel');assert.equal(await p.evaluate(()=>E.ferias.length),0);
   assert.equal(await p.evaluate(async()=>{try{await Acesso.fs.collection('ferias').get({source:'server'});return false;}catch(e){return e.code==='permission-denied';}}),true);
  }
- assert.deepEqual(erros,[]);
+ // WebKit pode emitir pageerror de transporte quando o emulador encerra o Listen
+ // após revogação/logout. Não é erro JS da aplicação: exclui apenas esse endpoint
+ // HTTP local de teste; falhas de autorização e de estado são verificadas acima.
+ const errosAplicacao=erros.filter(m=>!(process.env.PW_BROWSER==='webkit' &&
+  /^\/?(?:https?:\/\/)?127\.0\.0\.1:8080\/google\.firestore\.v1\.Firestore\/Listen\/channel\?/.test(m) &&
+  m.endsWith('due to access control checks.')));
+ assert.deepEqual(errosAplicacao,[]);
  console.log('Link do e-mail: sessão entre abas sem tokens no URL, destino férias, revogação em todas as abas, nova abertura revogada, logout compartilhado e isolamento do técnico passaram.');
 }finally{await browser.close();await env.cleanup();}

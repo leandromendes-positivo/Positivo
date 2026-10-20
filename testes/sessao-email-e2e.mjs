@@ -40,8 +40,7 @@ try{
  });
  await legado.goto(link.href);
  try { await pronto(legado); } catch(e) {
-  console.error('Diagnóstico legado',await legado.evaluate(()=>({status:typeof E==='undefined'?'ausente':E.status,codigo:typeof E==='undefined'?'':E.erroCodigo,fixture:!!window.__CP_LOGIN_TESTE__,sdk:!!window.firebase,login:!!document.querySelector('#entrar-google'),erros:document.body.innerText.slice(-1000)})),erros);
-  throw e;
+  throw new Error('Inicialização da fixture de sessão: '+JSON.stringify(await legado.evaluate(()=>({status:typeof E==='undefined'?'ausente':E.status,codigo:typeof E==='undefined'?'':E.erroCodigo,fixture:!!window.__CP_LOGIN_TESTE__,sdk:!!window.firebase,login:!!document.querySelector('#entrar-google'),texto:document.body.innerText.slice(-700)})))+'; pageerrors='+JSON.stringify(erros),{cause:e});
  }
  const legadoUid=await legado.evaluate(()=>Acesso.usuario.uid);
  const linkLegado=await pagina(legadoCtx);await linkLegado.locator('#entrar-google').waitFor();

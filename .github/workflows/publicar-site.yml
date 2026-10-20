@@ -49,7 +49,9 @@ jobs:
           python3 build.py
           python3 -m http.server 8003 --bind 127.0.0.1 --directory dist > /tmp/portal-http.log 2>&1 &
       - name: Testar separação dos estoques
-        run: node testes/portal-projecao.mjs
+        run: |
+          node testes/portal-projecao.mjs
+          node testes/lembretes-ferias.mjs
       - name: Testar regras reais de acesso e isolamento
         env:
           PW_PATH: ${{ github.workspace }}/seguranca
@@ -78,6 +80,16 @@ jobs:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           INITIAL_ADMIN_EMAIL: ${{ inputs.administrador_inicial || vars.INITIAL_ADMIN_EMAIL }}
         run: node publicar.mjs
+      - name: Instalar serviço de lembretes
+        working-directory: aviso
+        run: npm ci --no-audit --no-fund
+      - name: Conferir o remetente dos lembretes sem enviar e-mails
+        working-directory: aviso
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          GMAIL_USUARIO: ${{ secrets.GMAIL_USUARIO }}
+          GMAIL_SENHA_APP: ${{ secrets.GMAIL_SENHA_APP }}
+        run: node configurar-ferias.mjs
       - name: Montar o painel
         run: python3 build.py
       - uses: actions/configure-pages@v6

@@ -1,0 +1,38 @@
+name: Lembretes de férias
+on:
+  schedule:
+    - cron: "55 10 * * *" # Todos os dias, 7h55 em Brasília, inclusive sábados e domingos.
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: write
+concurrency:
+  group: lembretes-ferias
+  cancel-in-progress: false
+jobs:
+  enviar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+      - name: Instalar dependências
+        working-directory: aviso
+        run: npm ci --no-audit --no-fund
+      - name: Testar seleção e controle de envio
+        run: node testes/lembretes-ferias.mjs
+      - name: Enviar lembretes solicitados
+        working-directory: aviso
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          GMAIL_USUARIO: ${{ secrets.GMAIL_USUARIO }}
+          GMAIL_SENHA_APP: ${{ secrets.GMAIL_SENHA_APP }}
+          PAINEL_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
+        run: node enviar-ferias.mjs
+      - name: Manter o agendamento ativo
+        if: always() && github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X PUT "repos/${{ github.repository }}/actions/workflows/lembretes-ferias.yml/enable"

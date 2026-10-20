@@ -116,7 +116,7 @@ function renderFerias() {
   const lista = listaFeriasFiltrada(), ps = periodosFerias(), hoje = hojeISO(), ativos = E.ferias.filter(f=>!f.arquivado);
   const anos = [...new Set(E.ferias.flatMap(f => f.periodos.flatMap(p => Array.from({length:Number(p.fim.slice(0,4))-Number(p.inicio.slice(0,4))+1},(_,i)=>Number(p.inicio.slice(0,4))+i))))].sort();
   const opcoes = (valores, atual) => valores.map(([v,n]) => `<option value="${esc(v)}" ${String(atual)===String(v)?'selected':''}>${esc(n)}</option>`).join('');
-  return `<section class="ferias"><div class="ferias-abertura"><div><span class="ferias-eyebrow">GESTÃO DE COLABORADORES</span><h2>Férias da equipe</h2><p>Controle de períodos, datas de retorno e cobertura por região.</p><div class="ferias-acoes">${podeAdministrar()?'<button class="btn prim" data-ferias="novo">'+icone('mais')+' Adicionar colaborador</button>':''}<button class="btn" data-acao="ir" data-pagina="colaboradores">Colaboradores cadastrados</button></div></div></div>
+  return `<section class="ferias"><div class="ferias-abertura"><div><span class="ferias-eyebrow">GESTÃO DE COLABORADORES</span><h2>Férias da equipe</h2><p>Controle de períodos, datas de retorno e cobertura por região.</p><div class="ferias-acoes">${podeAdministrar()?'<button class="btn prim" data-ferias="novo">'+icone('mais')+' Adicionar colaborador</button>':''}<button class="btn" data-acao="ir" data-pagina="colaboradores">Colaboradores cadastrados</button><button class="btn" data-ferias="lembretes">${icone('sino')} Lembretes por e-mail</button></div></div></div>
   ${Acesso.modo !== 'firebase'?'<p class="aviso">Demonstração: alterações ficam somente nesta página.</p>':''}
   ${destaquesFerias()}
   <div class="ferias-kpis">${[['Equipe cadastrada',new Set(ativos.map(f=>f.matricula)).size,'colaboradores ativos'],['Em férias hoje',new Set(ps.filter(p=>p.inicio<=hoje && retornoFerias(p)>hoje).map(p=>p.registro.matricula)).size,'com retorno acompanhado'],['Saídas em 30 dias',ps.filter(p=>p.inicio>hoje && p.inicio<=somaDias(hoje,30)).length,'próximos períodos'],['Conflitos de cobertura',ativos.filter(f=>conflitosFerias(f).length).length,'planejamentos a revisar']].map(([t,n,sub],i)=>`<div><strong>${n}</strong><span>${t}</span><small>${sub}</small></div>`).join('')}</div>
@@ -155,6 +155,7 @@ function prepararTelaFerias() {
   raiz.addEventListener('click',e=>{
     const b=e.target.closest('[data-ferias]'); if(!b)return;
     Promise.resolve().then(async()=>{
+      if(b.dataset.ferias==='lembretes')await modalLembretesFerias();
       if(b.dataset.ferias==='novo')modalFerias();
       if(b.dataset.ferias==='editar')modalFerias(E.ferias.find(f=>f.id===b.dataset.id));
       if(b.dataset.ferias==='limpar'){Object.assign(UIferias,{busca:'',uf:'',ano:'',situacao:'',mes:''});renderizar(true);}

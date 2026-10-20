@@ -23,7 +23,7 @@ jobs:
           node-version: "24"
       - name: Instalar dependências
         working-directory: aviso
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
       - name: Enviar aviso
         working-directory: aviso
         env:

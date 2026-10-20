@@ -156,6 +156,25 @@ service cloud.firestore {
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['perfil','ativo','tecnicoId','atualizadoEm','atualizadoPor'])));
       allow delete: if false;
     }
+    match /servicos/lembretes-ferias { allow get: if autorizado(); allow list, write: if false; }
+    match /lembretes_ferias/{id} {
+      allow get: if autorizado() && id == request.auth.uid;
+      allow list: if false;
+      function valida(d) {
+        return d.keys().hasAll(['uid','titular','email','ativo','versao','criadoEm','atualizadoEm'])
+          && d.keys().hasOnly(['uid','titular','email','ativo','versao','criadoEm','atualizadoEm'])
+          && d.uid == id && id == request.auth.uid && d.titular == email()
+          && d.email is string && d.email.size() <= 254 && d.email == d.email.lower()
+          && d.email.matches('^[a-z0-9.!#$%&\'*+/?=^_`{|}~-]+@[a-z0-9-]+([.][a-z0-9-]+)+$')
+          && d.ativo is bool && d.versao is int && d.atualizadoEm == request.time;
+      }
+      allow create: if autorizado() && valida(request.resource.data)
+        && request.resource.data.versao == 1 && request.resource.data.criadoEm == request.time;
+      allow update: if autorizado() && valida(request.resource.data)
+        && request.resource.data.versao == resource.data.versao + 1
+        && request.resource.data.criadoEm == resource.data.criadoEm;
+      allow delete: if autorizado() && id == request.auth.uid;
+    }
     function feriasValidas(d) {
       return d.keys().hasAll(['id','nome','matricula','regiao','ciclo','status','direito','vendidos','obs','periodos','versao','atualizadoEm','atualizadoPor','evento'])
         && d.keys().hasOnly(['id','nome','matricula','regiao','ciclo','status','direito','vendidos','obs','periodos','versao','atualizadoEm','atualizadoPor','evento','arquivado','area','localidade'])

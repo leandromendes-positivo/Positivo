@@ -34,7 +34,8 @@ try{
  await p.route('https://worker-teste.workers.dev/testar',async r=>{
   if(r.request().method()==='OPTIONS')return r.fulfill({status:204,headers:{'Access-Control-Allow-Origin':'http://127.0.0.1:8003','Access-Control-Allow-Headers':'Authorization','Access-Control-Allow-Methods':'POST'}});
   chamadasWorker++;
-  const assinaturaWorker=await env.withSecurityRulesDisabled(async c=>(await c.firestore().doc('lembretes_ferias/'+uidWorker).get()).data());
+  let assinaturaWorker;
+  await env.withSecurityRulesDisabled(async c=>{assinaturaWorker=(await c.firestore().doc('lembretes_ferias/'+uidWorker).get()).data();});
   assert.equal(assinaturaWorker.email,chamadasWorker===1?'direto@exemplo.com':'alterado@exemplo.com','teste usa o endereço digitado, salvo antes da chamada');
   assert.equal(r.request().method(),'POST');assert.match(r.request().headers().authorization,/^Bearer /);
   assert.equal(r.request().postData(),null,'cliente não escolhe UID ou destino no corpo');

@@ -104,3 +104,9 @@ A operação `pecas-reinicio-2026-10-20` foi solicitada para zerar novas/usadas,
 Antes da exclusão, publica regras temporárias que bloqueiam gravações do cliente enquanto existe `manutencao/limpeza-pecas`, mantendo as leituras. Após a propagação, publica uma geração vazia e elimina recursivamente somente as coleções autorizadas, incluindo subcoleções sem documento pai. Verifica o esvaziamento e a integridade dos cadastros preservados, registra o resultado privado em `operacoes_manutencao/pecas-reinicio-2026-10-20`, restaura as regras e remove a trava. Logs públicos contêm apenas contagens.
 
 Se interrompida, a operação pode ser retomada; não libere gravações nem importe dados até concluir. Depois de `concluida`, reexecutar não apaga novas importações. Não apague esse registro para reaplicar a limpeza. Os testes usam somente o emulador local e aprovam a rotina antes de sua execução no projeto real.
+
+## Links de e-mail e sessão entre abas
+
+A persistência `LOCAL` do Firebase Auth permite reutilizar a identidade ao abrir `#ferias` em outra aba do mesmo navegador e origem. Não há tokens, credenciais ou privilégios nos links. Em cada abertura, o painel atualiza o token, confere o e-mail verificado e busca o perfil ativo no servidor antes de carregar dados. Técnicos continuam limitados ao próprio painel. Revogar o perfil bloqueia as abas abertas; sair da conta encerra a identidade compartilhada, e outra abertura exige login. Navegadores, perfis de navegador, origens ou janelas privadas diferentes continuam exigindo autenticação própria. Em dispositivos compartilhados, use **Sair** ao terminar.
+
+O teste `sessao-email-e2e.mjs` abre a segunda aba sem credenciais de fixture e verifica a persistência real do SDK, revogação, saída e bloqueio das férias para técnicos.

@@ -219,7 +219,9 @@ async function iniciarFirebase(cfg) {
     fs.useEmulator("127.0.0.1", 8080);
   }
   Acesso.auth = auth; Acesso.fs = fs;
-  await auth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
+  // Reutiliza a identidade no mesmo navegador, inclusive ao abrir um link do e-mail em outra aba.
+  // Não concede acesso: token atualizado e perfil ativo continuam obrigatórios em cada abertura.
+  await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
   try { await auth.getRedirectResult(); } catch (e) { console.warn("login por redirecionamento", e); }
   let usuario = await new Promise((ok) => { const parar = auth.onAuthStateChanged((u) => { parar(); ok(u); }); });
   if (window.__CP_FIREBASE_EMULADOR__ && /^(localhost|127\.0\.0\.1)$/.test(location.hostname) && window.__CP_LOGIN_TESTE__ && !usuario) {

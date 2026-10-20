@@ -5,15 +5,22 @@ export const OPERACAO_LIMPEZA='pecas-reinicio-2026-10-20';
 export const COLECOES_PECAS=['devolucoes','movimentos','historico','importacoes','acompanhamento','agendamentos','auditoria_agendamentos','contatos','anotacoes','saldos_tecnicos','declaracoes_tecnicos','eventos_tecnicos'];
 const PRESERVAR=['cadastro','config','usuarios','vinculos_tecnicos','seguranca','ferias','historico_ferias','exclusoes_ferias','lembretes_ferias'];
 export function bloquearGravacoes(source){
- return source.replace(/(allow\s+([a-z,\s]+):\s*if\s+)([\s\S]*?);/g,(original,prefixo,permissoes,condicao)=>/\b(write|create|update|delete)\b/.test(permissoes)?`${prefixo}!exists(/databases/$(database)/documents/manutencao/limpeza-pecas) && (${condicao});`:original);
+ // Remove comentários preservando strings e linhas: um ';' em comentário não encerra uma regra.
+ const codigo=source.replace(/'(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*"|\/\/[^\n]*|\/\*[\s\S]*?\*\//g,token=>token.startsWith('/')?token.replace(/[^\n]/g,' '):token);
+ return codigo.replace(/(allow\s+([a-z,\s]+):\s*if\s+)([\s\S]*?);/g,(original,prefixo,permissoes,condicao)=>/\b(write|create|update|delete)\b/.test(permissoes)?`${prefixo}!exists(/databases/$(database)/documents/manutencao/limpeza-pecas) && (${condicao});`:original);
+}
+let leiturasAtivas=0;const filaLeituras=[];
+async function limitarLeitura(fn){
+ if(leiturasAtivas>=20)await new Promise(r=>filaLeituras.push(r));else leiturasAtivas++;
+ try{return await fn();}finally{const proximo=filaLeituras.shift();if(proximo)proximo();else leiturasAtivas--;}
 }
 async function arvore(ref){
- const resultado=[];
- for(const doc of await ref.listDocuments()){
-  const s=await doc.get();if(s.exists)resultado.push([doc.path,s.data()]);
-  for(const sub of await doc.listCollections())resultado.push(...await arvore(sub));
- }
- return resultado.sort(([a],[b])=>a.localeCompare(b));
+ const docs=await limitarLeitura(()=>ref.listDocuments());
+ const linhas=await Promise.all(docs.map(async doc=>{
+  const [s,subs]=await Promise.all([limitarLeitura(()=>doc.get()),limitarLeitura(()=>doc.listCollections())]);
+  return [...(s.exists?[[doc.path,s.data()]]:[]),...(await Promise.all(subs.map(arvore))).flat()];
+ }));
+ return linhas.flat().sort(([a],[b])=>a.localeCompare(b));
 }
 async function preservar(db){
  const dados=[];for(const c of PRESERVAR)dados.push([c,await arvore(db.collection(c))]);

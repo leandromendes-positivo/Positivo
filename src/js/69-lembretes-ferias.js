@@ -23,13 +23,14 @@ async function modalLembretesFerias() {
   const [inscricao,servico]=await Promise.all([Acesso.fs.doc(`lembretes_ferias/${uid}`).get({source:'server'}),Acesso.fs.doc('servicos/lembretes-ferias').get({source:'server'})]);
   exigirAcessoLembretesFerias();if(uid!==Acesso.usuario.uid)return;
   const d=inscricao.data(),config=servico.data();
-  const m=abrirModal({titulo:'Lembretes de férias por e-mail',subtitulo:'Escolha quando deseja receber os avisos de saída da equipe.',corpo:`<form class="form" id="lembretes-ferias-form"><label class="campo"><span>E-mail para receber os lembretes</span><input type="email" name="email" required maxlength="254" autocomplete="email" value="${esc(d?.email||identidadeAtual().email)}"><small>Cadastre um único endereço. Sua inscrição não fica visível para os demais usuários.</small></label><label class="campo"><span>Horário de envio · Brasília</span><span class="lembretes-horario">${icone('relogio')}<input type="text" name="horario" inputmode="numeric" autocomplete="off" spellcheck="false" required maxlength="5" pattern="([01][0-9]|2[0-3]):[0-5][0-9]" placeholder="07:55" aria-describedby="lembretes-horario-ajuda" title="Informe um horário entre 00:00 e 23:59." value="${esc(d?.horario||'07:55')}"></span><small id="lembretes-horario-ajuda">Formato de 24 horas. Exemplo: 07:55.</small></label><label class="campo"><span>Quantos dias antes da saída?</span><input type="number" name="antecedencia" min="1" max="90" step="1" required value="${d?.antecedencia||10}"></label><label class="check-inline"><input type="checkbox" name="ativo" ${d?.ativo===false?'':'checked'}>Quero receber os lembretes de férias da equipe</label><p class="nota">A verificação acontece todos os dias, inclusive aos finais de semana. O aviso considera a antecedência escolhida, em dias corridos, antes de cada período e informa colaborador, UF, saída e retorno. Férias canceladas e colaboradores retirados da lista não geram aviso.</p><p class="nota">Se você se inscrever ou uma data mudar dentro da antecedência escolhida, o lembrete será incluído na próxima verificação, antes da saída. Repetições da mesma saída não são reenviadas para o mesmo e-mail.</p><p class="lembretes-ferias-situacao" role="status">${config?.habilitado?(config.ultimaExecucaoSemFalhas===false?'O serviço está disponível, mas a administração precisa conferir falhas no último processamento.':'Serviço de e-mail disponível.'):'O serviço de e-mail aguarda configuração. Você pode salvar sua inscrição; os envios começarão quando o serviço estiver disponível.'}${d?`<br>Sua inscrição está ${d.ativo?'ativa':'desativada'}.`:''}</p><p class="nota">O agendamento solicita verificações a cada cinco minutos após o horário escolhido. O GitHub pode atrasá-las por mais tempo; o teste fica na fila até uma execução. O teste independe desse horário. Salve as alterações antes de testar.</p><p class="nota" data-lembretes-fila hidden>Se a fila demorar, o responsável pelo repositório pode <a href="https://github.com/leandromendes-positivo/Positivo/actions/workflows/lembretes-ferias.yml" target="_blank" rel="noopener noreferrer">abrir o agendador no GitHub</a> e clicar em Run workflow → Run workflow para processá-la agora.</p><p data-lembretes-erro role="alert"></p></form>`,rodape:`<p data-lembretes-teste role="status" aria-live="polite" class="lembretes-ferias-retorno">Consultando o último teste…</p><p data-lembretes-acao role="alert" class="lembretes-ferias-retorno"></p><button class="btn" data-fechar>Fechar</button>${d?'<button class="btn" data-lembretes-excluir>Descadastrar e-mail</button>':''}${d?'<button class="btn" data-lembretes-testar>Enviar e-mail de teste</button>':''}<button class="btn prim" data-lembretes-salvar>Salvar lembretes</button>`});
+  const m=abrirModal({titulo:'Lembretes de férias por e-mail',subtitulo:'Escolha quando deseja receber os avisos de saída da equipe.',corpo:`<form class="form" id="lembretes-ferias-form"><label class="campo"><span>E-mail para receber os lembretes</span><input type="email" name="email" required maxlength="254" autocomplete="email" value="${esc(d?.email||identidadeAtual().email)}"><small>Cadastre um único endereço. Sua inscrição não fica visível para os demais usuários.</small></label><label class="campo"><span>Horário de envio · Brasília</span><span class="lembretes-horario"><input type="text" name="horario" inputmode="numeric" autocomplete="off" spellcheck="false" required maxlength="5" pattern="([01][0-9]|2[0-3]):[0-5][0-9]" placeholder="07:55" aria-describedby="lembretes-horario-ajuda" title="Informe um horário entre 00:00 e 23:59." value="${esc(d?.horario||'07:55')}"><button type="button" class="btn-icone" data-horario-abrir aria-label="Selecionar horário" aria-haspopup="dialog" aria-expanded="false">${icone('relogio')}</button></span><small id="lembretes-horario-ajuda">Selecione no relógio ou digite no formato 07:55.</small></label><label class="campo"><span>Quantos dias antes da saída?</span><input type="number" name="antecedencia" min="1" max="90" step="1" required value="${d?.antecedencia||10}"></label><label class="check-inline"><input type="checkbox" name="ativo" ${d?.ativo===false?'':'checked'}>Quero receber os lembretes de férias da equipe</label><p class="nota">A verificação acontece todos os dias, inclusive aos finais de semana. O aviso considera a antecedência escolhida, em dias corridos, antes de cada período e informa colaborador, UF, saída e retorno. Férias canceladas e colaboradores retirados da lista não geram aviso.</p><p class="nota">Se você se inscrever ou uma data mudar dentro da antecedência escolhida, o lembrete será incluído na próxima verificação, antes da saída. Repetições da mesma saída não são reenviadas para o mesmo e-mail.</p><p class="lembretes-ferias-situacao" role="status">${config?.habilitado?(config.ultimaExecucaoSemFalhas===false?'O serviço está disponível, mas a administração precisa conferir falhas no último processamento.':'Serviço de e-mail disponível.'):'O serviço de e-mail aguarda configuração. Você pode salvar sua inscrição; os envios começarão quando o serviço estiver disponível.'}${d?`<br>Sua inscrição está ${d.ativo?'ativa':'desativada'}.`:''}</p><p class="nota">O agendamento solicita verificações a cada cinco minutos após o horário escolhido. O GitHub pode atrasá-las por mais tempo; o teste fica na fila até uma execução. O teste independe desse horário. Salve as alterações antes de testar.</p><p class="nota" data-lembretes-fila hidden>Se a fila demorar, o responsável pelo repositório pode <a href="https://github.com/leandromendes-positivo/Positivo/actions/workflows/lembretes-ferias.yml" target="_blank" rel="noopener noreferrer">abrir o agendador no GitHub</a> e clicar em Run workflow → Run workflow para processá-la agora.</p><p data-lembretes-erro role="alert"></p></form>`,rodape:`<p data-lembretes-teste role="status" aria-live="polite" class="lembretes-ferias-retorno">Consultando o último teste…</p><p data-lembretes-acao role="alert" class="lembretes-ferias-retorno"></p><button class="btn" data-fechar>Fechar</button>${d?'<button class="btn" data-lembretes-excluir>Descadastrar e-mail</button>':''}${d?'<button class="btn" data-lembretes-testar>Enviar e-mail de teste</button>':''}<button class="btn prim" data-lembretes-salvar>Salvar lembretes</button>`});
   const f=m.el.querySelector('form'),acao=m.el.querySelector('[data-lembretes-acao]'),b=m.el.querySelector('[data-lembretes-salvar]');let salvando=false;
   const ajustarHorario=()=>{
     const valor=f.horario.value.trim();
     f.horario.value=/^\d{3,4}$/.test(valor)?valor.padStart(4,'0').replace(/(\d{2})(\d{2})/,'$1:$2'):/^\d:[0-5]\d$/.test(valor)?'0'+valor:valor;
   };
   f.horario.addEventListener('blur',ajustarHorario);
+  m.el.querySelector('[data-horario-abrir]').addEventListener('click',e=>{ajustarHorario();abrirSeletorHorario(f.horario,e.currentTarget);});
   const salvar=async(parar=false)=>{
     ajustarHorario();
     if(salvando || (!parar&&!f.reportValidity()))return;
@@ -69,4 +70,48 @@ async function modalLembretesFerias() {
     }catch(e){acao.textContent=e.code?erroAmigavel(e).message:e.message;salvando=false;excluir.disabled=false;}
   });
   b.addEventListener('click',()=>salvar());f.addEventListener('submit',e=>{e.preventDefault();salvar();});
+}
+
+function abrirSeletorHorario(campo,botao){
+  if(botao.getAttribute('aria-expanded')==='true')return;
+  const pad=n=>String(n).padStart(2,'0');
+  let [hora,minuto]=(/^([01][0-9]|2[0-3]):[0-5][0-9]$/.test(campo.value)?campo.value:'07:55').split(':').map(Number),etapa='hora';
+  const seletor=abrirModal({titulo:'Selecionar horário',subtitulo:'Horário de Brasília · formato de 24 horas',largura:'calendario horario-seletor',
+    corpo:`<div class="horario-previa" aria-live="polite"></div><div class="horario-etapas"><button type="button" class="btn" data-horario-etapa="hora">Horas</button><button type="button" class="btn" data-horario-etapa="minuto">Minutos</button></div><div class="horario-grade" role="group"></div>`,
+    rodape:'<button type="button" class="btn" data-fechar>Cancelar</button><button type="button" class="btn prim" data-horario-confirmar>Confirmar horário</button>',
+    aoFechar:()=>{botao.setAttribute('aria-expanded','false');botao.removeAttribute('aria-controls');}});
+  seletor.el.classList.add('calendario-fundo');
+  botao.setAttribute('aria-expanded','true');
+  const janela=seletor.el.querySelector('.horario-seletor');janela.id='horario-dialog-'+crypto.randomUUID();botao.setAttribute('aria-controls',janela.id);
+  const grade=seletor.el.querySelector('.horario-grade');
+  function desenhar(focar=false){
+    seletor.el.querySelector('.horario-previa').textContent=pad(hora)+':'+pad(minuto);
+    seletor.el.querySelectorAll('[data-horario-etapa]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.horarioEtapa===etapa)));
+    const atual=etapa==='hora'?hora:minuto,total=etapa==='hora'?24:60;
+    grade.setAttribute('aria-label',etapa==='hora'?'Escolha a hora':'Escolha os minutos');
+    grade.innerHTML=Array.from({length:total},(_,n)=>`<button type="button" class="calendario-dia" data-horario-valor="${n}" aria-label="${pad(n)} ${etapa==='hora'?'horas':'minutos'}" aria-pressed="${n===atual}" tabindex="${n===atual?0:-1}">${pad(n)}</button>`).join('');
+    const selecionado=grade.querySelector('[aria-pressed="true"]');
+    if(focar)selecionado.focus({preventScroll:true});
+    grade.scrollTop=Math.max(0,selecionado.offsetTop-grade.firstElementChild.offsetTop-grade.clientHeight/2+selecionado.offsetHeight/2);
+  }
+  seletor.el.querySelectorAll('[data-horario-etapa]').forEach(b=>b.addEventListener('click',()=>{etapa=b.dataset.horarioEtapa;desenhar(true);}));
+  grade.addEventListener('click',e=>{
+    const b=e.target.closest('[data-horario-valor]');if(!b)return;
+    if(etapa==='hora'){hora=Number(b.dataset.horarioValor);etapa='minuto';}else minuto=Number(b.dataset.horarioValor);
+    desenhar(true);
+  });
+  grade.addEventListener('keydown',e=>{
+    const b=e.target.closest('[data-horario-valor]');if(!b)return;
+    const n=Number(b.dataset.horarioValor),total=etapa==='hora'?24:60;
+    const destino={ArrowLeft:n-1,ArrowRight:n+1,ArrowUp:n-6,ArrowDown:n+6,Home:0,End:total-1}[e.key];
+    if(destino===undefined)return;e.preventDefault();
+    const proximo=grade.querySelector(`[data-horario-valor="${Math.max(0,Math.min(total-1,destino))}"]`);
+    grade.querySelectorAll('button').forEach(x=>x.tabIndex=-1);proximo.tabIndex=0;proximo.focus();
+  });
+  seletor.el.querySelector('[data-horario-confirmar]').addEventListener('click',()=>{
+    if(campo.isConnected){campo.value=pad(hora)+':'+pad(minuto);campo.dispatchEvent(new Event('input',{bubbles:true}));campo.dispatchEvent(new Event('change',{bubbles:true}));}
+    seletor.fechar();
+  });
+  desenhar();
+  grade.querySelector('[aria-pressed="true"]').focus({preventScroll:true});
 }

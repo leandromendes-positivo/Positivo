@@ -17,3 +17,12 @@
 .lembretes-horario>svg{width:20px;height:20px;flex-shrink:0;color:var(--muted)}
 #lembretes-ferias-form .lembretes-horario input{width:100%;min-width:0;height:48px;padding:0;border:0;border-radius:0;box-shadow:none;outline:none;background:transparent;color:var(--ink);font-family:inherit;font-size:18px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:1px}
 .lembretes-horario:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+
+.lembretes-horario .btn-icone{width:32px;height:32px;flex:0 0 32px;color:var(--muted);border-radius:6px}
+.lembretes-horario .btn-icone:hover,.lembretes-horario .btn-icone[aria-expanded="true"]{background:var(--accent-soft);color:var(--accent)}
+.horario-previa{text-align:center;font-size:36px;font-weight:650;letter-spacing:2px;font-variant-numeric:tabular-nums;margin:0 0 18px;color:var(--ink)}
+.horario-etapas{display:flex;gap:8px;margin-bottom:12px}.horario-etapas .btn{flex:1;justify-content:center}
+.horario-etapas [aria-pressed="true"],.horario-grade [aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.horario-grade{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:5px;max-height:220px;overflow-y:auto;overscroll-behavior:contain;padding:4px;scrollbar-width:thin;border:1px solid var(--line);border-radius:8px}
+.horario-grade .calendario-dia{min-height:38px;font-size:14px;flex-shrink:0}.horario-grade .calendario-dia[aria-pressed="true"]:hover{background:var(--accent-hover)}
+.horario-seletor .modal-rodape{display:flex;gap:8px;justify-content:space-between;padding:14px 16px}

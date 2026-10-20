@@ -1,7 +1,9 @@
 import {firestoreREST,tokenServico} from './firestore.mjs';
 import {transporteEmail} from './email.mjs';
 import {processarTestesFerias} from '../aviso/testes-ferias.mjs';
-import {processarLembretes} from '../aviso/lembretes-ferias.mjs';
+import {createHash} from 'node:crypto';
+import {hojeBrasilia} from '../aviso/data-brasilia.mjs';
+import {processarLembretes,destinatariosLembretes} from '../aviso/lembretes-ferias.mjs';
 export function origemPermitida(req,env){
  try{return new URL(env.PAINEL_URL).origin===req.headers.get('Origin')&&new URL(env.PAINEL_URL).protocol==='https:';}catch{return false;}
 }
@@ -25,6 +27,18 @@ export function limitarTeste(db,uid){
  return {...db,collection:p=>p==='testes_lembretes_ferias'?{get:async()=>{
   const s=await db.doc(p+'/'+uid).get();return {docs:s.exists?[s]:[]};
  }}:db.collection(p)};
+}
+// Faz o processamento completo só quando o dia, as preferências elegíveis ou
+// a programação mudam. A revisão usa uma consulta de 1 documento e uma contagem.
+export async function deveProcessarLembretes(db,agora=new Date()){
+ const hoje=hojeBrasilia(agora),horario=new Intl.DateTimeFormat('en-GB',{timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(agora);
+ const grupos=await destinatariosLembretes(db);
+ const elegiveis=[...grupos].map(([email,inscricoes])=>[email,inscricoes.filter(s=>horario>=(s.horario||'07:55')).map(s=>[s.id,s.versao||0,s.horario||'07:55',s.antecedencia||10]).sort()]).filter(([,i])=>i.length).sort();
+ if(!elegiveis.length)return null;
+ const ref=db.doc('operacoes_lembretes_ferias/cloudflare-agendamento');
+ const [revisao,ultimo]=await Promise.all([db.revisaoFerias(),ref.get()]);
+ const assinatura=createHash('sha256').update(JSON.stringify([hoje,elegiveis,revisao])).digest('hex');
+ return ultimo.data()?.assinatura===assinatura?null:{ref,assinatura,hoje,horario};
 }
 async function abrir(env){
  const cred=JSON.parse(env.FIREBASE_SERVICE_ACCOUNT||'null');
@@ -68,7 +82,10 @@ export default {
   servico=await abrir(env);
   await disponivel(env,servico);
   await processarTestesFerias(servico,true);
-  const resultado=await processarLembretes({...servico,painel:env.PAINEL_URL.replace(/\/$/,'')+'/'});
+  const janela=await deveProcessarLembretes(servico.db);
+  if(!janela)return;
+  const resultado=await processarLembretes({...servico,hoje:janela.hoje,horario:janela.horario,painel:env.PAINEL_URL.replace(/\/$/,'')+'/'});
+  if(!resultado.falhas&&!resultado.pendentes)await janela.ref.set({assinatura:janela.assinatura,processadoEm:new Date().toISOString()});
   await servico.db.doc('servicos/lembretes-ferias').set({ultimoProcessamento:new Date().toISOString(),ultimaExecucaoSemFalhas:!resultado.falhas&&!resultado.pendentes},{merge:true});
   }catch{
    if(servico)try{await servico.db.doc('servicos/lembretes-ferias').set({habilitado:false,ultimaExecucaoSemFalhas:false,motivo:'falha_cloudflare',verificadoEm:new Date().toISOString()},{merge:true});}catch{}

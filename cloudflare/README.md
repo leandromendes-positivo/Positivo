@@ -115,6 +115,11 @@ haja uma decisão futura de trocar de provedor; não é necessário configurá-l
   Consulte os estados privados de envio no Firestore para conferência.
 - O Worker usa o cron para retomar pedidos registrados quando a chamada direta
   falhar. Não há dependência da fila de máquinas do GitHub para o envio imediato.
+- Para reduzir leituras no Spark, o cron consulta as inscrições autorizadas e
+  uma revisão leve (última atualização e contagem). Só relê toda a programação
+  quando muda o dia, chega o horário de uma inscrição, mudam preferências ou
+  a programação de férias. O controle é persistido; não depende de memória do
+  Worker. Reservas de envios continuam independentes desse controle.
 - A conta gratuita tem cotas de requisições, CPU e subrequisições. Firestore e Gmail
   também têm cotas próprias. Acompanhe uso/erros; volumes maiores podem exigir
   paginação por lote, Cloudflare Queues ou plano pago. Não prometa envio ilimitado.

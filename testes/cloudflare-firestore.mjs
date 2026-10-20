@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
 import {firestoreREST} from '../cloudflare/firestore.mjs';
-import {limitarTeste} from '../cloudflare/worker.mjs';
+import {limitarTeste,deveProcessarLembretes} from '../cloudflare/worker.mjs';
 import {processarTestesFerias} from '../aviso/testes-ferias.mjs';
 const host=process.env.FIRESTORE_EMULATOR_HOST;
 if(!/^(127\.0\.0\.1|localhost):[0-9]+$/.test(host||''))throw new Error('Integração permitida apenas no emulador.');
@@ -34,6 +34,19 @@ try{
  const batch=db.batch();batch.update(db.doc('servicos/lembretes-ferias'),{habilitado:false});await batch.commit();
  assert.equal((await db.doc('servicos/lembretes-ferias').get()).data().habilitado,false);
  assert.equal((await db.doc('ferias/inexistente').get()).exists,false);
+ await db.doc('ferias/pessoa').set({atualizadoEm:new Date('2026-10-20T10:00:00Z')});
+ const antesRevisao=await db.revisaoFerias();
+ await db.doc('ferias/outra').set({atualizadoEm:new Date('2026-10-20T11:00:00Z')});
+ assert.notEqual(await db.revisaoFerias(),antesRevisao,'nova programação altera revisão');
+ await db.doc('lembretes_ferias/pessoa').set({horario:'07:55',versao:1},{merge:true});
+ await db.doc('lembretes_ferias/outra').set({horario:'07:55',versao:1},{merge:true});
+ assert.equal(await deveProcessarLembretes(db,new Date('2026-10-20T10:54:00Z')),null,'não processa antes do horário de Brasília');
+ const janela=await deveProcessarLembretes(db,new Date('2026-10-20T10:55:00Z'));assert.ok(janela);
+ await janela.ref.set({assinatura:janela.assinatura});
+ assert.equal(await deveProcessarLembretes(db,new Date('2026-10-20T11:00:00Z')),null,'não relê todo o planejamento a cada minuto sem mudança');
+ await db.doc('lembretes_ferias/pessoa').set({versao:2},{merge:true});
+ assert.ok(await deveProcessarLembretes(db,new Date('2026-10-20T11:00:00Z')),'preferência alterada reabre janela');
+
  const lote=await db.getAll(db.doc('testes_lembretes_ferias/outra'),db.doc('ferias/inexistente'));assert.deepEqual(lote.map(s=>[s.id,s.exists]),[['outra',true],['inexistente',false]]);
  await db.runTransaction(async tx=>{const l=await tx.getAll(db.doc('usuarios/pessoa@exemplo.com'),db.doc('ferias/inexistente'));assert.deepEqual(l.map(s=>s.exists),[true,false]);});
  console.log('Worker REST: transações reais, concorrência, isolamento por UID, timestamps, consultas e merge passaram. Nenhum e-mail real enviado.');

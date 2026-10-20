@@ -48,7 +48,16 @@ export function firestoreREST(projeto,token,fetcher=fetch){
   const mapa=new Map(resposta.map(r=>[r.found?.name||r.missing,r.found||null]));
   return refs.map(r=>snapshot(r.path,mapa.get(nome(r.path))||null));
  };
- const db={doc,getAll:(...refs)=>getAll(refs),collection:p=>{
+ const db={doc,getAll:(...refs)=>getAll(refs),revisaoFerias:async()=>{
+  const [ultimo,contagem]=await Promise.all([
+   pedir(':runQuery',{structuredQuery:{from:[{collectionId:'ferias'}],select:{fields:[{fieldPath:'atualizadoEm'}]},orderBy:[{field:{fieldPath:'atualizadoEm'},direction:'DESCENDING'}],limit:1}}),
+   pedir(':runAggregationQuery',{structuredAggregationQuery:{structuredQuery:{from:[{collectionId:'ferias'}]},aggregations:[{alias:'quantidade',count:{}}]}})
+  ]);
+  const quantidade=contagem.find(r=>r.result)?.result.aggregateFields?.quantidade?.integerValue;
+  if(quantidade===undefined)throw new Error('Revisão de férias indisponível');
+  const d=ultimo.find(r=>r.document)?.document;
+  return [String(quantidade),d?.name||'',d?.updateTime||''].join('|');
+ },collection:p=>{
   if(!/^[a-z_]+$/.test(p))throw new Error('Coleção inválida');
   const consulta=filtros=>({where:(field,op,value)=>{if(op!=='==')throw new Error('Operador inválido');return consulta([...filtros,{fieldFilter:{field:{fieldPath:field},op:'EQUAL',value:codificar(value)}}]);},get:async()=>{
    const r=await pedir(':runQuery',{structuredQuery:{from:[{collectionId:p}],...(filtros.length?{where:filtros.length===1?filtros[0]:{compositeFilter:{op:'AND',filters:filtros}}}:{})}});

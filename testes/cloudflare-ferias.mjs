@@ -31,4 +31,6 @@ const raw=Buffer.from(JSON.parse(chamadas[1][1].body).raw,'base64url').toString(
 await assert.rejects(()=>transporte.sendMail({to:{address:'x@exemplo.com\r\nBcc: outro@exemplo.com'}}),/Destinatário inválido/);
 const falho=transporteEmail({...emailenv,EMAIL_PROVEDOR:'resend',RESEND_API_KEY:'ficticio'},async()=>new Response(null,{status:429}));
 await assert.rejects(()=>falho.sendMail({to:{address:'destino@exemplo.com'},messageId:'teste'}),e=>e.responseCode===429);
+const incerto=transporteEmail({...emailenv,EMAIL_PROVEDOR:'resend',RESEND_API_KEY:'ficticio'},async()=>new Response(null,{status:502}));
+await assert.rejects(()=>incerto.sendMail({to:{address:'destino@exemplo.com'},messageId:'teste'}),e=>!e.responseCode&&e.code==='ESOCKET','erro do servidor não autoriza reenvio automático');
 console.log('Worker: origem exata, token validado no Firebase, projeto/revogação/perfil, isolamento por UID, ativação explícita, MIME e rejeição do provedor passaram. Nenhum e-mail real enviado.');

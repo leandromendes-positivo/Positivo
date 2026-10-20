@@ -5,7 +5,7 @@ export function transporteEmail(env,fetcher=fetch){
  let gmailToken;
  async function requisitar(url,init){
   const r=await fetcher(url,{...init,signal:AbortSignal.timeout(15000)});
-  if(!r.ok){const e=new Error('Provedor recusou a operação');e.responseCode=r.status;throw e;}return r.json();
+  if(!r.ok){const e=new Error('Resposta do provedor não confirmada');if(r.status>=400&&r.status<500&&r.status!==408)e.responseCode=r.status;else e.code='ESOCKET';throw e;}return r.json();
  }
  const verify=async()=>{
   if(env.EMAIL_PROVEDOR==='resend'){

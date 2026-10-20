@@ -41,11 +41,15 @@ jobs:
           python-version: "3.12"
       - name: Preparar o teste de navegador
         run: |
+          fase_navegador=instalacao
+          trap 'echo "::error title=Preparação dos navegadores::Falha na etapa $fase_navegador."' ERR
           ./seguranca/node_modules/.bin/playwright install --with-deps chromium firefox webkit
+          fase_navegador=sdk
           mkdir -p /tmp/firebase-sdk-portal
           for sdk in app auth firestore; do
             curl --fail --silent --show-error "https://www.gstatic.com/firebasejs/10.14.1/firebase-${sdk}-compat.js" -o "/tmp/firebase-sdk-portal/firebase-${sdk}-compat.js"
           done
+          fase_navegador=montagem
           python3 build.py
           python3 -m http.server 8003 --bind 127.0.0.1 --directory dist > /tmp/portal-http.log 2>&1 &
       - name: Conferir pacote do Worker sem publicar
@@ -66,7 +70,13 @@ jobs:
         env:
           PW_PATH: ${{ github.workspace }}/seguranca
           FIREBASE_SDK_DIR: /tmp/firebase-sdk-portal
-        run: ./seguranca/node_modules/.bin/firebase emulators:exec --only firestore,auth --project demo-controle-seguranca "node testes/verificar-acessos.mjs && PW_BROWSER=firefox node testes/verificar-sessao.mjs && PW_BROWSER=webkit node testes/verificar-sessao.mjs"
+        run: |
+          if ! ./seguranca/node_modules/.bin/firebase emulators:exec --only firestore,auth --project demo-controle-seguranca "node testes/verificar-acessos.mjs && PW_BROWSER=firefox node testes/verificar-sessao.mjs && PW_BROWSER=webkit node testes/verificar-sessao.mjs" > /tmp/testes-acesso.log 2>&1; then
+            cat /tmp/testes-acesso.log
+            python3 -c 'from pathlib import Path; s="\n".join(Path("/tmp/testes-acesso.log").read_text()[-12000:].splitlines()[-35:]); print("::error title=Execução dos emuladores::"+s.replace("%","%25").replace("\r","%0D").replace("\n","%0A"))'
+            exit 1
+          fi
+          cat /tmp/testes-acesso.log
   publicar:
     needs: testar-acessos
     runs-on: ubuntu-latest

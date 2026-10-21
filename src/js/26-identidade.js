@@ -158,7 +158,7 @@ async function salvarUsuario(email, perfil, ativo, tecnicoId = '', nomeInformado
     if (novoId) tx.set(Acesso.fs.doc(`vinculos_tecnicos/${novoId}`), vinculo);
     tx.set(ref, d);
   });
-  toast(ativo ? 'Acesso autorizado salvo.' : 'Acesso desativado.');
+  // A tela informa separadamente o cadastro e o resultado da geração de senha.
 }
 
 function bloquearSessao(mensagem = 'Seu acesso foi desativado. Procure o administrador.') {

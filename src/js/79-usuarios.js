@@ -15,6 +15,7 @@ async function enviarSenhaUsuario(email,confirmada=false,operacao=crypto.randomU
   if(resultadosEnviosAcesso().get(email)?.estado==='enviando')return;
   const uid=Acesso.usuario?.uid,r={email,estado:'enviando',mensagem:'O envio é direto pelo Cloudflare. Aguarde a confirmação; não é preciso salvar novamente.',operacao};
   resultadosEnviosAcesso().set(email,r);atualizarEnviosAcesso();
+  toast('Cadastro salvo. Gerando senha temporária no servidor…','info');
   try{
     if(Acesso.usuario?.uid!==uid)throw new Error('Sua sessão mudou. Entre novamente.');
     const d=await solicitarConta('temporaria',{email,operacao},true,60000);
@@ -30,7 +31,7 @@ async function enviarSenhaUsuario(email,confirmada=false,operacao=crypto.randomU
     }
 
   }catch(e){r.estado='erro';r.mensagem=e.message+' Confira a caixa de entrada e o spam antes de tentar gerar outra senha.';}
-  if(Acesso.usuario?.uid===uid)atualizarEnviosAcesso();
+  if(Acesso.usuario?.uid===uid){atualizarEnviosAcesso();if(r.estado==='erro')toast(r.mensagem,'erro',{duracao:12000});}
 }
 // Somente a senha recém-gerada é exibida; não é gravada no armazenamento do navegador.
 function mostrarAcessoGerado(d){
@@ -57,7 +58,7 @@ function modalUsuario(email = '', perfilInicial = 'usuario') {
   const protegido = u?.principal || email === Acesso.usuario?.email?.toLowerCase();
   const m = abrirModal({ administrativo: true, titulo: protegido ? 'Acesso protegido' : u ? 'Gerenciar acesso' : 'Cadastrar usuário', subtitulo: 'Cadastre o e-mail e defina as permissões do colaborador.',
     corpo: `<form class="form" id="usuario-form"><label class="campo"><span>Nome do colaborador</span><input type="text" name="nome" maxlength="80" autocomplete="name" value="${esc(u?.nome||'')}" ${protegido?'readonly':''} placeholder="Nome completo"><small>Opcional. Se deixar vazio, o nome atual será mantido.</small></label><label class="campo"><span>E-mail autorizado</span><input type="email" name="email" required maxlength="254" autocomplete="off" ${u?'readonly':''} value="${esc(email)}" autofocus><small>Use o endereço corporativo exato da pessoa.</small></label><label class="campo"><span>Perfil de acesso</span><select name="perfil" ${protegido?'disabled':''}>${Object.entries(PERFIS).map(([v,n])=>`<option value="${v}" ${(u?.perfil||perfilInicial)===v?'selected':''}>${n}</option>`).join('')}</select></label><label class="campo" data-vinculo><span>Técnico / UF do estoque</span><select name="tecnicoId" ${protegido?'disabled':''}><option value="">Selecione o cadastro correspondente</option>${u?.tecnicoId?`<option value="${esc(u.tecnicoId)}" selected>Vínculo atual: ${esc(u.tecnicoId)}</option>`:''}${opcoesVinculoTecnico().filter(t=>t.id!==u?.tecnicoId).map(t=>`<option value="${esc(t.id)}">${esc(t.nome)} · ${esc(t.regiao)} · ${esc(t.tid)}</option>`).join('')}</select><small>Confira o identificador exato do relatório. O vínculo é exclusivo por e-mail e UF; apelido e e-mail de contato não concedem acesso. Homônimos na mesma UF precisam de identificadores distintos na origem.</small></label><label class="check-inline"><input type="checkbox" name="ativo" ${!u||u.ativo?'checked':''} ${protegido?'disabled':''}>Acesso ativo</label><p class="nota">${u?.principal?'O administrador principal não pode ser removido, desativado ou rebaixado por outro administrador. Seu cadastro é somente leitura nesta tela.':protegido?'Você não pode alterar suas próprias permissões. Para editar seu nome, use Minha conta.':'Uma conta desativada permanece no cadastro para preservar a identificação do histórico.'}</p>${!protegido?`<label class="check-inline"><input type="checkbox" name="gerarSenha" ${!u?'checked':''}>${u?'Gerar nova senha temporária e enviar por e-mail':'Gerar senha temporária e enviar por e-mail'}</label><p class="nota">A senha é gerada no servidor, vale por 24 horas e deve ser trocada no primeiro acesso. Salvar com esta opção desmarcada não gera nem envia senha. Para enviar para esta conta, marque a opção acima ou use o botão na lista. A senha anterior será substituída; as permissões e o vínculo de estoque permanecem os deste cadastro.</p><p data-senha-resultado role="status" aria-live="polite"></p>`:''}</form>`,
-    rodape: protegido ? '<button class="btn" data-fechar>Fechar</button>' : '<p data-cadastro-status role="status" aria-live="polite" style="width:100%;margin:0"></p><button class="btn" data-fechar>Cancelar</button><button class="btn prim" data-salvar>Salvar alterações</button>' });
+    rodape: protegido ? '<button class="btn" data-fechar>Fechar</button>' : '<p data-cadastro-status role="status" aria-live="polite" style="width:100%;margin:0"></p><button class="btn" data-fechar>Cancelar</button><button class="btn" data-salvar>Salvar alterações</button><button class="btn prim" data-salvar-gerar>Salvar e gerar acesso</button>' });
   const f=m.el.querySelector('form'), btn=m.el.querySelector('[data-salvar]');
   const atualizarVinculo=()=>{const tec=f.perfil.value==='tecnico';f.querySelector('[data-vinculo]').hidden=!tec;f.tecnicoId.required=tec;};
   f.perfil.addEventListener('change',atualizarVinculo);atualizarVinculo();
@@ -74,11 +75,12 @@ function modalUsuario(email = '', perfilInicial = 'usuario') {
       m.fechar();
       if(dados.enviar){void enviarSenhaUsuario(dados.email,true).catch(e=>toast(e.message,'erro'));}
       else{
-        resultadosEnviosAcesso().set(dados.email,{email:dados.email,estado:'sem-envio',mensagem:'As alterações foram salvas. Nenhuma senha foi gerada ou enviada.'});atualizarEnviosAcesso();
+        resultadosEnviosAcesso().set(dados.email,{email:dados.email,estado:'sem-envio',mensagem:'As alterações foram salvas. Nenhuma senha foi gerada ou enviada.'});atualizarEnviosAcesso();toast('Cadastro salvo sem gerar senha. Para criar o acesso, use Salvar e gerar acesso.','info',{duracao:9000});
       }
     }
     catch(e){statusModal.textContent=e.code ? erroAmigavel(e).message : e.message;statusModal.setAttribute('role','alert');btn.disabled=false;btn.textContent='Salvar alterações';}
   };
+  const gerar=m.el.querySelector('[data-salvar-gerar]');if(gerar)gerar.onclick=()=>{f.gerarSenha.checked=true;salvar();};
   btn.addEventListener('click',salvar); f.addEventListener('submit',e=>{e.preventDefault();salvar();});
 }
 const UIconta = { uid: '', nome: '', base: '', salvando: false, erro: '', salvo: false };

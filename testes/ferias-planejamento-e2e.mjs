@@ -19,7 +19,7 @@ try{
  await campo('vendidos').fill('10');assert.equal(await campo('dias0').inputValue(),'15');assert.equal(await campo('dias1').inputValue(),'5');assert.equal(await campo('fim1').inputValue(),'2027-10-05');
  await data('inicio1','');assert.equal(await campo('fim1').inputValue(),'');
  await data('inicio0','2028-02-20');await campo('dias0').fill('10');assert.equal(await campo('fim0').inputValue(),'2028-02-29');
- await campo('nome').fill('Pessoa cálculo');await campo('matricula').fill('CALCULO-TESTE');await campo('regiao').selectOption('PR');await campo('area').selectOption('administrativo');await campo('ciclo').fill('2028');
+ await campo('nome').fill('Pessoa cálculo');await campo('matricula').fill('CALCULO-TESTE');await campo('regiao').selectOption('PR');await campo('area').selectOption('administrativo');assert.equal(await campo('ciclo').count(),0);
  await p.locator('[data-ferias-salvar]').click();await p.locator('.ferias-form').waitFor({state:'detached'});
  const id=await p.evaluate(()=>E.ferias.find(f=>f.matricula==='CALCULO-TESTE').id);
  assert.equal(await p.evaluate(id=>E.ferias.find(f=>f.id===id).periodos[0].fim,id),'2028-02-29');

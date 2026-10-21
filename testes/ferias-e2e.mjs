@@ -22,7 +22,7 @@ try {
  await form.locator('[name="area"]').selectOption('tecnico');
  assert.equal(await form.locator('[name="localidade"]').inputValue(),'');
  assert.equal(await form.locator('[name="localidade"]').evaluate(el=>el.required),false);
- await form.locator('[name="ciclo"]').fill('2027');
+ assert.equal(await form.locator('[name="ciclo"]').count(),0);
  // Native value + input also works with the shared calendar's hidden input.
  await page.evaluate(()=>{for(const [n,v] of [['inicio0','2027-01-10'],['fim0','2027-01-29']]){const el=document.querySelector(`.ferias-form [name="${n}"]`);el.value=v;el.dispatchEvent(new Event('input',{bubbles:true}));}});
  await form.locator('[name="vendidos"]').fill('10');

@@ -70,6 +70,7 @@ function irPara(pagina, { tid = null } = {}) {
 
 let renderPendente = false;
 function renderizar(forcar = false) {
+  if (!document.querySelector('.app[data-acesso-liberado]')) return;
   const conteudo = document.getElementById("conteudo");
   if (!conteudo) return;
   const ativo = document.activeElement;
@@ -521,7 +522,7 @@ async function iniciar() {
   if (Object.hasOwn(PAGINAS, inicial)) UI.pagina = inicial;
   renderizar(true);
   try { await Armazem.iniciar(); }
-  catch (e) { E.status = 'erro'; E.erro = 'Não foi possível conectar com segurança. Confira a conexão e tente novamente.'; mudou(); return; }
+  catch (e) { montarTelaAcesso('Não foi possível verificar o acesso','Confira a conexão e tente novamente.','<button class="btn prim" onclick="location.reload()">Tentar novamente</button>'); return; }
   montarMoldura();
   if (Acesso.modo === 'firebase' && !Acesso.perfil) { bloquearSessao(Acesso.negado); return; }
   if (Acesso.modo === "firebase" && Acesso.usuario) {
@@ -536,6 +537,9 @@ async function iniciar() {
       }
     } catch (_) { /* sem identidade: segue sem */ }
   }
+  const estrutura=document.querySelector('.app');
+  estrutura.setAttribute('data-acesso-liberado','');estrutura.removeAttribute('inert');estrutura.removeAttribute('aria-hidden');
+  const telaAcesso=document.getElementById('acesso');telaAcesso.hidden=true;telaAcesso.innerHTML='';
   await carregarTudo();
   if (!E.usadas.length && !E.novas.length && UI.pagina === "painel") renderizar(true);
 }

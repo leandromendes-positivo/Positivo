@@ -162,6 +162,10 @@ async function salvarUsuario(email, perfil, ativo, tecnicoId = '', nomeInformado
 }
 
 function bloquearSessao(mensagem = 'Seu acesso foi desativado. Procure o administrador.') {
+  const estrutura=document.querySelector('.app');estrutura?.removeAttribute('data-acesso-liberado');estrutura?.setAttribute('inert','');estrutura?.setAttribute('aria-hidden','true');
+  document.getElementById('conteudo')?.replaceChildren();
+  const tela=montarTelaAcesso('Acesso não autorizado',mensagem,'<button class="btn prim" data-outra-conta>Entrar com outra conta</button>');
+  tela.querySelector('[data-outra-conta]').onclick=async()=>{await Acesso.auth?.signOut();location.reload();};
   OutlookCobranca.desconectar();
   MenuLateral.fechar({ restaurarFoco: false });
   limparPortalTecnico();

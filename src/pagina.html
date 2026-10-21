@@ -12,9 +12,11 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <style>
 /*__CSS__*/
+/* Fechado antes do primeiro paint, mesmo se o JavaScript atrasar ou falhar. */
+.app:not([data-acesso-liberado]) { display: none !important; }
 </style>
 <!--__CORPO__-->
-<div class="app">
+<div class="app" inert aria-hidden="true">
   <aside class="rail" id="menu-lateral">
     <button type="button" class="btn fantasma pequeno btn-recolher-menu" data-acao="menu-lateral" aria-label="Recolher menu lateral" aria-expanded="true" aria-controls="menu-lateral" title="Recolher menu lateral">
       <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16m8-11-3 3 3 3"/></svg><span>Recolher</span>
@@ -64,7 +66,7 @@
   </main>
 </div>
 <template id="botao-tema"><!--__BOTAO_TEMA__--></template>
-<div id="acesso" class="acesso" hidden></div>
+<div id="acesso" class="acesso" role="status"><p>Verificando acesso…</p></div>
 <div id="dica" class="dica" hidden></div>
 <div id="toasts"></div>
 <div id="soltar" class="soltar" hidden>Solte as planilhas para importar</div>

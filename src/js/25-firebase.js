@@ -176,13 +176,13 @@ function diagnosticoSessao(auth) {
 }
 
 /** A autenticação não libera dados: as regras verificam perfil e troca de senha. */
-function pedirLogin(auth, firebase, mensagem = '') {
+function pedirLogin(auth, firebase, mensagem = '', sucesso=false) {
   return new Promise(resolver => {
     const tela=montarTelaAcesso('Entre na sua conta','Use o e-mail cadastrado e sua senha do painel.',`<form class="form acesso-form" id="login-senha"><label class="campo"><span>E-mail</span><input type="email" name="email" required maxlength="254" autocomplete="username" autocapitalize="none" spellcheck="false"></label><label class="campo"><span>Senha</span><input type="password" name="senha" required maxlength="128" autocomplete="current-password"></label><button class="btn prim" type="submit">Entrar</button><button class="acesso-link" type="button" data-esqueci>Esqueci minha senha</button></form><div class="acesso-ou"><span>ou</span></div><button class="btn acesso-provedor" id="entrar-google"><span class="marca-google" aria-hidden="true">G</span>Entrar com Google${icone('direita')}</button><details class="acesso-diagnostico"><summary>Diagnóstico de acesso</summary><pre></pre><p>Este diagnóstico não contém e-mail, senha nem tokens.</p></details>`);
     const diagnostico=tela.querySelector('.acesso-diagnostico');
     diagnostico.querySelector('pre').textContent=diagnosticoSessao(auth);
     diagnostico.addEventListener('toggle',()=>{if(diagnostico.open)diagnostico.querySelector('pre').textContent=diagnosticoSessao(auth);});
-    if(mensagem)erroTelaAcesso(tela,mensagem);
+    if(mensagem){erroTelaAcesso(tela,mensagem);if(sucesso){const aviso=tela.querySelector('.acesso-erro');aviso.classList.add('acesso-sucesso');aviso.setAttribute('role','status');}}
     const parar=auth.onAuthStateChanged(u=>{if(!u)return;parar();tela.hidden=true;tela.innerHTML='';resolver(u);});
     const f=tela.querySelector('form');
     f.onsubmit=async e=>{
@@ -233,7 +233,7 @@ async function iniciarFirebase(cfg) {
     const cred = firebase.auth.GoogleAuthProvider.credential(JSON.stringify(window.__CP_LOGIN_TESTE__));
     usuario = (await auth.signInWithCredential(cred)).user;
   }
-  if (!usuario) usuario = await pedirLogin(auth, firebase,recuperada?'Senha redefinida. Entre com sua nova senha.':'');
+  if (!usuario) usuario = await pedirLogin(auth, firebase,recuperada?'Senha redefinida. Entre com sua nova senha.':'',recuperada);
   for(;;){
     try{usuario=await prepararAcessoSenha(auth,usuario);break;}
     catch(e){await auth.signOut();usuario=await pedirLogin(auth,firebase,e.message||'Solicite a recuperação do acesso.');}

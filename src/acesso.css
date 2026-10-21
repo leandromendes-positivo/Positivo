@@ -131,3 +131,5 @@
 @media(max-width:600px){.acesso{padding:12px;gap:12px}.acesso-cartao{padding:20px}.acesso-cartao h1{font-size:25px}.acesso-rodape{text-align:center;font-size:9px}}
 @media(max-height:820px) and (max-width:900px){.acesso-apresentacao{display:none}}
 @media(prefers-reduced-motion:reduce){.login-luz{animation:none}}
+
+.acesso-erro.acesso-sucesso { color:var(--ink)!important; background:var(--surface-2); }

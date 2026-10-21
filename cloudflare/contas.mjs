@@ -1,5 +1,5 @@
 import {randomBytes,createHash} from 'node:crypto';
-import {escaparEmail} from '../aviso/layout-email-ferias.mjs';
+import {emailAcessoTemporario,emailRecuperacao} from '../aviso/layout-email-contas.mjs';
 const hash=s=>createHash('sha256').update(s).digest('hex');
 const emailValido=s=>typeof s==='string'&&s.length<=254&&/^[a-z0-9.!#$%&'*+\-=?^_`{|}~]+@[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?\.[a-z]{2,}$/i.test(s)&&!s.includes('/');
 const falha=(mensagem='Não foi possível concluir esta solicitação.',status=400)=>Object.assign(new Error(mensagem),{status,publica:true});
@@ -72,7 +72,7 @@ export async function gerarTemporaria(servico,id,email,operacao,agora=Date.now()
   await db.runTransaction(async tx=>{const d=(await tx.get(ref)).data();if(d?.operacao!==operacao)throw falha('A operação mudou. Gere outra senha.',409);tx.set(ref,{...d,uid,hashTemporaria:hash(senha),estado:'temporaria',bloqueioAte:agora+5*60000});});
   const url=origemPainel(servico.env),texto=`${reserva.nome?'Olá, '+reserva.nome+'.\n\n':''}Seu acesso ao painel Positivo foi preparado.\nE-mail: ${email}\nSenha temporária: ${senha}\n\nEntre em ${url}\nA senha expira em 24 horas. Você deverá definir sua própria senha antes de acessar os dados. Se não reconhecer este cadastro, avise a administração.`;
   let enviado=true;
-  try{await enviar(servico,email,'Seu acesso ao painel Positivo',texto,`<div style="font-family:Arial,sans-serif;background:#fff;color:#111;padding:28px;line-height:1.7"><h1 style="font-size:24px">Seu acesso ao painel</h1>${reserva.nome?`<p>Olá, ${escaparEmail(reserva.nome)}.</p>`:''}<p>E-mail: <strong>${escaparEmail(email)}</strong></p><p>Senha temporária:</p><p style="font-family:monospace;font-size:21px">${escaparEmail(senha)}</p><p>Válida por 24 horas. No primeiro acesso, você deverá criar sua própria senha.</p><p><a href="${escaparEmail(url)}">Abrir painel Positivo</a></p><p>Se não reconhecer este cadastro, avise a administração.</p></div>`);}catch{enviado=false;}
+  try{await enviar(servico,email,'Seu acesso ao painel Positivo',texto,emailAcessoTemporario({painel:url,email,senha,nome:reserva.nome}));}catch{enviado=false;}
   await db.runTransaction(async tx=>{const d=(await tx.get(ref)).data();if(d?.operacao===operacao)tx.set(ref,{...d,bloqueioAte:0,emailEnviado:enviado});});
   return {gerado:true,enviado,email,link:url,senhaTemporaria:senha,expiraEm:agora+24*3600000};
  }catch(e){await db.runTransaction(async tx=>{const d=(await tx.get(ref)).data();if(d?.operacao===operacao)tx.set(ref,{...d,estado:d.estado==='temporaria'?'temporaria':'falha_envio',bloqueioAte:0});});throw e;}
@@ -113,7 +113,7 @@ export async function recuperarSenha(servico,email,ip,agora=Date.now()){
    tx.set(servico.db.doc('pedidos_recuperacao/'+hash(email)),{geracao});
   });
   const url=origemPainel(servico.env)+'#redefinir-senha='+token;
-  await enviar(servico,email,'Redefinir sua senha — Positivo',`Abra este link para definir uma nova senha: ${url}\nO link expira em 15 minutos e só pode ser usado uma vez. Se não solicitou, ignore: sua senha atual continua válida.`,`<div style="font-family:Arial,sans-serif;background:#fff;color:#111;padding:28px;line-height:1.7"><h1 style="font-size:24px">Redefinir sua senha</h1><p>Você solicitou a recuperação do acesso ao painel Positivo.</p><p><a href="${escaparEmail(url)}">Definir nova senha</a></p><p>O link vale por 15 minutos e só pode ser usado uma vez.</p><p>Se não solicitou, ignore esta mensagem. Sua senha atual continua válida.</p></div>`);
+  await enviar(servico,email,'Redefinir sua senha — Positivo',`Abra este link para definir uma nova senha: ${url}\nO link expira em 15 minutos e só pode ser usado uma vez. Se não solicitou, ignore: sua senha atual continua válida.`,emailRecuperacao({painel:origemPainel(servico.env),url}));
  }catch{/* Resposta uniforme: não revela contas, limites individuais ou falhas do provedor. */}
  return generica;
 }

@@ -1,4 +1,11 @@
 import assert from 'node:assert/strict';
+import {emailAcessoTemporario,emailRecuperacao} from '../aviso/layout-email-contas.mjs';
+const painelLayout='https://positivo.pages.dev/';
+for(const html of [emailAcessoTemporario({painel:painelLayout,email:'pessoa@empresa.com',senha:'Senha<&123',nome:'Nome <teste>'}),emailRecuperacao({painel:painelLayout,url:painelLayout+'#redefinir-senha=exemplo'})]){
+ assert.match(html,/email-header/);assert.match(html,/email-footer/);assert.match(html,/positivo-email-footer.png/);assert.match(html,/bgcolor="#000000"/);assert.doesNotMatch(html,/Férias da equipe →/);assert.doesNotMatch(html,/<teste>/);
+}
+assert.match(emailRecuperacao({painel:painelLayout,url:painelLayout+'#redefinir-senha=exemplo'}),/href="https:\/\/positivo.pages.dev\/#redefinir-senha=exemplo"/);
+assert.match(emailAcessoTemporario({painel:painelLayout,email:'pessoa@empresa.com',senha:'Senha<&123'}),/Senha&lt;&amp;123/);
 import {gerarTemporaria,trocarTemporaria,credencialLiberada,recuperarSenha,concluirRecuperacao,limitarContas,senhaValida,atenderContas} from '../cloudflare/contas.mjs';
 function banco(){const dados=new Map();let fila=Promise.resolve();const doc=p=>({path:p,get:async()=>({exists:dados.has(p),data:()=>structuredClone(dados.get(p))}),set:async(d,o={})=>dados.set(p,structuredClone(o.merge?{...dados.get(p),...d}:d))});return{dados,doc,runTransaction:fn=>{const r=fila.then(async()=>{const writes=[];const result=await fn({get:r=>r.get(),set:(r,d)=>writes.push([r.path,structuredClone(d)])});for(const[p,d]of writes)dados.set(p,d);return result;});fila=r.catch(()=>{});return r;}};}
 const db=banco(),agora=Date.now(),contas=new Map(),emails=[];

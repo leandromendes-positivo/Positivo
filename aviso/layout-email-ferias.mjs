@@ -17,17 +17,19 @@ function faixaEmail(conteudo,{preto=false,classe='',padding='40px 32px'}={}){
  <!--[if mso]></td></tr></table><![endif]-->
  </td></tr></table>`;
 }
-export function layoutEmailFerias({titulo,resumo,conteudo,painel='',etiqueta='LEMBRETES DE FÉRIAS'}){
+export function layoutEmailFerias({titulo,resumo,conteudo,painel='',etiqueta='LEMBRETES DE FÉRIAS',botaoUrl='',textoBotao='Abrir programação de férias',rodapeMensagem='',rodapeDetalhe=''}){
  const esc=escaparEmail,links=linksEmailFerias(painel);
  const header=`<p class="email-cinza" style="margin:0 0 12px;color:#cccccc;font-size:11px;font-weight:700;letter-spacing:1.5px;line-height:1.6">GESTÃO DE COLABORADORES · ${esc(etiqueta)}</p>
  <h1 class="email-titulo email-branco" style="margin:0;color:#ffffff;font-size:32px;letter-spacing:-0.5px;line-height:1.2;font-weight:700">${esc(titulo)}</h1>
  <p class="email-cinza" style="margin:12px 0 0;color:#cccccc;font-size:16px;line-height:1.7">${esc(resumo)}</p>`;
- const cta=links?`<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td bgcolor="#000000" class="email-preto" style="background-color:#000000"><a class="email-branco" href="${esc(links.painel)}" style="display:inline-block;padding:16px 24px;border:1px solid #000000;background-color:#000000;color:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:700;line-height:1.5;text-decoration:none">Abrir programação de férias</a></td></tr></table>`:'';
+ let destino=links?.painel;
+ if(botaoUrl){const u=new URL(botaoUrl);if(u.protocol!=='https:'||u.username||u.password)throw new Error('Link de e-mail inválido');destino=u.href;}
+ const cta=destino?`<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td bgcolor="#000000" class="email-preto" style="background-color:#000000"><a class="email-branco" href="${esc(destino)}" style="display:inline-block;padding:16px 24px;border:1px solid #000000;background-color:#000000;color:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:700;line-height:1.5;text-decoration:none">${esc(textoBotao)}</a></td></tr></table>`:'';
  const footer=`<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td align="center" style="padding:0 0 12px">
  ${links?`<img src="${esc(links.logo)}" width="240" height="80" alt="Positivo Tecnologia" style="display:block;margin:0 auto;width:240px;max-width:100%;height:auto;background-color:#000000;color:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:20px;font-weight:700;text-align:center">`:'<p class="email-branco" style="margin:0;color:#ffffff;font-size:24px;font-weight:700">Positivo Tecnologia</p>'}
  </td></tr><tr><td align="center" class="email-cinza" style="font-family:Arial,Helvetica,sans-serif;color:#cccccc;font-size:12px;line-height:1.6;text-align:center">
- <p style="margin:0 0 12px">Você recebe este e-mail pela sua inscrição no painel.<br>Para alterar o endereço, o horário ou desativar os avisos, acesse<br><strong class="email-branco" style="color:#ffffff">Férias da equipe → Lembretes por e-mail</strong>.</p>
- <p style="margin:0;color:#cccccc">Gestão de colaboradores · Mensagem automática<br>Consulte o painel para conferir a programação atual.</p>
+ <p style="margin:0 0 12px">${rodapeMensagem?esc(rodapeMensagem):'Você recebe este e-mail pela sua inscrição no painel.<br>Para alterar o endereço, o horário ou desativar os avisos, acesse<br><strong class="email-branco" style="color:#ffffff">Férias da equipe → Lembretes por e-mail</strong>.'}</p>
+ <p style="margin:0;color:#cccccc">${rodapeDetalhe?esc(rodapeDetalhe):'Gestão de colaboradores · Mensagem automática<br>Consulte o painel para conferir a programação atual.'}</p>
  </td></tr></table>`;
  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="light"><meta name="supported-color-schemes" content="light"><title>${esc(titulo)}</title><style>
  :root{color-scheme:light;supported-color-schemes:light}

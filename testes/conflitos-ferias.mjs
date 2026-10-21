@@ -19,4 +19,7 @@ const legado=(id,regiao)=>{const f=pessoa(id,undefined,{regiao});delete f.area;d
 assert.equal(conflitos(legado('a','PR Capital'),legado('b','PR Interior')),0);
 assert.equal(conflitos(legado('a','PR Capital'),legado('b','PR Capital')),1);
 assert.equal(conflitos(pessoa('adm','',{area:'administrativo'}),pessoa('adm2','',{area:'administrativo'})),1);
+const administrativo=pessoa('administrativo','',{area:'administrativo'});
+for(const tecnico of [capital,interior,pessoa('sem-localidade',''),legado('legado','PR Capital')]){assert.equal(conflitos(administrativo,tecnico),0);assert.equal(conflitos(tecnico,administrativo),0);}
+assert.equal(conflitos(administrativo,pessoa('adm-outra-uf','',{area:'administrativo',regiao:'SC'})),0);
 console.log('Conflitos: capital/interior separados, mesma localidade, dados legados, localidade ausente, UF, datas, cancelamento e arquivo passaram.');

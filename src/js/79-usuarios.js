@@ -1,11 +1,11 @@
-// Resultados transitórios, sem senha; a autorização continua no servidor.
+// Resultados transitórios em memória; nunca usar localStorage/Firestore para senhas.
 const UIenviosAcesso={uid:'',itens:new Map()};
 function resultadosEnviosAcesso(){
   if(UIenviosAcesso.uid!==Acesso.usuario?.uid){UIenviosAcesso.uid=Acesso.usuario?.uid||'';UIenviosAcesso.itens.clear();}
   return UIenviosAcesso.itens;
 }
 function avisoEnviosAcesso(){
-  return [...resultadosEnviosAcesso().values()].slice(-5).reverse().map(r=>`<section class="usuarios-envio ${r.estado}" role="${r.estado==='erro'?'alert':'status'}" aria-live="polite"><div><strong>${r.estado==='enviando'?'Cadastro salvo · enviando senha temporária':r.estado==='enviado'?'Cadastro salvo · e-mail aceito pelo provedor':r.estado==='sem-envio'?'Cadastro salvo · sem alteração de senha':'Cadastro salvo · envio não confirmado'}</strong><p>${esc(r.email)}</p><p>${esc(r.mensagem)}</p></div>${r.estado==='erro'?`<button class="btn pequeno" data-acao="enviar-senha-usuario" data-email="${esc(r.email)}">Tentar enviar senha</button>`:''}</section>`).join('');
+  return [...resultadosEnviosAcesso().values()].slice(-5).reverse().map(r=>`<section class="usuarios-envio ${r.estado}" role="${r.estado==='erro'?'alert':'status'}" aria-live="polite"><div><strong>${r.estado==='enviando'?'Cadastro salvo · enviando senha temporária':r.estado==='enviado'?'Cadastro salvo · e-mail aceito pelo provedor':r.estado==='sem-envio'?'Cadastro salvo · sem alteração de senha':'Cadastro salvo · envio não confirmado'}</strong><p>${esc(r.email)}</p><p>${esc(r.mensagem)}</p></div>${r.acesso?`<button class="btn pequeno" data-acao="ver-acesso-gerado" data-email="${esc(r.email)}">Ver link e senha temporária</button>`:''}${r.estado==='erro'?`<button class="btn pequeno" data-acao="enviar-senha-usuario" data-email="${esc(r.email)}">Tentar enviar senha</button>`:''}</section>`).join('');
 }
 function atualizarEnviosAcesso(){if(podeAdministrar()&&UI.pagina==='usuarios')renderizar(true);}
 async function enviarSenhaUsuario(email,confirmada=false,operacao=crypto.randomUUID()){
@@ -20,7 +20,14 @@ async function enviarSenhaUsuario(email,confirmada=false,operacao=crypto.randomU
     const d=await solicitarConta('temporaria',{email,operacao},true,60000);
     if(d.enviado!==true&&d.gerado!==true)throw new Error('O serviço não confirmou a geração do acesso.');
     r.estado=d.enviado?'enviado':'erro';r.mensagem=d.enviado?'Confira a caixa de entrada e o spam. A senha temporária vale por 24 horas.':'A senha foi gerada, mas o Gmail não confirmou o envio. Confira as credenciais de envio no Cloudflare. Você pode compartilhar os dados manualmente.';
-    if(d.senhaTemporaria&&Acesso.usuario?.uid===uid&&podeAdministrar())mostrarAcessoGerado(d);
+    if(Acesso.usuario?.uid!==uid||!podeAdministrar())return;
+    if(d.senhaTemporaria){
+      r.acesso=d;
+      setTimeout(()=>{delete r.acesso;if(Acesso.usuario?.uid===uid)atualizarEnviosAcesso();},5*60000);
+      mostrarAcessoGerado({...d});
+    }else{
+      r.estado='erro';r.mensagem='O serviço respondeu sem a senha temporária. Confira se a publicação do Worker no Cloudflare concluiu com a mesma versão do painel. A senha anterior não pode ser recuperada; após atualizar o Worker, gere uma nova.';
+    }
 
   }catch(e){r.estado='erro';r.mensagem=e.message+' Confira a caixa de entrada e o spam antes de tentar gerar outra senha.';}
   if(Acesso.usuario?.uid===uid)atualizarEnviosAcesso();

@@ -170,6 +170,7 @@ function bloquearSessao(mensagem = 'Seu acesso foi desativado. Procure o adminis
   MenuLateral.fechar({ restaurarFoco: false });
   limparPortalTecnico();
   RespostasTecnicos.eventos = [];
+  UIenviosAcesso.itens.clear();
   Acesso.perfil = null;
   fecharModaisAdministrativos();
   limparHistoricoRanking();

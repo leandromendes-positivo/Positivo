@@ -268,6 +268,7 @@ const ACOES = {
   "devolucoes-novas": () => { Object.assign(UIinventario,{tid:'',tipo:'novas',estado:'devolvidas',busca:'',pagina:1});irPara('inventario'); },
   "inventario-atualizar": () => carregarInventario(),
   "inventario-exportar": () => exportarInventario(),
+  "ver-acesso-gerado": el => { exigirAdministrador();const d=resultadosEnviosAcesso().get(el.dataset.email)?.acesso;if(d)mostrarAcessoGerado({...d});else toast('Gere uma nova senha temporária para consultar o acesso.','info'); },
   "novo-usuario": () => modalUsuario(),
   "editar-usuario": el => modalUsuario(el.dataset.email),
   "enviar-senha-usuario": el => enviarSenhaUsuario(el.dataset.email),

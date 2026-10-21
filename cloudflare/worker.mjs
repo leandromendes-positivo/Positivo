@@ -5,6 +5,15 @@ import {processarTestesFerias} from '../aviso/testes-ferias.mjs';
 import {createHash} from 'node:crypto';
 import {hojeBrasilia} from '../aviso/data-brasilia.mjs';
 import {processarLembretes,destinatariosLembretes} from '../aviso/lembretes-ferias.mjs';
+// Cache somente da credencial de serviço, nunca de permissões ou de tokens do usuário.
+let credencialContasCache=null;
+async function tokenContas(cred){
+ const chave=createHash('sha256').update(JSON.stringify([cred.project_id,cred.client_email,cred.private_key])).digest('hex');
+ if(credencialContasCache?.chave===chave&&credencialContasCache.expira>Date.now())return credencialContasCache.promessa;
+ const entrada={chave,expira:Date.now()+5*60000,promessa:null};
+ entrada.promessa=tokenServico(cred,fetch,'https://www.googleapis.com/auth/cloud-platform').catch(e=>{if(credencialContasCache===entrada)credencialContasCache=null;throw e;});
+ credencialContasCache=entrada;return entrada.promessa;
+}
 export function origemPermitida(req,env){
  try{return new URL(env.PAINEL_URL).origin===req.headers.get('Origin')&&new URL(env.PAINEL_URL).protocol==='https:';}catch{return false;}
 }
@@ -64,7 +73,7 @@ export default {
   if(req.method!=='POST')return new Response(null,{status:405,headers});
   if(caminho.startsWith('/contas/'))return atenderContas(req,env,async()=>{
    const cred=JSON.parse(env.FIREBASE_SERVICE_ACCOUNT||'null');if(cred?.project_id!==env.FIREBASE_PROJECT_ID)throw new Error('Projeto inválido');
-   const token=await tokenServico(cred,fetch,'https://www.googleapis.com/auth/cloud-platform');
+   const token=await tokenContas(cred);
    return {db:firestoreREST(env.FIREBASE_PROJECT_ID,token),authAdmin:authAdministrativa(env.FIREBASE_PROJECT_ID,token),transporte:transporteEmail(env),remetente:env.EMAIL_REMETENTE};
   },headers,ctx);
   if(env.ATIVAR_SERVICO!=='true')return Response.json({erro:'Serviço ainda não ativado'},{status:503,headers});

@@ -234,3 +234,26 @@ protegido. O Google continua disponível; Microsoft foi retirado da tela inicial
 - Depois de resetar, abas antigas podem continuar exibindo conteúdo já visto;
   as regras bloqueiam novas leituras e escritas. Recarregar/entrar limpa a sessão.
   Permissões, revogação do perfil e isolamento dos técnicos continuam aplicados.
+
+### Resultado do cadastro e rapidez do envio
+
+O cadastro agora aceita **Nome do colaborador**, preservando o nome atual se o
+campo ficar vazio. Administradores podem ajustar nomes de outros colaboradores;
+o administrador principal e a própria permissão continuam protegidos.
+
+**Salvar alterações** fecha a janela assim que o Firestore confirma o cadastro.
+Se o envio de senha estiver marcado, a chamada direta ao Worker começa em seguida,
+sem manter o popup aberto. O topo da lista informa envio em andamento, aceite do
+provedor ou erro com opção de tentar novamente. Uma falha no e-mail não é tratada
+como falha do cadastro já salvo. A lista também oferece **Enviar senha temporária**
+para contas ativas elegíveis, sem obrigar a salvar o cadastro novamente. Salvar
+com a opção desmarcada não gera ou envia senha, nem altera a senha existente.
+
+Para reduzir viagens de rede, tokens OAuth de serviço/Gmail são reaproveitados
+somente em memória no Worker por até cinco minutos. Tokens e permissões de
+usuários nunca são cacheados por essa otimização: perfil, vínculo e versão de
+senha continuam sendo reconferidos. Rejeição Gmail 401 permite uma renovação e
+nova tentativa; timeout e respostas incertas não provocam reenvio automático.
+A autenticação do remetente é conferida antes de substituir a senha atual. O
+aceite do Gmail/Resend não comprova chegada na caixa de entrada; a entrega final
+continua dependendo do provedor e dos filtros da empresa. Não há fila do GitHub.

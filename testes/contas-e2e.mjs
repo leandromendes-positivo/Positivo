@@ -26,8 +26,16 @@ try{
  const ctx=await browser.newContext({viewport:{width:1360,height:900}});
  await ctx.route('https://www.gstatic.com/firebasejs/**',r=>r.fulfill({path:path.resolve(process.env.FIREBASE_SDK_DIR||'seguranca/node_modules/firebase',r.request().url().split('/').at(-1)),contentType:'application/javascript'}));
  await ctx.addInitScript(projeto=>{window.CP_FIREBASE={apiKey:'chave-de-teste',projectId:projeto,authDomain:projeto+'.firebaseapp.com'};window.__CP_FIREBASE_EMULADOR__=true;},projeto);
+ let liberarEnvio,simularFalha=false;const portaoEnvio=new Promise(resolve=>liberarEnvio=resolve);
  await ctx.route('https://positivo.leandromendes-positivo.workers.dev/contas/**',async route=>{
   const r=route.request();if(r.method()==='OPTIONS')return route.fulfill({status:204,headers:{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'Authorization,Content-Type'}});
+  if(r.url().endsWith('/contas/temporaria')){
+   const dados=JSON.parse(r.postData()||'{}');
+   if(dados.email==='cadastro.e2e@empresa.com'){
+    if(simularFalha)return route.fulfill({status:503,headers:{'Access-Control-Allow-Origin':'*','Content-Type':'application/json'},body:JSON.stringify({erro:'Confira o remetente de e-mail no Cloudflare.'})});
+    await portaoEnvio;
+   }
+  }
   const res=await atenderContas(new Request(r.url(),{method:r.method(),headers:r.headers(),body:r.postData()}),config,async()=>servico,{'Access-Control-Allow-Origin':'*','Cache-Control':'no-store'},undefined,fetchLocal);
   await route.fulfill({status:res.status,headers:Object.fromEntries(res.headers),body:await res.text()});
  });
@@ -45,5 +53,20 @@ try{
  const link=emails.at(-1).text.match(/#redefinir-senha=([-\w]+)/)[0];await p.goto(base+link);await p.locator('[data-nova-senha]').waitFor();assert.equal(p.url().includes('redefinir-senha='),false);
  const ultima='Outra frase nova e segura 456!';await p.locator('[data-nova-senha] [name=senha]').fill(ultima);await p.locator('[data-nova-senha] [name=confirmacao]').fill(ultima);await p.locator('[data-nova-senha] [type=submit]').click();await p.locator('#login-senha').waitFor();
  await p.locator('#login-senha [name=email]').fill('senha.e2e@empresa.com');await p.locator('#login-senha [name=senha]').fill(ultima);await p.locator('#login-senha [type=submit]').click();await p.waitForFunction(()=>E.status==='pronto');
- assert.deepEqual(erros,[]);console.log('E-mail/senha E2E: criação REST real, troca obrigatória antes dos dados, recuperação, login e responsividade passaram. Nenhum e-mail real enviado.');
+ // Cadastro fecha antes do provedor responder e mantém resultado na lista.
+ const gestor=await ctx.newPage();gestor.on('pageerror',e=>erros.push(e.message));
+ await p.evaluate(async()=>Acesso.auth.signOut());
+ await gestor.addInitScript(()=>{window.__CP_LOGIN_TESTE__={sub:'admin-cadastro',email:'admin@empresa.com',email_verified:true};});
+ await gestor.goto(base);await gestor.waitForFunction(()=>E.status==='pronto');await gestor.evaluate(()=>irPara('usuarios'));
+ await gestor.locator('[data-acao="novo-usuario"]').click();await gestor.locator('.modal [name=nome]').fill('Maria Cadastro');await gestor.locator('.modal [name=email]').fill('cadastro.e2e@empresa.com');
+ await gestor.locator('.modal [data-salvar]').click();await gestor.waitForFunction(()=>!document.querySelector('.modal-fundo'));
+ await gestor.locator('.usuarios-envio.enviando').waitFor();assert.equal(emails.length,2,'janela fecha enquanto envio está em andamento');
+ liberarEnvio();await gestor.locator('.usuarios-envio.enviado').waitFor();assert.match(emails.at(-1).text,/Maria Cadastro/);
+ assert.equal((await db.doc('usuarios/cadastro.e2e@empresa.com').get()).data().nome,'Maria Cadastro');
+ const quantidade=emails.length;
+ await gestor.locator('[data-acao="editar-usuario"][data-email="cadastro.e2e@empresa.com"]').click();await gestor.locator('.modal [name=nome]').fill('Maria Nome Alterado');await gestor.locator('.modal [data-salvar]').click();await gestor.waitForFunction(()=>!document.querySelector('.modal-fundo'));
+ assert.equal(emails.length,quantidade,'editar nome não redefine senha automaticamente');assert.equal((await db.doc('usuarios/cadastro.e2e@empresa.com').get()).data().nome,'Maria Nome Alterado');
+ simularFalha=true;
+ await gestor.locator('[data-acao="editar-usuario"][data-email="cadastro.e2e@empresa.com"]').click();await gestor.locator('.modal [name=gerarSenha]').check();await gestor.locator('.modal [data-salvar]').click();await gestor.waitForFunction(()=>!document.querySelector('.modal-fundo'));await gestor.locator('.usuarios-envio.erro').waitFor();assert.match(await gestor.locator('.usuarios-envio.erro').innerText(),/Confira o remetente/);
+ assert.deepEqual(erros,[]);console.log('E-mail/senha E2E: nome, popup fecha antes do envio, falha explícita sem repetir cadastro, criação REST real, troca obrigatória antes dos dados, recuperação, login e responsividade passaram. Nenhum e-mail real enviado.');
 }finally{await browser.close();await ambiente.cleanup();await deleteApp(app);}

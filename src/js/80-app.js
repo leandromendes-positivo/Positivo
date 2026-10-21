@@ -269,6 +269,7 @@ const ACOES = {
   "inventario-exportar": () => exportarInventario(),
   "novo-usuario": () => modalUsuario(),
   "editar-usuario": el => modalUsuario(el.dataset.email),
+  "enviar-senha-usuario": el => enviarSenhaUsuario(el.dataset.email),
   "historico-agenda": el => modalHistoricoAgenda(el.dataset.tid),
   "editar-tecnico": (el) => modalTecnico(el.dataset.tid),
   "editar-prazos": (el) => modalTecnico(el.dataset.tid, true),

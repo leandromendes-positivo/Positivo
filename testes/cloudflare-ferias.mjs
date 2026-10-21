@@ -34,3 +34,12 @@ await assert.rejects(()=>falho.sendMail({to:{address:'destino@exemplo.com'},mess
 const incerto=transporteEmail({...emailenv,EMAIL_PROVEDOR:'resend',RESEND_API_KEY:'ficticio'},async()=>new Response(null,{status:502}));
 await assert.rejects(()=>incerto.sendMail({to:{address:'destino@exemplo.com'},messageId:'teste'}),e=>!e.responseCode&&e.code==='ESOCKET','erro do servidor não autoriza reenvio automático');
 console.log('Worker: origem exata, token validado no Firebase, projeto/revogação/perfil, isolamento por UID, ativação explícita, MIME e rejeição do provedor passaram. Nenhum e-mail real enviado.');
+
+// Novo transporte reaproveita o token em memória e só repete envio rejeitado por 401.
+const cacheEnv={...emailenv,GMAIL_CLIENT_ID:'cache-dedicado'},pedidosCache=[];
+const fetchCache=async(url)=>{pedidosCache.push(url);return Response.json(url.includes('oauth2')?{access_token:'token-cache',expires_in:3600}:{id:'ok'});};
+for(let i=0;i<2;i++)await transporteEmail(cacheEnv,fetchCache).sendMail({to:{address:'destino@exemplo.com'},subject:'Teste',text:'Teste',messageId:'<cache-'+i+'@exemplo.com>'});
+assert.equal(pedidosCache.filter(u=>u.includes('oauth2')).length,1,'reduz autenticações repetidas sem cachear autorização de usuários');
+let rejeitar=true,renovacoes=0,enviosCache=0;
+await transporteEmail(cacheEnv,async(url)=>{if(url.includes('oauth2')){renovacoes++;return Response.json({access_token:'renovado'});}enviosCache++;if(rejeitar){rejeitar=false;return new Response(null,{status:401});}return Response.json({id:'aceito'});}).sendMail({to:{address:'destino@exemplo.com'},subject:'Teste',text:'Teste',messageId:'<renovado@exemplo.com>'});
+assert.equal(renovacoes,1);assert.equal(enviosCache,2);

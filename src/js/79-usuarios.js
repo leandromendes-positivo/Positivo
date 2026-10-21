@@ -1,12 +1,37 @@
+// Resultados transitórios, sem senha; a autorização continua no servidor.
+const UIenviosAcesso={uid:'',itens:new Map()};
+function resultadosEnviosAcesso(){
+  if(UIenviosAcesso.uid!==Acesso.usuario?.uid){UIenviosAcesso.uid=Acesso.usuario?.uid||'';UIenviosAcesso.itens.clear();}
+  return UIenviosAcesso.itens;
+}
+function avisoEnviosAcesso(){
+  return [...resultadosEnviosAcesso().values()].slice(-5).reverse().map(r=>`<section class="usuarios-envio ${r.estado}" role="${r.estado==='erro'?'alert':'status'}" aria-live="polite"><div><strong>${r.estado==='enviando'?'Cadastro salvo · enviando senha temporária':r.estado==='enviado'?'Cadastro salvo · e-mail aceito pelo provedor':r.estado==='sem-envio'?'Cadastro salvo · sem alteração de senha':'Cadastro salvo · envio não confirmado'}</strong><p>${esc(r.email)}</p><p>${esc(r.mensagem)}</p></div>${r.estado==='erro'?`<button class="btn pequeno" data-acao="enviar-senha-usuario" data-email="${esc(r.email)}">Tentar enviar senha</button>`:''}</section>`).join('');
+}
+function atualizarEnviosAcesso(){if(podeAdministrar()&&UI.pagina==='usuarios')renderizar(true);}
+async function enviarSenhaUsuario(email,confirmada=false,operacao=crypto.randomUUID()){
+  exigirAdministrador();email=String(email||'').trim().toLowerCase();
+  if(resultadosEnviosAcesso().get(email)?.estado==='enviando')return;
+  if(!confirmada)await confirmarAdministradorSenha();
+  if(resultadosEnviosAcesso().get(email)?.estado==='enviando')return;
+  const uid=Acesso.usuario?.uid,r={email,estado:'enviando',mensagem:'O envio é direto pelo Cloudflare. Aguarde a confirmação; não é preciso salvar novamente.',operacao};
+  resultadosEnviosAcesso().set(email,r);atualizarEnviosAcesso();
+  try{
+    if(Acesso.usuario?.uid!==uid)throw new Error('Sua sessão mudou. Entre novamente.');
+    const d=await solicitarConta('temporaria',{email,operacao},true,60000);
+    if(d.enviado!==true)throw new Error('O serviço não confirmou o envio.');
+    r.estado='enviado';r.mensagem='Confira a caixa de entrada e o spam. A senha temporária vale por 24 horas.';
+  }catch(e){r.estado='erro';r.mensagem=e.message+' Confira a caixa de entrada e o spam antes de tentar gerar outra senha.';}
+  if(Acesso.usuario?.uid===uid)atualizarEnviosAcesso();
+}
 /* Gestão de acessos: somente administradores; o perfil vem do banco protegido. */
 function renderUsuarios() {
   if (!podeAdministrar()) return vazio('pessoa','Acesso restrito','O cadastro de usuários é exclusivo de administradores.');
   if (Acesso.modo !== 'firebase') return vazio('info','Conecte o Firebase','Os acessos são gerenciados no banco autenticado. A demonstração não libera contas reais.');
   const lista = [...E.usuarios].sort((a,b) => Number(b.principal)-Number(a.principal) || comparar(a.email,b.email));
-  return `<section class="usuarios-intro"><div><span class="sobretitulo">ADMINISTRAÇÃO / ACESSOS</span><h2>As pessoas da operação</h2><p>Autorize cada endereço e escolha o que a pessoa pode fazer.</p></div><button class="btn prim" data-acao="novo-usuario">${icone('mais')}Cadastrar usuário</button><button class="btn" data-acao="novo-acesso-tecnico">Cadastrar técnico</button>${imagemCabecalho()}</section>
+  return `${avisoEnviosAcesso()}<section class="usuarios-intro"><div><span class="sobretitulo">ADMINISTRAÇÃO / ACESSOS</span><h2>As pessoas da operação</h2><p>Autorize cada endereço e escolha o que a pessoa pode fazer.</p></div><button class="btn prim" data-acao="novo-usuario">${icone('mais')}Cadastrar usuário</button><button class="btn" data-acao="novo-acesso-tecnico">Cadastrar técnico</button>${imagemCabecalho()}</section>
     <div class="perfis-grade"><article>${icone('pessoa')}<h3>Usuário</h3><p>Consulta peças e indicadores, agenda devoluções e registra contatos e observações.</p></article><article>${icone('ajustes')}<h3>Administrador</h3><p>Também importa planilhas, edita técnicos e regras, classifica saídas e gerencia acessos.</p></article><article>${icone('caixa')}<h3>Técnico</h3><p>Acessa exclusivamente as próprias peças e informa devolução e RMDF. Exige vínculo explícito com técnico e UF.</p></article></div>
     <div class="usuarios-resumo"><span><strong>${lista.filter(u=>u.ativo).length}</strong> acessos ativos</span><span><strong>${lista.filter(u=>u.ativo&&u.perfil==='administrador').length}</strong> administradores</span><span><strong>${lista.filter(u=>!u.ativo).length}</strong> desativados</span></div>
-    ${lista.length ? `<div class="tabela-rolagem"><table class="tabela"><thead><tr><th>Pessoa / e-mail autorizado</th><th>Perfil</th><th>Acesso</th><th>Última alteração</th><th></th></tr></thead><tbody>${lista.map(u=>`<tr><td><span class="celula-tec">${avatar(nomeDaConta(u,u.email))}<span><strong>${esc(nomeDaConta(u,u.email))}</strong><small class="sub-celula">${esc(u.email)}</small></span></span></td><td>${pill(u.perfil==='administrador'?'info':'neutro',u.principal?'Administrador principal':PERFIS[u.perfil])}${u.tecnicoId?`<small class="sub-celula">Estoque: ${esc(u.tecnicoId)}</small>`:''}</td><td>${pill(u.ativo?'ok':'grave',u.ativo?'Ativo':'Desativado')}</td><td>${u.atualizadoEm?fmtDataHora(u.atualizadoEm):'—'}<small class="sub-celula">${esc(u.atualizadoPor?.email ? primeiroNomeEmail(u.atualizadoPor.email) : 'Configuração inicial')}</small></td><td><button class="btn pequeno" data-acao="editar-usuario" data-email="${esc(u.email)}">${u.principal || u.email === Acesso.usuario?.email?.toLowerCase() ? 'Ver acesso' : 'Gerenciar'}</button></td></tr>`).join('')}</tbody></table></div>` : vazio('pessoas','Carregando acessos','Os cadastros aparecerão aqui.')}
+    ${lista.length ? `<div class="tabela-rolagem"><table class="tabela"><thead><tr><th>Pessoa / e-mail autorizado</th><th>Perfil</th><th>Acesso</th><th>Última alteração</th><th></th></tr></thead><tbody>${lista.map(u=>`<tr><td><span class="celula-tec">${avatar(nomeDaConta(u,u.email))}<span><strong>${esc(nomeDaConta(u,u.email))}</strong><small class="sub-celula">${esc(u.email)}</small></span></span></td><td>${pill(u.perfil==='administrador'?'info':'neutro',u.principal?'Administrador principal':PERFIS[u.perfil])}${u.tecnicoId?`<small class="sub-celula">Estoque: ${esc(u.tecnicoId)}</small>`:''}</td><td>${pill(u.ativo?'ok':'grave',u.ativo?'Ativo':'Desativado')}</td><td>${u.atualizadoEm?fmtDataHora(u.atualizadoEm):'—'}<small class="sub-celula">${esc(u.atualizadoPor?.email ? primeiroNomeEmail(u.atualizadoPor.email) : 'Configuração inicial')}</small></td><td><button class="btn pequeno" data-acao="editar-usuario" data-email="${esc(u.email)}">${u.principal || u.email === Acesso.usuario?.email?.toLowerCase() ? 'Ver acesso' : 'Gerenciar'}</button>${u.ativo&&!u.principal&&u.email!==Acesso.usuario?.email?.toLowerCase()?`<button class="btn pequeno" data-acao="enviar-senha-usuario" data-email="${esc(u.email)}" ${resultadosEnviosAcesso().get(u.email)?.estado==='enviando'?'disabled':''}>Enviar senha temporária</button>`:''}</td></tr>`).join('')}</tbody></table></div>` : vazio('pessoas','Carregando acessos','Os cadastros aparecerão aqui.')}
     <p class="nota usuarios-nota">A desativação bloqueia novas leituras e gravações, inclusive em uma sessão já aberta. O administrador principal permanece protegido para evitar que a equipe perca o acesso.</p>`;
 }
 function modalUsuario(email = '', perfilInicial = 'usuario') {
@@ -15,27 +40,28 @@ function modalUsuario(email = '', perfilInicial = 'usuario') {
   if (email && !u) { toast('O cadastro não está disponível. Atualize a lista antes de continuar.', 'info'); return; }
   const protegido = u?.principal || email === Acesso.usuario?.email?.toLowerCase();
   const m = abrirModal({ administrativo: true, titulo: protegido ? 'Acesso protegido' : u ? 'Gerenciar acesso' : 'Cadastrar usuário', subtitulo: 'Cadastre o e-mail e defina as permissões do colaborador.',
-    corpo: `<form class="form" id="usuario-form"><label class="campo"><span>E-mail autorizado</span><input type="email" name="email" required maxlength="254" autocomplete="off" ${u?'readonly':''} value="${esc(email)}" autofocus><small>Use o endereço corporativo exato da pessoa.</small></label><label class="campo"><span>Perfil de acesso</span><select name="perfil" ${protegido?'disabled':''}>${Object.entries(PERFIS).map(([v,n])=>`<option value="${v}" ${(u?.perfil||perfilInicial)===v?'selected':''}>${n}</option>`).join('')}</select></label><label class="campo" data-vinculo><span>Técnico / UF do estoque</span><select name="tecnicoId" ${protegido?'disabled':''}><option value="">Selecione o cadastro correspondente</option>${u?.tecnicoId?`<option value="${esc(u.tecnicoId)}" selected>Vínculo atual: ${esc(u.tecnicoId)}</option>`:''}${opcoesVinculoTecnico().filter(t=>t.id!==u?.tecnicoId).map(t=>`<option value="${esc(t.id)}">${esc(t.nome)} · ${esc(t.regiao)} · ${esc(t.tid)}</option>`).join('')}</select><small>Confira o identificador exato do relatório. O vínculo é exclusivo por e-mail e UF; apelido e e-mail de contato não concedem acesso. Homônimos na mesma UF precisam de identificadores distintos na origem.</small></label><label class="check-inline"><input type="checkbox" name="ativo" ${!u||u.ativo?'checked':''} ${protegido?'disabled':''}>Acesso ativo</label><p class="nota">${u?.principal?'O administrador principal não pode ser removido, desativado ou rebaixado por outro administrador. Seu cadastro é somente leitura nesta tela.':protegido?'Você não pode alterar suas próprias permissões. Para editar seu nome, use Minha conta.':'Uma conta desativada permanece no cadastro para preservar a identificação do histórico.'}</p>${!protegido?`<label class="check-inline"><input type="checkbox" name="gerarSenha" ${!u?'checked':''}>${u?'Gerar nova senha temporária e enviar por e-mail':'Gerar senha temporária e enviar por e-mail'}</label><p class="nota">A senha é gerada no servidor, vale por 24 horas e deve ser trocada no primeiro acesso. Para redefinir uma conta existente, marque a opção acima. A senha anterior será substituída; as permissões e o vínculo de estoque permanecem os deste cadastro.</p><p data-senha-resultado role="status" aria-live="polite"></p>`:''}</form>`,
-    rodape: protegido ? '<button class="btn" data-fechar>Fechar</button>' : '<button class="btn" data-fechar>Cancelar</button><button class="btn prim" data-salvar>Salvar acesso</button>' });
-  const f=m.el.querySelector('form'), btn=m.el.querySelector('[data-salvar]');let operacaoSenha=crypto.randomUUID();
+    corpo: `<form class="form" id="usuario-form"><label class="campo"><span>Nome do colaborador</span><input type="text" name="nome" maxlength="80" autocomplete="name" value="${esc(u?.nome||'')}" ${protegido?'readonly':''} placeholder="Nome completo"><small>Opcional. Se deixar vazio, o nome atual será mantido.</small></label><label class="campo"><span>E-mail autorizado</span><input type="email" name="email" required maxlength="254" autocomplete="off" ${u?'readonly':''} value="${esc(email)}" autofocus><small>Use o endereço corporativo exato da pessoa.</small></label><label class="campo"><span>Perfil de acesso</span><select name="perfil" ${protegido?'disabled':''}>${Object.entries(PERFIS).map(([v,n])=>`<option value="${v}" ${(u?.perfil||perfilInicial)===v?'selected':''}>${n}</option>`).join('')}</select></label><label class="campo" data-vinculo><span>Técnico / UF do estoque</span><select name="tecnicoId" ${protegido?'disabled':''}><option value="">Selecione o cadastro correspondente</option>${u?.tecnicoId?`<option value="${esc(u.tecnicoId)}" selected>Vínculo atual: ${esc(u.tecnicoId)}</option>`:''}${opcoesVinculoTecnico().filter(t=>t.id!==u?.tecnicoId).map(t=>`<option value="${esc(t.id)}">${esc(t.nome)} · ${esc(t.regiao)} · ${esc(t.tid)}</option>`).join('')}</select><small>Confira o identificador exato do relatório. O vínculo é exclusivo por e-mail e UF; apelido e e-mail de contato não concedem acesso. Homônimos na mesma UF precisam de identificadores distintos na origem.</small></label><label class="check-inline"><input type="checkbox" name="ativo" ${!u||u.ativo?'checked':''} ${protegido?'disabled':''}>Acesso ativo</label><p class="nota">${u?.principal?'O administrador principal não pode ser removido, desativado ou rebaixado por outro administrador. Seu cadastro é somente leitura nesta tela.':protegido?'Você não pode alterar suas próprias permissões. Para editar seu nome, use Minha conta.':'Uma conta desativada permanece no cadastro para preservar a identificação do histórico.'}</p>${!protegido?`<label class="check-inline"><input type="checkbox" name="gerarSenha" ${!u?'checked':''}>${u?'Gerar nova senha temporária e enviar por e-mail':'Gerar senha temporária e enviar por e-mail'}</label><p class="nota">A senha é gerada no servidor, vale por 24 horas e deve ser trocada no primeiro acesso. Salvar com esta opção desmarcada não gera nem envia senha. Para enviar para esta conta, marque a opção acima ou use o botão na lista. A senha anterior será substituída; as permissões e o vínculo de estoque permanecem os deste cadastro.</p><p data-senha-resultado role="status" aria-live="polite"></p>`:''}</form>`,
+    rodape: protegido ? '<button class="btn" data-fechar>Fechar</button>' : '<p data-cadastro-status role="status" aria-live="polite" style="width:100%;margin:0"></p><button class="btn" data-fechar>Cancelar</button><button class="btn prim" data-salvar>Salvar alterações</button>' });
+  const f=m.el.querySelector('form'), btn=m.el.querySelector('[data-salvar]');
   const atualizarVinculo=()=>{const tec=f.perfil.value==='tecnico';f.querySelector('[data-vinculo]').hidden=!tec;f.tecnicoId.required=tec;};
   f.perfil.addEventListener('change',atualizarVinculo);atualizarVinculo();
   if (!btn) { f.addEventListener('submit', e => e.preventDefault()); return; }
   const salvar=async()=>{
     if (btn.disabled || !f.reportValidity()) return;
-    btn.disabled=true;
+    btn.disabled=true;btn.textContent='Salvando…';
+    const statusModal=m.el.querySelector('[data-cadastro-status]');statusModal.textContent='Salvando cadastro. Aguarde a confirmação.';
     try {
       if(f.gerarSenha?.checked&&!f.ativo.checked)throw new Error('Ative o acesso para enviar uma senha temporária.');
       if(f.gerarSenha?.checked)await confirmarAdministradorSenha();
-      await salvarUsuario(f.email.value, f.perfil.value, f.ativo.checked, f.tecnicoId.value);
-      if(f.gerarSenha?.checked){
-        const status=f.querySelector('[data-senha-resultado]');status.textContent='Cadastro salvo. Gerando o acesso e enviando o e-mail…';
-        try{await solicitarConta('temporaria',{email:f.email.value.trim().toLowerCase(),operacao:operacaoSenha},true);toast('Senha temporária enviada ao e-mail cadastrado.');}
-        catch(e){status.textContent='O cadastro foi salvo, mas o envio da senha não foi confirmado. '+e.message;operacaoSenha=crypto.randomUUID();btn.disabled=false;return;}
-      }
+      const dados={email:f.email.value.trim().toLowerCase(),perfil:f.perfil.value,ativo:f.ativo.checked,tecnicoId:f.tecnicoId.value,nome:f.nome.value,enviar:!!f.gerarSenha?.checked};
+      await salvarUsuario(dados.email,dados.perfil,dados.ativo,dados.tecnicoId,dados.nome);
       m.fechar();
+      if(dados.enviar){void enviarSenhaUsuario(dados.email,true).catch(e=>toast(e.message,'erro'));}
+      else{
+        resultadosEnviosAcesso().set(dados.email,{email:dados.email,estado:'sem-envio',mensagem:'As alterações foram salvas. Nenhuma senha foi gerada ou enviada.'});atualizarEnviosAcesso();
+      }
     }
-    catch(e){toast(e.code ? erroAmigavel(e).message : e.message,'erro');btn.disabled=false;}
+    catch(e){statusModal.textContent=e.code ? erroAmigavel(e).message : e.message;statusModal.setAttribute('role','alert');btn.disabled=false;btn.textContent='Salvar alterações';}
   };
   btn.addEventListener('click',salvar); f.addEventListener('submit',e=>{e.preventDefault();salvar();});
 }

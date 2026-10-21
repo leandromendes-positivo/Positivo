@@ -162,7 +162,7 @@ service cloud.firestore {
             && 'nome' in request.resource.data)
           // O principal é imutável para terceiros; nenhum administrador gerencia a própria permissão.
           || (administrador() && resource.data.principal == false && id != email()
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['perfil','ativo','tecnicoId','atualizadoEm','atualizadoPor'])));
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nome','perfil','ativo','tecnicoId','atualizadoEm','atualizadoPor'])));
       allow delete: if false;
     }
     match /servicos/lembretes-ferias { allow get: if autorizado(); allow list, write: if false; }

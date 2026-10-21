@@ -121,11 +121,13 @@ async function carregarAcompanhamento() {
   combinarAcompanhamento();
 }
 
-async function salvarUsuario(email, perfil, ativo, tecnicoId = '') {
+async function salvarUsuario(email, perfil, ativo, tecnicoId = '', nomeInformado = undefined) {
   exigirAdministrador(); email = String(email || '').trim().toLowerCase();
   if (!emailValido(email) || !PERFIS[perfil] || typeof ativo !== 'boolean') throw new Error('Confira o e-mail e o perfil informado.');
   if (Acesso.modo !== 'firebase') throw new Error('O cadastro de acessos exige conexão com o Firebase.');
   if (perfil === 'tecnico' && !tecnicoId) throw new Error('Selecione o técnico e a UF do estoque.');
+  const nome=nomeInformado===undefined?undefined:limpar(nomeInformado);
+  if(nome && (nome.length>80 || /[<>\u0000-\u001f\u007f]/u.test(nome)))throw new Error('Informe um nome de até 80 caracteres, sem símbolos < ou >.');
   const ref = Acesso.fs.doc(`usuarios/${email}`);
   await Acesso.fs.runTransaction(async tx => {
     const atual = await tx.get(ref);
@@ -149,7 +151,8 @@ async function salvarUsuario(email, perfil, ativo, tecnicoId = '') {
     const por = identidadeAtual(), em = carimboServidor();
     const d = { email, perfil, ativo, principal: atual.data()?.principal || false, atualizadoEm: em, atualizadoPor: por,
       criadoEm: atual.exists ? atual.data().criadoEm : em, criadoPor: atual.exists ? atual.data().criadoPor : por };
-    if (typeof atual.data()?.nome === 'string') d.nome = atual.data().nome;
+    if (nome) d.nome=nome;
+    else if (typeof atual.data()?.nome === 'string') d.nome = atual.data().nome;
     if (novoId) d.tecnicoId = novoId;
     if (anteriorId && anteriorId !== novoId && anterior(anteriorId)?.data()?.email === email) tx.delete(Acesso.fs.doc(`vinculos_tecnicos/${anteriorId}`));
     if (novoId) tx.set(Acesso.fs.doc(`vinculos_tecnicos/${novoId}`), vinculo);

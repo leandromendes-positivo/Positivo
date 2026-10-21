@@ -89,7 +89,8 @@ try {
  ]) await assertFails(minhaConta.update({...nomeAtualizado('Ana Silva'),...alteracao}));
  await assertFails(minhaConta.update({nome:'Sem auditoria'}));
  await assertFails(operador.doc('usuarios/dono@empresa.com').update(nomeAtualizado('Outro nome')));
- await assertFails(dono.doc('usuarios/ana.silva@empresa.com').update({nome:'Outro nome',atualizadoEm:stamp(),atualizadoPor:por}));
+ await assertSucceeds(dono.doc('usuarios/ana.silva@empresa.com').update({nome:'Nome pelo administrador',atualizadoEm:stamp(),atualizadoPor:por}));
+ await assertSucceeds(dono.doc('usuarios/ana.silva@empresa.com').update({nome:'Ana Júlia D’Ávila',atualizadoEm:stamp(),atualizadoPor:por}));
  for(const db of [outro,conta('ana','ana.silva@empresa.com','microsoft.com',false),conta('ana','ana.silva@empresa.com','password')]) {
   await assertFails(db.doc('usuarios/ana.silva@empresa.com').update(nomeAtualizado('Sem permissão')));
  }

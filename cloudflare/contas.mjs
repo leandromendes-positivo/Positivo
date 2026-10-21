@@ -53,6 +53,7 @@ export async function gerarTemporaria(servico,id,email,operacao,agora=Date.now()
  const ref=db.doc('credenciais_usuarios/'+email);
  await limitarContas(db,'admin:'+id.uid,15,15*60000,agora);
  await authAdmin.verificar?.();
+ try{await servico.transporte.verify?.();}catch{throw falha('O remetente Gmail não conseguiu autenticar. Confira as credenciais de envio no Cloudflare.',503);}
  const conta=await authAdmin.buscar(email);
  const reserva=await db.runTransaction(async tx=>{
   const [alvo,estado,autor]=await Promise.all([tx.get(db.doc('usuarios/'+email)),tx.get(ref),tx.get(db.doc('usuarios/'+id.email))]);
@@ -62,7 +63,7 @@ export async function gerarTemporaria(servico,id,email,operacao,agora=Date.now()
   if(d?.bloqueioAte>agora)throw falha('Há uma operação em andamento. Aguarde alguns minutos.',409);
   const versao=(d?.versao||0)+1;
   tx.set(ref,{uid:conta?.localId||'',versao,exigirTroca:true,estado:'preparando',operacao,bloqueioAte:agora+5*60000,expiraEm:agora+24*3600000,emailEnviado:false,liberadoApartir:Math.floor(agora/1000)+1});
-  return {versao};
+  return {versao,nome:p.nome||''};
  });
  if(reserva.repetida){if(reserva.estado==='temporaria'&&reserva.emailEnviado)return {enviado:true};throw falha('A operação anterior não foi confirmada. Gere outra senha temporária.',409);}
  const senha='Aa7!'+randomBytes(18).toString('base64url'),claims=JSON.parse(conta?.customAttributes||'{}');claims.cpSenha=reserva.versao;
@@ -71,8 +72,8 @@ export async function gerarTemporaria(servico,id,email,operacao,agora=Date.now()
   if(uid)await authAdmin.atualizar({localId:uid,password:senha,validSince:String(Math.floor(agora/1000)),customAttributes:JSON.stringify(claims)});
   else {uid=(await authAdmin.criar({email,password:senha,emailVerified:false})).localId;await authAdmin.atualizar({localId:uid,customAttributes:JSON.stringify(claims)});}
   await db.runTransaction(async tx=>{const d=(await tx.get(ref)).data();if(d?.operacao!==operacao)throw falha('A operação mudou. Gere outra senha.',409);tx.set(ref,{...d,uid,hashTemporaria:hash(senha),estado:'temporaria',bloqueioAte:agora+5*60000});});
-  const url=origemPainel(servico.env),texto=`Seu acesso ao painel Positivo foi preparado.\nE-mail: ${email}\nSenha temporária: ${senha}\n\nEntre em ${url}\nA senha expira em 24 horas. Você deverá definir sua própria senha antes de acessar os dados. Se não reconhecer este cadastro, avise a administração.`;
-  await enviar(servico,email,'Seu acesso ao painel Positivo',texto,`<div style="font-family:Arial,sans-serif;background:#fff;color:#111;padding:28px;line-height:1.7"><h1 style="font-size:24px">Seu acesso ao painel</h1><p>E-mail: <strong>${escaparEmail(email)}</strong></p><p>Senha temporária:</p><p style="font-family:monospace;font-size:21px">${escaparEmail(senha)}</p><p>Válida por 24 horas. No primeiro acesso, você deverá criar sua própria senha.</p><p><a href="${escaparEmail(url)}">Abrir painel Positivo</a></p><p>Se não reconhecer este cadastro, avise a administração.</p></div>`);
+  const url=origemPainel(servico.env),texto=`${reserva.nome?'Olá, '+reserva.nome+'.\n\n':''}Seu acesso ao painel Positivo foi preparado.\nE-mail: ${email}\nSenha temporária: ${senha}\n\nEntre em ${url}\nA senha expira em 24 horas. Você deverá definir sua própria senha antes de acessar os dados. Se não reconhecer este cadastro, avise a administração.`;
+  try{await enviar(servico,email,'Seu acesso ao painel Positivo',texto,`<div style="font-family:Arial,sans-serif;background:#fff;color:#111;padding:28px;line-height:1.7"><h1 style="font-size:24px">Seu acesso ao painel</h1>${reserva.nome?`<p>Olá, ${escaparEmail(reserva.nome)}.</p>`:''}<p>E-mail: <strong>${escaparEmail(email)}</strong></p><p>Senha temporária:</p><p style="font-family:monospace;font-size:21px">${escaparEmail(senha)}</p><p>Válida por 24 horas. No primeiro acesso, você deverá criar sua própria senha.</p><p><a href="${escaparEmail(url)}">Abrir painel Positivo</a></p><p>Se não reconhecer este cadastro, avise a administração.</p></div>`);}catch{throw falha('O provedor não confirmou o envio da senha. Confira o remetente no Cloudflare e a caixa de spam antes de gerar outra senha.',503);}
   await db.runTransaction(async tx=>{const d=(await tx.get(ref)).data();if(d?.operacao===operacao)tx.set(ref,{...d,bloqueioAte:0,emailEnviado:true});});
   return {enviado:true};
  }catch(e){await db.runTransaction(async tx=>{const d=(await tx.get(ref)).data();if(d?.operacao===operacao)tx.set(ref,{...d,estado:d.estado==='temporaria'?'temporaria':'falha_envio',bloqueioAte:0});});throw e;}

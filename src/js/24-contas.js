@@ -4,10 +4,10 @@ function urlServicoContas(){
   if(u.protocol!=='https:'&&!((window.__CP_FIREBASE_EMULADOR__)&&/^(localhost|127\.0\.0\.1)$/.test(u.hostname)))throw new Error('Serviço de contas inválido.');
   return u;
 }
-async function solicitarConta(caminho,dados={},autenticado=false){
+async function solicitarConta(caminho,dados={},autenticado=false,timeout=30000){
   const headers={'Content-Type':'application/json'};
   if(autenticado){if(!Acesso.auth?.currentUser)throw new Error('Entre novamente para continuar.');headers.Authorization='Bearer '+await Acesso.auth.currentUser.getIdToken();}
-  const r=await fetch(new URL('contas/'+caminho,urlServicoContas()),{method:'POST',headers,body:JSON.stringify(dados),credentials:'omit',referrerPolicy:'no-referrer',signal:AbortSignal.timeout(30000)});
+  const r=await fetch(new URL('contas/'+caminho,urlServicoContas()),{method:'POST',headers,body:JSON.stringify(dados),credentials:'omit',referrerPolicy:'no-referrer',signal:AbortSignal.timeout(timeout)});
   let d;try{d=await r.json();}catch{throw new Error('O serviço de contas não está disponível. Tente novamente.');}
   if(!r.ok)throw Object.assign(new Error(d.erro||'Não foi possível concluir.'),{status:r.status});return d;
 }

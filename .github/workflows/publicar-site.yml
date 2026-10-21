@@ -23,7 +23,7 @@ concurrency:
 
 jobs:
   testar-acessos:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -43,7 +43,11 @@ jobs:
         run: |
           fase_navegador=instalacao
           trap 'echo "::error title=Preparação dos navegadores::Falha na etapa $fase_navegador."' ERR
-          ./seguranca/node_modules/.bin/playwright install --with-deps chromium firefox webkit
+          if ! ./seguranca/node_modules/.bin/playwright install --with-deps chromium firefox webkit > /tmp/instalacao-navegadores.log 2>&1; then
+            cat /tmp/instalacao-navegadores.log
+            python3 -c 'from pathlib import Path; s="\n".join(Path("/tmp/instalacao-navegadores.log").read_text()[-10000:].splitlines()[-30:]); print("::error title=Instalação dos navegadores::"+s.replace("%","%25").replace("\r","%0D").replace("\n","%0A"))'
+            exit 1
+          fi
           fase_navegador=sdk
           mkdir -p /tmp/firebase-sdk-portal
           for sdk in app auth firestore; do
@@ -80,7 +84,7 @@ jobs:
           cat /tmp/testes-acesso.log
   publicar:
     needs: testar-acessos
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment:
       name: github-pages
       url: ${{ steps.publicacao.outputs.page_url || 'https://positivo.pages.dev/' }}

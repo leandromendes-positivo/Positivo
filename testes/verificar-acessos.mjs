@@ -12,6 +12,7 @@ try {
   await import('./sessao-email-e2e.mjs');
   await import('./ferias-planejamento-e2e.mjs');
   await import('./importacao-rmdf-e2e.mjs');
+  await import('./pecas-novas-e2e.mjs');
 } catch(e) {
   console.error(`::error title=Falha nos testes de acesso::${String(e.stack||e).replaceAll('%','%25').replaceAll('\r','%0D').replaceAll('\n','%0A')}`);
   process.exitCode=1;

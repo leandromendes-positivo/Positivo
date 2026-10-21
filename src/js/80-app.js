@@ -19,6 +19,7 @@ const PAGINAS = {
   'respostas-tecnicos': {titulo:'Respostas dos técnicos',icone:'retorno',render:renderRespostasTecnicos,depois:carregarRespostasTecnicos},
   painel: { titulo: "Controle operacional", nav: "Visão geral", icone: "painel", render: renderPainel, depois: desenharPainel },
   cobrancas: { titulo: "Cobranças", icone: "sino", render: renderCobrancas },
+  novas: { titulo: "Peças novas", icone: "caixa", render: renderConsulta },
   usadas: { titulo: "Peças usadas", icone: "retorno", render: renderUsadas },
   consulta: { titulo: "Consulta de peças", nav: "Consulta avançada", icone: "busca", render: renderConsulta },
   inventario: { titulo: "Histórico de inventário", icone: "caixa", render: renderInventario },
@@ -210,10 +211,10 @@ const ACOES = {
   "ranking-detalhe": (el) => modalRanking(el.dataset.tid, el.dataset.modo),
   "ranking-completo": (el) => modalRankingCompleto(el.dataset.modo),
   "consultar-saidas": () => { UIconsulta.filtros = { ...FILTROS_CONSULTA, tipo: 'novas', origem: 'saida', situacao: 'pendente', regiao: UIranking.regiao }; UIconsulta.pagina = 1; UIconsulta.visao = 'pecas'; irPara('consulta'); },
-  "consulta-remover": (el) => { UIconsulta.filtros[el.dataset.campo] = FILTROS_CONSULTA[el.dataset.campo]; UIconsulta.pagina = 1; renderizar(true); },
-  "consulta-limpar": () => { UIconsulta.filtros = { ...FILTROS_CONSULTA }; UIconsulta.pagina = 1; renderizar(true); },
-  "consulta-visao": (el) => { UIconsulta.visao = el.dataset.valor; if (UIconsulta.visao === 'tecnicos' && UIconsulta.ordem === 'material') UIconsulta.ordem = 'tecnico'; UIconsulta.pagina = 1; renderizar(true); },
-  "consulta-responsavel": (el) => { UIconsulta.filtros.tid = el.dataset.tid; UIconsulta.visao = 'pecas'; UIconsulta.pagina = 1; renderizar(true); },
+  "consulta-remover": (el) => { estadoConsulta().filtros[el.dataset.campo] = FILTROS_CONSULTA[el.dataset.campo]; estadoConsulta().pagina = 1; renderizar(true); },
+  "consulta-limpar": () => { estadoConsulta().filtros = padroesConsulta(); estadoConsulta().pagina = 1; renderizar(true); },
+  "consulta-visao": (el) => { estadoConsulta().visao = el.dataset.valor; if (estadoConsulta().visao === 'tecnicos' && estadoConsulta().ordem === 'material') estadoConsulta().ordem = 'tecnico'; estadoConsulta().pagina = 1; renderizar(true); },
+  "consulta-responsavel": (el) => { estadoConsulta().filtros.tid = el.dataset.tid; estadoConsulta().visao = 'pecas'; estadoConsulta().pagina = 1; renderizar(true); },
   "consulta-exportar": () => exportarConsulta(),
   "consulta-classificar": (el) => modalClassificarSaida(el.dataset.k),
   "painel-usadas": (el) => {
@@ -316,7 +317,7 @@ const ACOES = {
     if (alvo === "us") UI.us.pagina = p;
     else if (alvo === "dev") UI.us.paginaDev = p;
     else if (alvo === "ficha") UI.ficha.pagina = p;
-    else if (alvo === "consulta") UIconsulta.pagina = p;
+    else if (alvo === "consulta") estadoConsulta().pagina = p;
     else if (alvo === "inventario") UIinventario.pagina = p;
     else if (alvo === "relatorios") UIrelatorios.pagina = p;
     renderizar(true);
@@ -368,7 +369,7 @@ const ACOES = {
 
 const MUDANCAS = {
   "ranking-regiao": (el) => { UIranking.regiao = el.value; renderizar(true); },
-  "consulta-ordem": (el) => { UIconsulta.ordem = el.value; UIconsulta.pagina = 1; renderizar(true); },
+  "consulta-ordem": (el) => { estadoConsulta().ordem = el.value; estadoConsulta().pagina = 1; renderizar(true); },
   "previsao-item": async el => {
     const i=derivar().itens.find(i=>i.k===el.dataset.k);if(!i)return;
     const data=el.value;el.value=i.previsao || '';modalConfirmacao(i.tid,[i.k],data);

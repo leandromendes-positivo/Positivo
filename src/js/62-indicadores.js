@@ -57,6 +57,7 @@ function cabecalhoSecao(pagina, D) {
   const tecs = D.tecnicos.filter((t) => t.temDados);
   const textos = {
     cobrancas: ["Acompanhamento de devoluções", "Registre cada contato e acompanhe as datas combinadas.", [["Na fila", fmtNum(k.cobrarTecnicos), "técnicos"], ["Sem contato hoje", fmtNum(a.semContatoHoje), "na fila atual"], ["Previsões vencidas", fmtNum(k.prevVencida), "peças"]]],
+    novas: ["Acompanhamento de peças novas", "Consulte peças sob responsabilidade dos técnicos, prazos e saídas registradas.", [["Peças novas", fmtNum(k.novas), "no relatório atual"]]],
     usadas: ["Rastreabilidade das peças", "Consulte chamados, idade, previsões e histórico de devoluções.", [["Em aberto", fmtNum(k.usadas), "peças"], ["Acima do prazo", fmtNum(k.atrasadas), "respeita prazos individuais"], ["Idade média", a.idadeMedia == null ? "—" : fmtNum1(a.idadeMedia), "dias por peça"]]],
     rmdf: ["Conferência de RMDF", "Relação importada por técnico e UF, separada dos estoques de novas e usadas.", []],
     estoque: ["Controle do limite de estoque", "Estoque menor é bem-vindo. A atenção está em quem ultrapassou o limite máximo.", [["Dentro do limite", a.estoque.temRelatorio ? fmtNum(a.estoque.dentro.length) : "—", "técnicos"], ["Peças em excesso", a.estoque.temRelatorio ? fmtNum(a.excesso) : "—", "para recolher ou redistribuir"]]],

@@ -178,10 +178,7 @@ function diagnosticoSessao(auth) {
 /** A autenticação não libera dados: as regras verificam perfil e troca de senha. */
 function pedirLogin(auth, firebase, mensagem = '', sucesso=false) {
   return new Promise(resolver => {
-    const tela=montarTelaAcesso('Entre na sua conta','Use o e-mail cadastrado e sua senha do painel.',`<form class="form acesso-form" id="login-senha"><label class="campo"><span>E-mail</span><input type="email" name="email" required maxlength="254" autocomplete="username" autocapitalize="none" spellcheck="false"></label><label class="campo"><span>Senha</span><input type="password" name="senha" required maxlength="128" autocomplete="current-password"></label><button class="btn prim" type="submit">Entrar</button><button class="acesso-link" type="button" data-esqueci>Esqueci minha senha</button></form><div class="acesso-ou"><span>ou</span></div><button class="btn acesso-provedor" id="entrar-google"><span class="marca-google" aria-hidden="true">G</span>Entrar com Google${icone('direita')}</button><details class="acesso-diagnostico"><summary>Diagnóstico de acesso</summary><pre></pre><p>Este diagnóstico não contém e-mail, senha nem tokens.</p></details>`);
-    const diagnostico=tela.querySelector('.acesso-diagnostico');
-    diagnostico.querySelector('pre').textContent=diagnosticoSessao(auth);
-    diagnostico.addEventListener('toggle',()=>{if(diagnostico.open)diagnostico.querySelector('pre').textContent=diagnosticoSessao(auth);});
+    const tela=montarTelaAcesso('Entre na sua conta','Use o e-mail cadastrado e sua senha do painel.',`<form class="form acesso-form" id="login-senha"><label class="campo"><span>E-mail</span><input type="email" name="email" required maxlength="254" autocomplete="username" autocapitalize="none" spellcheck="false"></label><label class="campo"><span>Senha</span><input type="password" name="senha" required maxlength="128" autocomplete="current-password"></label><button class="btn prim" type="submit">Entrar</button><button class="acesso-link" type="button" data-esqueci>Esqueci minha senha</button></form><div class="acesso-ou"><span>ou</span></div><button class="btn acesso-provedor" id="entrar-google"><span class="marca-google" aria-hidden="true">G</span>Entrar com Google${icone('direita')}</button>`);
     if(mensagem){erroTelaAcesso(tela,mensagem);if(sucesso){const aviso=tela.querySelector('.acesso-erro');aviso.classList.add('acesso-sucesso');aviso.setAttribute('role','status');}}
     const parar=auth.onAuthStateChanged(u=>{if(!u)return;parar();tela.hidden=true;tela.innerHTML='';resolver(u);});
     const f=tela.querySelector('form');
@@ -194,7 +191,7 @@ function pedirLogin(auth, firebase, mensagem = '', sucesso=false) {
       const email=f.email.value;f.senha.value='';
       const cartao=tela.querySelector('.acesso-cartao'),titulo=cartao.querySelector('h1'),descricao=cartao.querySelector(':scope > p');
       const anteriores=[titulo.textContent,descricao.textContent];titulo.textContent='Recuperar acesso';descricao.textContent='Enviaremos instruções para o e-mail cadastrado.';
-      const ocultar=[f,tela.querySelector('.acesso-ou'),tela.querySelector('#entrar-google'),diagnostico];ocultar.forEach(el=>el.hidden=true);
+      const ocultar=[f,tela.querySelector('.acesso-ou'),tela.querySelector('#entrar-google')];ocultar.forEach(el=>el.hidden=true);
       const area=document.createElement('section');area.innerHTML=`<form class="form acesso-form"><label class="campo"><span>E-mail cadastrado</span><input name="email" type="email" required maxlength="254" autocomplete="email" value="${esc(email)}"></label><small>Solicitar a recuperação não altera sua senha atual.</small><p role="status" aria-live="polite"></p><button class="btn prim" type="submit">Enviar instruções</button><button class="acesso-link" type="button" data-voltar>Voltar ao login</button></form>`;
       cartao.insertBefore(area,cartao.querySelector('.acesso-restrito'));
       area.querySelector('[data-voltar]').onclick=()=>{area.remove();ocultar.forEach(el=>el.hidden=false);[titulo.textContent,descricao.textContent]=anteriores;};

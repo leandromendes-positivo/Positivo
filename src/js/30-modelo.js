@@ -6,7 +6,7 @@
      cadastro/tecnicos           { t: { tid: {chave,nome,apelido,regiao,tipo,meta,telefone,email,obs} } }
      dados/indice                arquivos importados por "tipo:regiao" (geração atual e anterior)
      dados/catalogo              { m: { codigoMaterial: descrição } }
-     dados/<u|n>-<UF>-<geração>-<parte>   linhas compactas da foto atual
+     dados/<u|n|r>-<UF>-<geração>-<parte>   linhas compactas da foto atual
      acompanhamento/<tid>        previsões, observações e cobranças do técnico
      devolucoes/<AAAA-MM-DD>     peças usadas que saíram do relatório naquele dia
      movimentos/<lote-parte>     saídas de novas, com destino classificado pelo operador
@@ -60,6 +60,7 @@ const E = {
   cadastro: {}, ferias: [],
   usadas: [],
   novas: [],
+  rmdf: [],
   acomp: {}, acompLegado: {}, agendamentos: [], contatos: [], anotacoes: [], usuarios: [],
   historico: [],
   devolucoes: [],
@@ -72,7 +73,7 @@ const E = {
 const aoMudar = new Set();
 function mudou() { E.rev++; for (const f of aoMudar) f(); }
 
-const caminhoParte = (tipo, regiao, gen, parte) => `dados/${tipo === "usadas" ? "u" : "n"}-${regiao}-${gen}-${parte}`;
+const caminhoParte = (tipo, regiao, gen, parte) => `dados/${tipo === "usadas" ? "u" : tipo === "rmdf" ? "r" : "n"}-${regiao}-${gen}-${parte}`;
 
 function decodificarUsada(l, regiao) {
   return { k: l[0], tid: l[1], regiao, nf: l[2], remessa: l[3], mat: l[4], chamado: l[5], dataFT: l[6] || null, qtd: l[7], desde: l[8], matSol: l[9] || "", qtdUso: l[10] || l[7] };
@@ -92,16 +93,17 @@ async function lerArquivoDoIndice(chave, ent) {
   if (partes.some(p => !p || !Array.isArray(p.itens))) throw Object.assign(new Error('Uma parte do estoque não está disponível. Recarregue antes de importar novamente.'), { amigavel: true });
   const linhas = [];
   for (const p of partes) if (p && Array.isArray(p.itens)) for (const l of p.itens) linhas.push(l);
-  return linhas.map((l) => (tipo === "usadas" ? decodificarUsada(l, regiao) : decodificarNova(l, regiao)));
+  return linhas.map((l) => (tipo === "novas" ? decodificarNova(l, regiao) : decodificarUsada(l, regiao)));
 }
 
 async function carregarFotos() {
-  const usadas = [], novas = [];
+  const usadas = [], novas = [], rmdf = [];
   const entradas = Object.entries(E.indice.arquivos || {}).filter(([, ent]) => ent && ent.gen);
   const listas = await Promise.all(entradas.map(([chave, ent]) => lerArquivoDoIndice(chave, ent)));
-  entradas.forEach(([chave], i) => (chave.startsWith("usadas:") ? usadas : novas).push(...listas[i]));
+  entradas.forEach(([chave], i) => ({usadas,novas,rmdf}[chave.split(":")[0]]).push(...listas[i]));
   E.usadas = usadas;
   E.novas = novas;
+  E.rmdf = rmdf;
 }
 
 async function carregarHistoricos() {
@@ -460,7 +462,8 @@ function derivar() {
   // ---- atualização das planilhas
   const frescor = [];
   for (const r of new Set([...regioes, ...Object.keys(E.indice.arquivos || {}).map((k) => k.split(":")[1])])) {
-    for (const tipo of ["novas", "usadas"]) {
+    for (const tipo of ["novas", "usadas", "rmdf"]) {
+      if (tipo === "rmdf" && !E.indice.arquivos?.[`rmdf:${r}`]) continue;
       const ent = (E.indice.arquivos || {})[`${tipo}:${r}`];
       frescor.push({ regiao: r, tipo, em: ent ? ent.em : null, dias: ent ? diffDias(ent.em.slice(0, 10), hoje) : null, arquivo: ent ? ent.arquivo : "" });
     }

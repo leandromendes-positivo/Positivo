@@ -32,7 +32,7 @@ function alertasOperacionais(D = derivar()) {
   if (antigas.length) adicionar({
     id: 'planilhas', nivel: 'atencao', icone: 'arquivo', titulo: 'Atualize a base antes de cobrar',
     texto: `${plural(antigas.length, 'planilha não foi atualizada', 'planilhas não foram atualizadas')} hoje. Uma devolução recente pode ainda não aparecer no painel.`,
-    detalhes: antigas.map(f => `${f.regiao} · ${f.tipo === 'usadas' ? 'Usadas' : 'Novas'} · ${f.em ? 'última atualização em ' + fmtDataHora(f.em) : 'ainda não importada'}`),
+    detalhes: antigas.map(f => `${f.regiao} · ${f.tipo === 'rmdf' ? 'RMDF' : f.tipo === 'usadas' ? 'Usadas' : 'Novas'} · ${f.em ? 'última atualização em ' + fmtDataHora(f.em) : 'ainda não importada'}`),
     acao: podeAdministrar() ? 'Importar planilhas' : '', destino: 'importar',
     orientacao: podeAdministrar() ? '' : 'Peça a atualização das planilhas a um administrador.',
   }, antigas.map(f => [f.regiao, f.tipo, f.em, D.hoje]));

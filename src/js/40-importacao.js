@@ -25,6 +25,11 @@ function dividirEmPartes(linhas) {
 
 /** Calcula a nova foto de uma planilha e o que mudou em relação à anterior. */
 function compararFoto(lido, hoje, agoraS, lote, foto = E) {
+  if (lido.tipo === 'rmdf') {
+    const r = compararFoto({...lido,tipo:'usadas'},hoje,agoraS,lote,{usadas:foto.rmdf||[]});
+    // RMDF é uma relação independente: desaparecer dela não comprova devolução.
+    return {...r,devolvidas:[],movimentos:[]};
+  }
   const R = lido.regiao;
   if (lido.tipo === "usadas") {
     const anteriores = new Map(foto.usadas.filter((u) => u.regiao === R).map((u) => [u.k, u]));
@@ -155,18 +160,20 @@ async function importarLote(lidos, aoProgresso = () => {}) {
 
   // Capture uma foto consistente, independente das atualizações do listener.
   const indiceBase = structuredClone((Armazem.online ? await Armazem.ler('dados/indice') : E.indice) || { arquivos: {}, anterior: {} });
-  const fotoBase = { usadas: E.usadas, novas: E.novas };
+  const fotoBase = { usadas: E.usadas, novas: E.novas, rmdf: E.rmdf||[] };
   if (Armazem.online) {
     aoProgresso('Conferindo o estoque anterior…');
     const entradas = Object.entries(indiceBase.arquivos || {}).filter(([,ent]) => ent && ent.gen);
     const listas = await Promise.all(entradas.map(([chave,ent]) => lerArquivoDoIndice(chave,ent)));
-    fotoBase.usadas = []; fotoBase.novas = [];
+    fotoBase.usadas = []; fotoBase.novas = []; fotoBase.rmdf = [];
     entradas.forEach(([chave],i) => fotoBase[chave.split(':')[0]].push(...listas[i]));
   }
 
   const grupos = new Map();
   for (const l of lidos) {
+    if (!["usadas","novas","rmdf"].includes(l.tipo) || !Object.hasOwn(UFS,l.regiao)) throw new Error("Tipo ou UF inválidos na importação.");
     const chave = `${l.tipo}:${l.regiao}`;
+    if (grupos.has(chave) && l.tipo === "rmdf") throw new Error(`Há mais de uma planilha RMDF de ${l.regiao} no mesmo lote. Selecione somente a relação atual para evitar substituição ambígua.`);
     if (grupos.has(chave)) avisos.push(`Havia mais de um arquivo de ${l.tipo} de ${l.regiao}; usei "${l.nome}".`);
     grupos.set(chave, l);
   }
@@ -229,7 +236,7 @@ async function importarLote(lidos, aoProgresso = () => {}) {
     const l = grupos.get(chave);
     n++;
     aoProgresso(`Salvando ${tipo} de ${regiao} (${n} de ${fotos.size})…`);
-    const codificadas = r.linhas.map(tipo === "usadas" ? codificarUsada : codificarNova);
+    const codificadas = r.linhas.map(tipo === "novas" ? codificarNova : codificarUsada);
     const partes = dividirEmPartes(codificadas);
     for (let i = 0; i < partes.length; i++) {
       await Armazem.gravar(caminhoParte(tipo, regiao, gen, i), { tipo, regiao, gen, parte: i, total: partes.length, itens: partes[i] });
@@ -251,14 +258,14 @@ async function importarLote(lidos, aoProgresso = () => {}) {
   const versao = (indiceBase.versao || 0) + 1;
   const registro = { em: agoraS, por: E.usuario.id || '', arquivos: resultados, avisos, chaves: [...fotos.keys()], devolvidas: somar(devolvidas,d=>d[5]), desfeito: false };
   aoProgresso('Preparando os saldos individuais dos técnicos…');
-  const fotoPortal = {usadas:[...fotoBase.usadas],novas:[...fotoBase.novas]};
+  const fotoPortal = {usadas:[...fotoBase.usadas],novas:[...fotoBase.novas],rmdf:[...fotoBase.rmdf]};
   for(const [chave,r] of fotos) {
     const [tipo,regiao]=chave.split(':');
     fotoPortal[tipo]=[...fotoPortal[tipo].filter(x=>x.regiao!==regiao),...r.linhas];
   }
   const cadastroPortal=structuredClone(E.cadastro);
   for(const [tid,c] of Object.entries(novosTecs))cadastroPortal[tid]={...cadastroPortal[tid],...c};
-  const portal=await prepararSaldosTecnicos(fotoPortal.usadas,fotoPortal.novas,cadastroPortal,{...E.catalogo,...novosMats},versao);
+  const portal=await prepararSaldosTecnicos(fotoPortal.usadas,fotoPortal.novas,cadastroPortal,{...E.catalogo,...novosMats},versao,fotoPortal.rmdf);
   const arquivo = await confirmarImportacaoNoBanco({ indice: { arquivos: entradasIndice, anterior: anteriores, versao, atualizadoEm: agoraS, origemSessao: Acesso.sessao }, registro, lote, devolvidas, movimentos, hoje, portal });
   E.existe.indice = true;
 
@@ -274,8 +281,7 @@ async function importarLote(lidos, aoProgresso = () => {}) {
   E.cadastro = cadastro;
   for (const [chave, r] of fotos) {
     const [tipo, regiao] = chave.split(":");
-    if (tipo === "usadas") E.usadas = [...E.usadas.filter((u) => u.regiao !== regiao), ...r.linhas];
-    else E.novas = [...E.novas.filter((x) => x.regiao !== regiao), ...r.linhas];
+    E[tipo] = [...E[tipo].filter(x => x.regiao !== regiao), ...r.linhas];
   }
   E.devolucoes.push(...arquivo.devolucoes);
   E.movimentos.push(...arquivo.movimentos);
@@ -310,11 +316,11 @@ async function desfazerImportacao(imp) {
   const indice = {arquivos,anterior,versao:versaoAnterior+1,atualizadoEm:agoraISO(),origemSessao:Acesso.sessao};
   const registro = {desfeito:true,desfeitoEm:agoraISO(),desfeitoPor:identidadeAtual()};
   if(Acesso.modo==='firebase') {
-    const fotoPortal={usadas:[],novas:[]};
+    const fotoPortal={usadas:[],novas:[],rmdf:[]};
     for(const [chave,ent] of Object.entries({...E.indice.arquivos,...arquivos})) {
       if(ent?.gen)fotoPortal[chave.split(':')[0]].push(...await lerArquivoDoIndice(chave,ent));
     }
-    const portal=await prepararSaldosTecnicos(fotoPortal.usadas,fotoPortal.novas,E.cadastro,E.catalogo,indice.versao);
+    const portal=await prepararSaldosTecnicos(fotoPortal.usadas,fotoPortal.novas,E.cadastro,E.catalogo,indice.versao,fotoPortal.rmdf);
     await Acesso.fs.runTransaction(async tx=>{
       const ref = Acesso.fs.doc('dados/indice'), atual=await tx.get(ref);
       if((atual.data()?.versao||0)!==versaoAnterior) throw new Error('As planilhas foram atualizadas em outra sessão. Recarregue antes de desfazer.');

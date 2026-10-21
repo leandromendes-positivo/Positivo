@@ -110,7 +110,7 @@ function calcularRelatorio(f = UIrelatorios.filtros, H = relatorioHistorico, D =
   }
   devolucoes.forEach(i => { const b = fluxo.get(chaveData(i.em)); if (b) b[i.tipo] += i.qtd; });
   const regioesTecnico = new Set([...estoque, ...saidas, ...(f.tid && D.mapa.has(f.tid) ? [D.mapa.get(f.tid)] : [])].map(i => i.regiao));
-  const frescor = D.frescor.filter(i => (!f.regiao || i.regiao === f.regiao) && (!f.tipo || i.tipo === f.tipo) && (!f.tid || regioesTecnico.has(i.regiao)));
+  const frescor = D.frescor.filter(i => i.tipo !== 'rmdf' && (!f.regiao || i.regiao === f.regiao) && (!f.tipo || i.tipo === f.tipo) && (!f.tid || regioesTecnico.has(i.regiao)));
   const filtros = [f.tipo === 'usadas' ? 'Peças usadas' : f.tipo === 'novas' ? 'Peças novas' : 'Novas e usadas', f.regiao || 'Todas as UFs', f.tid ? nomeTecnico(f.tid) : 'Todos os técnicos'];
   return { filtros: { ...f }, filtrosTexto: filtros.join(' · '), ...intervalo, emitido: agoraISO(), hoje: D.hoje, k, estoque, saidas, tecnicos, fluxo: [...fluxo.values()], mensal, porPeca, frescor, notas: [...NOTAS_RELATORIO] };
 }

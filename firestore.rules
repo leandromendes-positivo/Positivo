@@ -110,7 +110,7 @@ service cloud.firestore {
       return d.keys().hasAll(['tecnicoId','peca','geracao','mat','tipo','quantidadeDevolver','quantidadeRmdf','rmdf','previsao','protocolo','observacao','cancelado','uid','email','versao','evento','em'])
         && d.keys().hasOnly(['tecnicoId','peca','geracao','mat','tipo','quantidadeDevolver','quantidadeRmdf','rmdf','previsao','protocolo','observacao','cancelado','uid','email','versao','evento','em'])
         && meuEstoque(id) && d.tecnicoId == id && d.peca == peca && geracaoAtual(d.geracao)
-        && d.mat == p.mat && d.tipo == p.tipo && autor(d) && d.em == request.time
+        && d.mat == p.mat && d.tipo == p.tipo && d.tipo in ['novas','usadas'] && autor(d) && d.em == request.time
         && d.evento is string && d.evento.matches('^[a-zA-Z0-9-]{20,80}$') && d.versao is int
         && d.quantidadeDevolver is int && d.quantidadeDevolver >= 0
         && d.quantidadeRmdf is int && d.quantidadeRmdf >= 0

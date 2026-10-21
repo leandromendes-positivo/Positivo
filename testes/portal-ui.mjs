@@ -9,10 +9,11 @@ try{
  await p.goto(process.env.URL_PAINEL_TESTE||'http://127.0.0.1:8003/pagina-completa.html');await p.waitForFunction(()=>E.status==='pronto');
  await p.evaluate(()=>{
   Acesso.modo='firebase';Acesso.usuario={uid:'ana',email:'ana@empresa.com',nome:'Ana'};Acesso.perfil={email:'ana@empresa.com',perfil:'tecnico',ativo:true,tecnicoId:'PR--ANA'};
-  Object.assign(PortalTecnico,{controle:{geracao:'geracao-ui',versao:1,atualizadoEm:'2026-10-19T09:00:00'},saldo:{nome:'Ana Silva'},pecas:[{id:'u-1',tipo:'usadas',mat:'USADA-1',descricao:'Placa usada',quantidade:2,chamado:'CH-123',nf:'NF-1'},{id:'n-1',tipo:'novas',mat:'NOVA-1',descricao:'Placa nova',quantidade:5,tipoEnvio:'Reposição'}],declaracoes:[]});
+  Object.assign(PortalTecnico,{controle:{geracao:'geracao-ui',versao:1,atualizadoEm:'2026-10-19T09:00:00'},saldo:{nome:'Ana Silva'},pecas:[{id:'u-1',tipo:'usadas',mat:'USADA-1',descricao:'Placa usada',quantidade:2,chamado:'CH-123',nf:'NF-1'},{id:'n-1',tipo:'novas',mat:'NOVA-1',descricao:'Placa nova',quantidade:5,tipoEnvio:'Reposição'},{id:'r-1',tipo:'rmdf',mat:'RMDF-1',descricao:'Relação importada',quantidade:9,chamado:'CH-RMDF'}],declaracoes:[]});
   montarMoldura();irPara('meu-painel');
  });
  assert.deepEqual(await p.locator('[data-nav]').evaluateAll(es=>es.map(e=>e.dataset.nav)),['meu-painel','conta']);
+ assert.equal(await p.locator('[data-peca="r-1"]').count(),0,'RMDF importado é somente consulta');assert.match(await p.locator('#conteudo').innerText(),/RMDF-1/);
  assert.match(await p.locator('#conteudo').innerText(),/Ana Silva/);assert.match(await p.locator('#conteudo').innerText(),/USADA-1/);
  for(const pagina of ['usuarios','ferias','importar','painel','estoque','respostas-tecnicos']){
   await p.evaluate(pagina=>irPara(pagina),pagina);assert.equal(await p.evaluate(()=>UI.pagina),'meu-painel');

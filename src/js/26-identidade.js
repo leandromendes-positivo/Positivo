@@ -177,7 +177,7 @@ function bloquearSessao(mensagem = 'Seu acesso foi desativado. Procure o adminis
   limparHistoricoRelatorio();
   Object.assign(UIinventario,{devolucoes:[],movimentos:[],chave:null,carregando:false,erro:''});
   for (const parar of E.ouvintes) parar(); E.ouvintes = [];
-  E.ferias = []; E.usadas = []; E.novas = []; E.cadastro = {}; E.acomp = {}; E.acompLegado = {};
+  E.ferias = []; E.usadas = []; E.novas = []; E.rmdf = []; E.cadastro = {}; E.acomp = {}; E.acompLegado = {};
   E.agendamentos = []; E.contatos = []; E.anotacoes = []; E.usuarios = [];
   E.devolucoes = []; E.movimentos = []; E.historico = []; E.importacoes = [];
   E.catalogo = {}; E.indice = { arquivos: {}, anterior: {} }; E.config = { ...PADROES };

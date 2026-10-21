@@ -63,6 +63,7 @@ function regiaoDoNome(nome) {
 }
 function tipoDoNome(nome) {
   const b = normBusca(nome);
+  if (/rmdf/.test(b)) return "rmdf";
   if (/usad|defeit|retorno|devol/.test(b)) return "usadas";
   if (/nova|novo|estoque|backup|saldo/.test(b)) return "novas";
   return null;

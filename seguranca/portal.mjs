@@ -6,25 +6,25 @@ export async function prepararPortalExistente(db) {
   const [indiceSnap,controleSnap,cadastroSnap,catalogoSnap]=await Promise.all(['dados/indice','portal/controle','cadastro/tecnicos','dados/catalogo'].map(p=>db.doc(p).get()));
   const indice=indiceSnap.data()||{},versao=indice.versao||0;
   if(controleSnap.exists&&controleSnap.data().versao===versao)return;
-  const usadas=[],novas=[];
+  const usadas=[],novas=[],rmdf=[];
   for(const [chave,ent] of Object.entries(indice.arquivos||{})) {
     if(!ent?.gen)continue;
     const [tipo,regiao]=chave.split(':');
-    const prefixo=tipo==='usadas'?'u':'n';
+    const prefixo=tipo==='usadas'?'u':tipo==='rmdf'?'r':'n';
     for(let parte=0;parte<(ent.partes||0);parte++) {
       const snap=await db.doc(`dados/${prefixo}-${regiao}-${ent.gen}-${parte}`).get();
       if(!snap.exists||!Array.isArray(snap.data().itens))throw new Error('Uma parte do estoque está ausente. Portal não publicado.');
       for(const compacta of snap.data().itens) {
         const l=Array.isArray(compacta)?compacta:compacta.cp_lista;
         if(!Array.isArray(l))throw new Error('Linha compacta inválida no estoque.');
-        if(tipo==='usadas')usadas.push({k:l[0],tid:l[1],regiao,nf:l[2],mat:l[4],chamado:l[5],qtd:l[7],desde:l[8]});
+        if(tipo!=='novas')(tipo==='rmdf'?rmdf:usadas).push({k:l[0],tid:l[1],regiao,nf:l[2],remessa:l[3],mat:l[4],chamado:l[5],dataFT:l[6]||'',qtd:l[7],desde:l[8]});
         else novas.push({tid:l[0],regiao,mat:l[1],tipoEnvio:l[2],qtd:l[3],desde:l[5]});
       }
     }
   }
   const codigo=await readFile(new URL('../src/js/27-portal.js',import.meta.url),'utf8');
   const montar=runInNewContext(`${codigo}\nmontarSaldosTecnicos`,{TextEncoder});
-  const saldos=montar(usadas,novas,cadastroSnap.data()?.t||{},catalogoSnap.data()?.m||{});
+  const saldos=montar(usadas,novas,cadastroSnap.data()?.t||{},catalogoSnap.data()?.m||{},rmdf);
   const geracao=randomUUID();let batch=db.batch(),n=0;
   async function gravar(ref,d){batch.set(ref,d);if(++n===400){await batch.commit();batch=db.batch();n=0;}}
   for(const [id,s] of saldos) {

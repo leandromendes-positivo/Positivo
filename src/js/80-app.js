@@ -22,6 +22,7 @@ const PAGINAS = {
   usadas: { titulo: "Peças usadas", icone: "retorno", render: renderUsadas },
   consulta: { titulo: "Consulta de peças", nav: "Consulta avançada", icone: "busca", render: renderConsulta },
   inventario: { titulo: "Histórico de inventário", icone: "caixa", render: renderInventario },
+  rmdf: { titulo: 'Relação RMDF', icone: 'retorno', render: renderRmdf },
   estoque: { titulo: "Estoque de novas", icone: "caixa", render: renderEstoque },
   tecnicos: { titulo: "Técnicos", icone: "pessoas", render: renderTecnicos },
   ferias: { titulo: "Férias da equipe", icone: "calendario", render: renderFerias, depois: prepararTelaFerias },
@@ -330,6 +331,8 @@ const ACOES = {
   },
   "status-es": (el) => { UI.es.status = UI.es.status === el.dataset.status && el.dataset.status ? "" : el.dataset.status; if (UI.pagina !== "estoque") irPara("estoque"); else renderizar(true); },
   "abrir-es": (el) => { const s = UI.es.abertos; s.has(el.dataset.tid) ? s.delete(el.dataset.tid) : s.add(el.dataset.tid); renderizar(true); },
+  "rmdf-pagina": el=>{UIrmdf.pagina=Math.max(1,UIrmdf.pagina+Number(el.dataset.delta));renderizar(true);},
+  "exportar-rmdf": ()=>exportarRmdf(),
   "exportar-estoque": () => exportarEstoque(),
   "exportar-tecnicos": () => exportarTecnicos(),
   "aba-ficha": (el) => { UI.ficha.aba = el.dataset.aba; UI.ficha.pagina = 1; renderizar(true); },
@@ -386,6 +389,7 @@ const MUDANCAS = {
   },
   "regiao-es": (el) => { UI.es.regiao = el.value; renderizar(true); },
   "inventario-filtro": el => { UIinventario[el.dataset.campo]=el.value;UIinventario.pagina=1;renderizar(true); },
+  "rmdf-regiao": el=>{UIrmdf.regiao=el.value;UIrmdf.pagina=1;renderizar(true);},
   "regiao-tc": (el) => { UI.tc.regiao = el.value; renderizar(true); },
   "sem-dados-tc": (el) => { UI.tc.mostrarSemDados = el.checked; renderizar(true); },
   "fila-regiao": (el) => { const it = UI.im.fila[+el.dataset.n]; if (it) { it.regiao = el.value; renderizar(true); } },
@@ -397,6 +401,7 @@ const DIGITACAO = {
   "busca-us": (v) => { UI.us.busca = v; UI.us.pagina = 1; },
   "busca-es": (v) => { UI.es.busca = v; },
   "inventario-busca": v => { UIinventario.busca=v;UIinventario.pagina=1; },
+  "rmdf-busca": v=>{UIrmdf.busca=v;UIrmdf.pagina=1;},
   "busca-tc": (v) => { UI.tc.busca = v; },
 };
 const aplicarBusca = debounce((campo) => {

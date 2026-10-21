@@ -155,25 +155,27 @@ async function lerRelatorio(arquivo, opcoes = {}) {
   if ("dataFT" in mapa && !("tipoEnvio" in mapa)) tipoCab = "usadas";
   else if ("tipoEnvio" in mapa && !("dataFT" in mapa)) tipoCab = "novas";
   const tipoNome = tipoDoNome(nome);
-  const tipo = opcoes.tipo || tipoCab || tipoNome;
-  if (!opcoes.tipo && tipoCab && tipoNome && tipoCab !== tipoNome) {
+  const tipo = opcoes.tipo || (tipoNome === "rmdf" ? "rmdf" : tipoCab || tipoNome);
+  if (!opcoes.tipo && tipoNome !== "rmdf" && tipoCab && tipoNome && tipoCab !== tipoNome) {
     avisos.push(`O nome do arquivo diz "${tipoNome}", mas as colunas são de peças ${tipoCab}. Considerei ${tipoCab}.`);
   }
-  if (tipo !== "novas" && tipo !== "usadas") {
-    throw new ErroLeitura("Não identifiquei se o arquivo é de peças NOVAS ou USADAS.", { precisa: "tipo" });
+  if (!["novas", "usadas", "rmdf"].includes(tipo)) {
+    throw new ErroLeitura("Não identifiquei se o arquivo é de peças NOVAS, USADAS ou RMDF.", { precisa: "tipo" });
   }
+  if (!opcoes.tipo && tipoCab==='usadas' && !tipoNome) avisos.push('As colunas são comuns a Usadas e RMDF. Confira o tipo antes de importar.');
   const regiao = (opcoes.regiao || regiaoDoNome(nome) || "").toUpperCase();
   if (!regiao) {
     throw new ErroLeitura("Não identifiquei a região pelo nome do arquivo. Escolha a região ou renomeie como \"PR Usadas.csv\".", { precisa: "regiao", tipo });
   }
   if (!("mat" in mapa) && "matSol" in mapa) { mapa.mat = mapa.matSol; if (!("desc" in mapa) && "descSol" in mapa) mapa.desc = mapa.descSol; }
   if (!("mat" in mapa)) throw new ErroLeitura("O arquivo não tem a coluna de material (Material Enviado).");
-  if (tipo === "usadas" && !("dataFT" in mapa)) avisos.push("Sem a coluna Data FT: os dias serão contados a partir da primeira importação.");
+  if (tipo !== "novas" && !("dataFT" in mapa)) avisos.push("Sem a coluna Data FT: os dias serão contados a partir da primeira importação.");
 
   const val = (linha, campo) => {
     const j = mapa[campo];
     return j == null || j >= linha.length ? "" : limpar(linha[j]);
   };
+  if (tipo === "rmdf" && !("qtd" in mapa)) throw new ErroLeitura("A planilha RMDF precisa da coluna Qtd ou Quantidade.");
   const itens = [];
   let lidas = 0, ignoradas = 0, datasRuins = 0;
   for (let r = iCab + 1; r < linhas.length; r++) {
@@ -182,7 +184,9 @@ async function lerRelatorio(arquivo, opcoes = {}) {
     lidas++;
     const tecNome = val(linha, "tecnico");
     const mat = codigoMaterial(val(linha, "mat"));
-    const qtd = parseQtd(val(linha, "qtd"), 1);
+    const brutoQtd=val(linha,"qtd");
+    const qtd = tipo==='rmdf' ? (brutoQtd ? Number(brutoQtd.replace(/\.(?=\d{3}(?:\D|$))/g,'').replace(',','.')) : NaN) : parseQtd(brutoQtd,1);
+    if(tipo==='rmdf'&&(!tecNome||!mat||!Number.isSafeInteger(qtd)||qtd<=0))throw new ErroLeitura(`Revise técnico, material e quantidade inteira positiva na linha ${r+1} do RMDF. Nenhum saldo foi atualizado.`);
     if (!tecNome || !mat || qtd <= 0) { ignoradas++; continue; }
     const item = {
       tecNome, tecChave: chaveTexto(tecNome),
@@ -191,7 +195,7 @@ async function lerRelatorio(arquivo, opcoes = {}) {
       desc: val(linha, "desc") || val(linha, "descSol"),
       chamado: val(linha, "chamado"), qtd,
     };
-    if (tipo === "usadas") {
+    if (tipo !== "novas") {
       const bruto = val(linha, "dataFT");
       item.dataFT = parseDataTexto(bruto);
       if (bruto && !item.dataFT) datasRuins++;

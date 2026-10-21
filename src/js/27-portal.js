@@ -15,30 +15,30 @@ function opcoesVinculoTecnico() {
     const id=chaveSaldoTecnico(tid,regiao);opcoes.set(id,{id,tid,regiao,nome:E.cadastro[tid].nome});
   }};
   for(const [tid,t] of Object.entries(E.cadastro))incluir(tid,t.regiao);
-  for(const p of [...E.usadas,...E.novas])incluir(p.tid,p.regiao);
+  for(const p of [...E.usadas,...E.novas,...(E.rmdf||[])])incluir(p.tid,p.regiao);
   return [...opcoes.values()].sort((a,b)=>comparar(a.nome,b.nome)||comparar(a.regiao,b.regiao));
 }
 /* Função pura também usada pela implantação para publicar o estoque já existente. */
-function montarSaldosTecnicos(usadas, novas, cadastro, catalogo) {
+function montarSaldosTecnicos(usadas, novas, cadastro, catalogo, rmdf = []) {
   const saldos = new Map();
-  for (const [tipo, lista] of [['usadas', usadas], ['novas', novas]]) for (const linha of lista) {
+  for (const [tipo, lista] of [['usadas', usadas], ['novas', novas], ['rmdf', rmdf]]) for (const linha of lista) {
     if (!['PR','SC','TO','RS'].includes(linha.regiao)) continue;
     const id = chaveSaldoTecnico(linha.tid, linha.regiao);
     if (!saldos.has(id)) saldos.set(id, { nome: cadastro[linha.tid]?.nome || linha.tid, tid: linha.tid, regiao: linha.regiao, pecas: new Map() });
     // Codificação reversível e sem colisões para novas; usadas conservam a chave oficial.
-    const peca = tipo === 'usadas' ? `u-${linha.k}` : `n-${Array.from(new TextEncoder().encode(JSON.stringify([linha.mat, linha.tipoEnvio || '']))).map(b=>b.toString(16).padStart(2,'0')).join('')}`;
+    const peca = tipo !== 'novas' ? `${tipo === 'rmdf' ? 'r' : 'u'}-${linha.k}` : `n-${Array.from(new TextEncoder().encode(JSON.stringify([linha.mat, linha.tipoEnvio || '']))).map(b=>b.toString(16).padStart(2,'0')).join('')}`;
     if (peca.length > 1400) throw new Error('Código de material muito longo para publicar no portal.');
     const s = saldos.get(id);
     if (s.pecas.has(peca)) throw new Error('Estoque ambíguo: duas linhas com a mesma identificação. Corrija a origem antes de publicar.');
     if (!Number.isSafeInteger(linha.qtd) || linha.qtd <= 0) throw new Error('O portal exige quantidades inteiras e positivas. Confira o relatório.');
-    s.pecas.set(peca, { tipo, mat: linha.mat, descricao: catalogo[linha.mat] || '', quantidade: linha.qtd, chamado: linha.chamado || '', nf: linha.nf || '', tipoEnvio: linha.tipoEnvio || '', desde: linha.desde || '' });
+    s.pecas.set(peca, { tipo, mat: linha.mat, descricao: catalogo[linha.mat] || '', quantidade: linha.qtd, chamado: linha.chamado || '', nf: linha.nf || '', tipoEnvio: linha.tipoEnvio || '', desde: linha.desde || '', ...(tipo==='rmdf'?{remessa:linha.remessa||'',dataFT:linha.dataFT||''}:{}) });
   }
   return saldos;
 }
-async function prepararSaldosTecnicos(usadas, novas, cadastro, catalogo, versao) {
+async function prepararSaldosTecnicos(usadas, novas, cadastro, catalogo, versao, rmdf = []) {
   if (Acesso.modo !== 'firebase') return null;
   exigirAdministrador();
-  const geracao = crypto.randomUUID(), saldos = montarSaldosTecnicos(usadas, novas, cadastro, catalogo);
+  const geracao = crypto.randomUUID(), saldos = montarSaldosTecnicos(usadas, novas, cadastro, catalogo, rmdf);
   let lote = Acesso.fs.batch(), n = 0;
   const gravar = async (ref,d) => { lote.set(ref,d); if (++n === 400) { await lote.commit(); lote=Acesso.fs.batch();n=0; } };
   for (const [id,s] of saldos) {

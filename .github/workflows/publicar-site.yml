@@ -72,6 +72,7 @@ jobs:
           node testes/cloudflare-ferias.mjs
           node testes/contas.mjs
           node testes/conflitos-ferias.mjs
+          node testes/rmdf-leitura.mjs
           node testes/acesso-gerado.mjs
       - name: Testar regras reais de acesso e isolamento
         env:

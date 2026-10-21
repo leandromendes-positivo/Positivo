@@ -111,6 +111,7 @@ async function exportarTudo() {
   for (const [tid, a] of Object.entries(E.acomp)) for (const c of a.cobrancas || []) cob.push([nomeTecnico(tid), c.em, CANAIS[c.canal] || c.canal, c.pecas, c.previsao, c.obs, c.tipo === 'novas' ? 'Novas' : 'Usadas']);
   cob.sort((a, b) => comparar(b[1], a[1]));
   await exportarExcel(`controle-de-pecas-${D.hoje}.xlsx`, [
+    abaExportacaoRmdf(),
     {
       nome: "Peças usadas",
       colunas: [{ titulo: "Técnico", largura: 30 }, { titulo: "UF", largura: 5 }, { titulo: "Chamado", largura: 14 }, { titulo: "Material", largura: 11 }, { titulo: "Descrição", largura: 40 }, { titulo: "Data FT", largura: 12, tipo: "data" }, { titulo: "Dias", largura: 7, tipo: "numero" }, { titulo: "Situação", largura: 16 }, { titulo: "Previsão", largura: 12, tipo: "data" }, { titulo: "Observação", largura: 30 }, { titulo: "Qtd", largura: 6, tipo: "numero" }],

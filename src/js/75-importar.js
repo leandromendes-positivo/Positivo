@@ -27,14 +27,14 @@ async function receberArquivos(lista) {
   }
   UI.im.fila = fila;
   renderizar(true);
-  if (fila.every((i) => i.lido)) await executarImportacao();
+  if (fila.every(i=>i.lido && tipoDoNome(i.nome)===i.tipo) && !fila.some(i=>i.tipo==='rmdf')) await executarImportacao();
 }
 
 async function executarImportacao() {
   const s = UI.im;
   for (const it of s.fila) {
     if (it.lido && it.lido.regiao === it.regiao && it.lido.tipo === it.tipo) continue;
-    if (!it.regiao || !it.tipo) continue;
+    if (!it.regiao || !it.tipo) { it.lido=null; continue; }
     try {
       it.lido = await lerRelatorio(it.arquivo, { regiao: it.regiao, tipo: it.tipo });
       it.erro = null; it.precisa = null;
@@ -70,7 +70,7 @@ function zonaSoltar(grande) {
   return `<label class="zona-soltar${grande ? " grande" : ""}" data-zona>
     ${icone("upload")}
     <strong>Arraste as planilhas do dia aqui</strong>
-    <span>Pode soltar todas de uma vez: Novas e Usadas de cada região (CSV do sistema ou .xlsx)</span>
+    <span>Pode soltar todas de uma vez: Novas, Usadas e RMDF de cada região (CSV do sistema ou .xlsx)</span>
     <span class="btn prim">Escolher arquivos</span>
     <input type="file" multiple accept=".csv,.txt,.xlsx,.xls" data-entrada-arquivos hidden>
   </label>`;
@@ -87,15 +87,15 @@ function renderImportar() {
   if (s.processando) {
     partes.push(`<div class="cartao processando"><div class="girando" aria-hidden="true"></div><div><strong>Importando…</strong><p data-progresso>${esc(s.progresso)}</p></div></div>`);
   } else {
-    partes.push(zonaSoltar(!E.usadas.length && !E.novas.length));
+    partes.push(zonaSoltar(!E.usadas.length && !E.novas.length && !E.rmdf.length));
   }
   if (s.erro) partes.push(`<div class="faixa crit compacta">${icone("alerta")}<div><strong>A importação não terminou</strong><span>${esc(s.erro)}</span></div><button class="btn" data-acao="tentar-importar">Tentar de novo</button></div>`);
   if (s.fila.length && !s.processando) partes.push(cartaoFila());
   if (s.resultado) partes.push(cartaoResultado(s.resultado));
   partes.push(`<div class="grade-2">${cartao("Última atualização de cada planilha", tabelaFrescor(D), { sub: "Importe todo dia para os prazos ficarem certos" })}${cartao("Como nomear os arquivos", `<div class="dicas-nome">
       <p>O sistema reconhece a região e o tipo pelo nome do arquivo e confere pelas colunas:</p>
-      <ul><li><span class="mono">PR Novas.csv</span> · <span class="mono">PR Usadas.csv</span></li><li><span class="mono">RS Novas.csv</span> · <span class="mono">RS Usadas.csv</span></li><li><span class="mono">SC …</span> e <span class="mono">TO …</span> do mesmo jeito</li></ul>
-      <p>Cada planilha substitui a foto anterior da mesma região. Peça usada que sumiu do relatório conta como <strong>devolvida</strong> naquele dia.</p></div>`)}</div>`);
+      <ul><li><span class="mono">PR Novas.csv</span> · <span class="mono">PR Usadas.csv</span> · <span class="mono">PR RMDF.csv</span></li><li><span class="mono">RS Novas.csv</span> · <span class="mono">RS Usadas.csv</span> · <span class="mono">RS RMDF.csv</span></li><li><span class="mono">SC …</span> e <span class="mono">TO …</span> do mesmo jeito</li></ul>
+      <p>Cada planilha substitui somente a foto anterior do mesmo tipo e UF. RMDF fica em uma relação separada, sem somar ao estoque de novas/usadas e sem baixar peças automaticamente. Peça usada que sumiu do relatório conta como <strong>devolvida</strong> naquele dia.</p></div>`)}</div>`);
   partes.push(cartao("Histórico de importações", tabelaImportacoes(), { sub: "Desfazer volta as planilhas daquela importação para a versão anterior" }));
   return partes.join("");
 }
@@ -103,14 +103,14 @@ function renderImportar() {
 function cartaoFila() {
   const s = UI.im;
   const pendentes = s.fila.filter((i) => !i.lido);
-  return cartao(pendentes.length ? "Confira antes de importar" : "Prontas para importar", `<div class="tabela-rolagem"><table class="tabela compacta">
+  return cartao(pendentes.length ? "Confira antes de importar" : "Prontas para importar", `${s.fila.some(i=>i.tipo==='rmdf')?'<p class="nota">RMDF foi reconhecido como uma relação separada. Confira os tipos e as UFs antes de confirmar; suas peças não serão somadas às novas ou usadas.</p>':''}<div class="tabela-rolagem"><table class="tabela compacta">
     <thead><tr><th>Arquivo</th><th>Região</th><th>Tipo</th><th class="num">Linhas</th><th>Situação</th></tr></thead>
     <tbody>${s.fila.map((it, n) => `<tr>
       <td class="mono">${esc(it.nome)}</td>
       <td><select data-mudar="fila-regiao" data-n="${n}" aria-label="Região"><option value="">Escolha…</option>${Object.keys(UFS).map((u) => `<option value="${u}"${it.regiao === u ? " selected" : ""}>${u}</option>`).join("")}</select></td>
-      <td><select data-mudar="fila-tipo" data-n="${n}" aria-label="Tipo"><option value="">Escolha…</option><option value="novas"${it.tipo === "novas" ? " selected" : ""}>Novas</option><option value="usadas"${it.tipo === "usadas" ? " selected" : ""}>Usadas</option></select></td>
+      <td><select data-mudar="fila-tipo" data-n="${n}" aria-label="Tipo"><option value="">Escolha…</option><option value="novas"${it.tipo === "novas" ? " selected" : ""}>Novas</option><option value="usadas"${it.tipo === "usadas" ? " selected" : ""}>Usadas</option><option value="rmdf"${it.tipo === "rmdf" ? " selected" : ""}>RMDF</option></select></td>
       <td class="num">${it.lido ? fmtNum(it.lido.linhasLidas) : "—"}</td>
-      <td>${it.lido ? pill("ok", "Pronto", "ok") : pill(it.precisa ? "alerta" : "crit", it.erro || "Escolha região e tipo", "alerta")}</td>
+      <td>${it.lido ? pill("ok", "Pronto", "ok") : pill(it.precisa ? "alerta" : "crit", it.erro || "Escolha região e tipo", "alerta")}${(it.lido?.avisos||[]).map(a=>`<small class="aviso-linha">${esc(a)}</small>`).join('')}</td>
     </tr>`).join("")}</tbody></table></div>`, {
     acoes: `<button class="btn fantasma" data-acao="limpar-fila">Cancelar</button><button class="btn prim" data-acao="tentar-importar" ${s.fila.some((i) => i.lido || (i.regiao && i.tipo && i.precisa)) ? "" : "disabled"}>${icone("upload")}Importar</button>`,
   });
@@ -119,11 +119,12 @@ function cartaoFila() {
 function cartaoResultado(r) {
   const linhas = r.resultados.map((x) => {
     const usadas = x.tipo === "usadas";
-    const mud = usadas
+    const rmdf = x.tipo === "rmdf";
+    const mud = rmdf ? `${pill('info',fmtNum(x.qtd)+' peças na relação RMDF')}${x.saidas?pill('neutro',fmtNum(x.saidasQtd||x.saidas)+' fora da relação; sem baixa automática'):''}` : usadas
       ? `${x.entradas ? pill("alerta", `+${fmtNum(x.entradas)} novas pendências`, "mais") : ""}${x.saidas ? pill("ok", `${fmtNum(x.saidasQtd || x.saidas)} devolvidas`, "retorno") : ""}${!x.entradas && !x.saidas ? pill("neutro", "Sem mudanças", "ok") : ""}`
       : `${x.entradas ? pill("info", `+${fmtNum(x.entradas)} itens novos`, "mais") : ""}${x.saidas ? pill("neutro", `${fmtNum(x.saidas)} itens saíram`, "retorno") : ""}${x.alterados ? pill("neutro", `${fmtNum(x.alterados)} com quantidade alterada`, "lapis") : ""}${!x.entradas && !x.saidas && !x.alterados ? pill("neutro", "Sem mudanças", "ok") : ""}`;
     return `<tr>
-      <td class="mono">${esc(x.nome)}</td><td>${regiaoTag(x.regiao)}</td><td>${usadas ? "Usadas" : "Novas"}</td>
+      <td class="mono">${esc(x.nome)}</td><td>${regiaoTag(x.regiao)}</td><td>${x.tipo === "rmdf" ? "RMDF" : usadas ? "Usadas" : "Novas"}</td>
       <td class="num">${fmtNum(x.linhas)}</td>
       <td class="num">${fmtNum(x.qtd)}${!usadas && x.qtdAntes != null && x.qtdAntes !== x.qtd ? ` <small>(antes ${fmtNum(x.qtdAntes)})</small>` : ""}</td>
       <td><div class="pills">${mud}</div>${(x.avisos || []).map((a) => `<small class="aviso-linha">${icone("info")}${esc(a)}</small>`).join("")}</td>
@@ -146,8 +147,8 @@ function tabelaFrescor(D) {
     const cls = f.dias === 0 ? "hoje" : f.dias === 1 ? "ontem" : "velha";
     return `<span class="frescor ${cls}" title="${esc(f.arquivo)}">${icone(f.dias === 0 ? "ok" : "relogio")}${fmtQuando(f.em)}</span>`;
   };
-  return `<div class="tabela-rolagem"><table class="tabela compacta"><thead><tr><th>Região</th><th>Novas</th><th>Usadas</th></tr></thead><tbody>
-    ${regioes.map((r) => `<tr><td>${regiaoTag(r)} ${esc(UFS[r] || "")}</td><td>${celula(D.frescor.find((f) => f.regiao === r && f.tipo === "novas"))}</td><td>${celula(D.frescor.find((f) => f.regiao === r && f.tipo === "usadas"))}</td></tr>`).join("")}
+  return `<div class="tabela-rolagem"><table class="tabela compacta"><thead><tr><th>Região</th><th>Novas</th><th>Usadas</th><th>RMDF</th></tr></thead><tbody>
+    ${regioes.map((r) => `<tr><td>${regiaoTag(r)} ${esc(UFS[r] || "")}</td><td>${celula(D.frescor.find((f) => f.regiao === r && f.tipo === "novas"))}</td><td>${celula(D.frescor.find((f) => f.regiao === r && f.tipo === "usadas"))}</td><td>${celula(D.frescor.find(f=>f.regiao===r&&f.tipo==="rmdf"))}</td></tr>`).join("")}
   </tbody></table></div>`;
 }
 
@@ -164,7 +165,7 @@ function tabelaImportacoes() {
     <thead><tr><th>Quando</th><th>Planilhas</th><th class="num">Linhas</th><th class="num">Devolvidas</th><th></th></tr></thead>
     <tbody>${imps.map((imp) => `<tr class="${imp.desfeito ? "apagado" : ""}">
       <td class="nowrap">${fmtDataHora(imp.em)}</td>
-      <td>${(imp.arquivos || []).map((a) => `<span class="tag">${esc(a.regiao)} ${a.tipo === "usadas" ? "usadas" : "novas"}</span>`).join(" ")}${imp.desfeito ? ` <small>desfeita</small>` : ""}</td>
+      <td>${(imp.arquivos || []).map((a) => `<span class="tag">${esc(a.regiao)} ${a.tipo === "rmdf" ? "RMDF" : a.tipo === "usadas" ? "usadas" : "novas"}</span>`).join(" ")}${imp.desfeito ? ` <small>desfeita</small>` : ""}</td>
       <td class="num">${fmtNum(somar(imp.arquivos || [], (a) => a.linhas || 0))}</td>
       <td class="num">${fmtNum(imp.devolvidas || 0)}</td>
       <td>${podeDesfazer(imp) ? `<button class="btn pequeno fantasma" data-acao="desfazer" data-id="${esc(imp.id)}">${icone("desfazer")}Desfazer</button>` : ""}</td>

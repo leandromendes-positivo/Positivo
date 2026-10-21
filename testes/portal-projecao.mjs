@@ -9,14 +9,17 @@ const saldos=montar(usadas,novas,{ANA:{nome:'Ana Silva'},BRUNO:{nome:'Bruno'}},{
 assert.equal(saldos.size,3);assert.equal(saldos.get('PR--ANA').pecas.size,3);assert.equal(saldos.get('SC--ANA').pecas.size,1);
 assert.equal(saldos.get('PR--ANA').pecas.get('u-1').quantidade,2);assert.equal(saldos.get('SC--ANA').pecas.get('u-1').quantidade,9);
 assert.equal(saldos.get('PR--ANA').pecas.get('u-1').descricao,'Placa');
+const comRmdf=montar(usadas,novas,{ANA:{nome:'Ana'}},{},[{...usadas[0],qtd:8}]);
+assert.equal(comRmdf.get('PR--ANA').pecas.get('r-1').tipo,'rmdf');assert.equal(comRmdf.get('PR--ANA').pecas.get('r-1').quantidade,8);assert.equal(comRmdf.get('PR--ANA').pecas.get('u-1').quantidade,2);
 assert.equal(montar([],[],{},{}).size,0);
 assert.throws(()=>montar([...usadas,usadas[0]],[],{},{}),/ambíguo/);
 for(const qtd of [-1,0,1.5,Infinity,NaN])assert.throws(()=>montar([{...usadas[0],qtd}],[],{},{}),/quantidades/);
 assert.throws(()=>montar([{...usadas[0],tid:'../OUTRA'}],[],{},{}),/inválida/);
 // Exercita também a publicação inicial, inclusive o formato compacto real cp_lista.
 const docs=new Map([
- ['dados/indice',{versao:7,arquivos:{'usadas:PR':{gen:'g-antiga',partes:1}}}],
+ ['dados/indice',{versao:7,arquivos:{'usadas:PR':{gen:'g-antiga',partes:1},'rmdf:PR':{gen:'g-antiga',partes:1}}}],
  ['cadastro/tecnicos',{t:{ANA:{nome:'Ana'}}}],['dados/catalogo',{m:{A:'Placa'}}],
+ ['dados/r-PR-g-antiga-0',{itens:[{cp_lista:['abc','ANA','NF-R','REM','A','CH-R','',8,'2026-10-19']}]}],
  ['dados/u-PR-g-antiga-0',{itens:[{cp_lista:['abc','ANA','NF','REM','A','CH','',4,'2026-10-19']}]}]
 ]);
 const ref=path=>({path,collection:c=>({doc:id=>ref(`${path}/${c}/${id}`)}),get:async()=>snap(path)});
@@ -26,6 +29,7 @@ await prepararPortalExistente(db);
 const controle=docs.get('portal/controle');assert.equal(controle.versao,7);
 const publicado=docs.get(`saldos_tecnicos/PR--ANA/geracoes/${controle.geracao}/pecas/u-abc`);
 assert.equal(publicado.quantidade,4);assert.equal(publicado.mat,'A');assert.equal(publicado.chamado,'CH');
+assert.equal(docs.get(`saldos_tecnicos/PR--ANA/geracoes/${controle.geracao}/pecas/r-abc`).quantidade,8);
 await prepararPortalExistente(db);assert.equal(docs.get('portal/controle').geracao,controle.geracao,'implantação idempotente');
 assert.equal([...docs.keys()].filter(p=>p.startsWith('usuarios/')).length,0,'nenhum acesso é criado automaticamente');
 console.log('Projeção: separação por técnico/UF, ausência de colisões, saldo vazio e migração do estoque existente passaram.');

@@ -7,10 +7,11 @@ const servico={env,db,remetente:'no-reply@exemplo.com',transporte:{sendMail:asyn
 const principal={uid:'admin',email:'admin@exemplo.com',claims:{auth_time:Math.floor(agora/1000),firebase:{sign_in_provider:'google.com'}},usuario:{emailVerified:true},perfil:{perfil:'administrador',ativo:true}};
 db.dados.set('usuarios/admin@exemplo.com',{perfil:'administrador',ativo:true,principal:true});db.dados.set('usuarios/pessoa@exemplo.com',{perfil:'tecnico',ativo:true,tecnicoId:'PR--123'});
 await assert.rejects(()=>gerarTemporaria(servico,{...principal,perfil:{perfil:'usuario'}},'pessoa@exemplo.com','operacao-123456789012345',agora),e=>e.status===403);
-await assert.rejects(()=>gerarTemporaria(servico,{...principal,claims:{...principal.claims,auth_time:Math.floor(agora/1000)-901}},'pessoa@exemplo.com','operacao-123456789012345',agora),e=>e.status===401);
-await assert.rejects(()=>gerarTemporaria({...servico,transporte:{verify:async()=>{throw new Error('falha');}}},principal,'pessoa@exemplo.com','preflight-123456789012345',agora),e=>e.status===503);
-assert.equal(contas.size,0,'falha de autenticação do remetente não altera nem cria senha');
-await gerarTemporaria(servico,principal,'pessoa@exemplo.com','operacao-123456789012345',agora);
+const acessoGerado=await gerarTemporaria(servico,{...principal,claims:{...principal.claims,auth_time:Math.floor(agora/1000)-3600}},'pessoa@exemplo.com','operacao-123456789012345',agora);
+assert.equal(acessoGerado.enviado,true);assert.equal(acessoGerado.link,env.PAINEL_URL);assert.equal(acessoGerado.senhaTemporaria,contas.get('pessoa@exemplo.com').password);
+db.dados.set('usuarios/manual@exemplo.com',{perfil:'usuario',ativo:true});
+const manual=await gerarTemporaria({...servico,transporte:{sendMail:async()=>{throw new Error('Gmail indisponível');}}},principal,'manual@exemplo.com','manual-123456789012345',agora);
+assert.equal(manual.gerado,true);assert.equal(manual.enviado,false);assert.equal(manual.senhaTemporaria,contas.get('manual@exemplo.com').password);assert.equal(JSON.stringify([...db.dados]).includes(manual.senhaTemporaria),false);
 assert.equal(emails.length,1);const temporaria=contas.get('pessoa@exemplo.com').password;assert.ok(temporaria.length>=24);assert.match(emails[0].text,/24 horas/);assert.equal(JSON.stringify([...db.dados]).includes(temporaria),false,'senha não é armazenada no Firestore');
 await gerarTemporaria(servico,principal,'pessoa@exemplo.com','operacao-123456789012345',agora);assert.equal(emails.length,1,'repetir a operação não redefine ou reenvia');
 const uid=contas.get('pessoa@exemplo.com').localId,estado=db.dados.get('credenciais_usuarios/pessoa@exemplo.com');

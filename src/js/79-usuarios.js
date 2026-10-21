@@ -18,10 +18,19 @@ async function enviarSenhaUsuario(email,confirmada=false,operacao=crypto.randomU
   try{
     if(Acesso.usuario?.uid!==uid)throw new Error('Sua sessão mudou. Entre novamente.');
     const d=await solicitarConta('temporaria',{email,operacao},true,60000);
-    if(d.enviado!==true)throw new Error('O serviço não confirmou o envio.');
-    r.estado='enviado';r.mensagem='Confira a caixa de entrada e o spam. A senha temporária vale por 24 horas.';
+    if(d.enviado!==true&&d.gerado!==true)throw new Error('O serviço não confirmou a geração do acesso.');
+    r.estado=d.enviado?'enviado':'erro';r.mensagem=d.enviado?'Confira a caixa de entrada e o spam. A senha temporária vale por 24 horas.':'A senha foi gerada, mas o Gmail não confirmou o envio. Confira as credenciais de envio no Cloudflare. Você pode compartilhar os dados manualmente.';
+    if(d.senhaTemporaria&&Acesso.usuario?.uid===uid&&podeAdministrar())mostrarAcessoGerado(d);
+
   }catch(e){r.estado='erro';r.mensagem=e.message+' Confira a caixa de entrada e o spam antes de tentar gerar outra senha.';}
   if(Acesso.usuario?.uid===uid)atualizarEnviosAcesso();
+}
+// Somente a senha recém-gerada é exibida; não é gravada no armazenamento do navegador.
+function mostrarAcessoGerado(d){
+  const link=new URL(d.link);if(link.protocol!=='https:')return;
+  const m=abrirModal({administrativo:true,titulo:'Acesso gerado',subtitulo:d.enviado?'E-mail aceito pelo provedor. Os dados também estão disponíveis para envio manual.':'E-mail não confirmado. Compartilhe o acesso manualmente e confira o Gmail no Cloudflare.',
+    corpo:`<div class="form"><label class="campo"><span>E-mail do colaborador</span><input readonly value="${esc(d.email)}"></label><label class="campo"><span>Link do painel</span><input readonly value="${esc(link.href)}"></label><label class="campo"><span>Senha temporária</span><input readonly autocomplete="off" value="${esc(d.senhaTemporaria)}"></label><p>Válida por 24 horas. O colaborador deverá trocar a senha no primeiro acesso. Ao fechar esta tela, a senha não poderá ser consultada novamente.</p><p data-copia role="status"></p></div>`,rodape:'<button class="btn" data-fechar>Fechar</button><button class="btn prim" data-copiar>Copiar dados de acesso</button>',aoFechar:()=>{d.senhaTemporaria='';m.el.querySelectorAll('input').forEach(i=>i.value='');}});
+  m.el.querySelector('[data-copiar]').onclick=async()=>{try{exigirAdministrador();await navigator.clipboard.writeText(`Acesso ao painel Positivo\n${link.href}\nE-mail: ${d.email}\nSenha temporária: ${d.senhaTemporaria}\nVálida por 24 horas. Troque a senha no primeiro acesso.`);m.el.querySelector('[data-copia]').textContent='Dados copiados.';}catch{m.el.querySelector('[data-copia]').textContent='Selecione os campos e copie manualmente.';}};
 }
 /* Gestão de acessos: somente administradores; o perfil vem do banco protegido. */
 function renderUsuarios() {

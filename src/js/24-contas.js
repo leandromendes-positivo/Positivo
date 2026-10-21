@@ -60,21 +60,9 @@ async function abrirRecuperacaoPublica(auth){
   await auth.signOut();return concluida;
 }
 async function confirmarAdministradorSenha(){
+  exigirAdministrador();
   const u=Acesso.auth.currentUser;if(!u)throw new Error('Entre novamente.');
-  const token=await u.getIdTokenResult();if(Date.now()/1000-token.claims.auth_time<=840)return;
-  if(token.signInProvider==='password'){
-    await new Promise((resolve,reject)=>{
-      let terminou=false;
-      const m=abrirModal({titulo:'Confirme sua identidade',aoFechar:()=>{if(!terminou)reject(new Error('Confirmação cancelada.'));},corpo:'<form class="form"><label class="campo"><span>Sua senha atual</span><input type="password" name="senha" required autocomplete="current-password"></label><p role="alert"></p></form>',rodape:'<button class="btn" data-cancelar>Cancelar</button><button class="btn prim" data-confirmar>Confirmar</button>'});
-      const f=m.el.querySelector('form'),b=m.el.querySelector('[data-confirmar]');m.el.querySelector('[data-cancelar]').onclick=()=>m.fechar();
-      const confirmar=async()=>{if(!f.reportValidity())return;b.disabled=true;try{await u.reauthenticateWithCredential(firebase.auth.EmailAuthProvider.credential(u.email,f.senha.value));f.reset();terminou=true;m.fechar();resolve();}catch{f.querySelector('[role=alert]').textContent='Não foi possível confirmar sua senha.';b.disabled=false;}};
-      b.onclick=confirmar;f.onsubmit=e=>{e.preventDefault();confirmar();};
-    });
-  }else{
-    if(token.signInProvider!=='google.com')throw new Error('Entre novamente para confirmar sua identidade.');
-    await u.reauthenticateWithPopup(new firebase.auth.GoogleAuthProvider());
-  }
-  await u.getIdToken(true);
+  await u.getIdToken();
 }
 async function gerarSenhaCadastro(email,operacao=crypto.randomUUID()){
   await confirmarAdministradorSenha();return solicitarConta('temporaria',{email,operacao},true);

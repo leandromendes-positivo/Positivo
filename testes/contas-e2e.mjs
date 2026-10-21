@@ -62,6 +62,7 @@ try{
  await gestor.locator('.modal [data-salvar]').click();await gestor.waitForFunction(()=>!document.querySelector('.modal-fundo'));
  await gestor.locator('.usuarios-envio.enviando').waitFor();assert.equal(emails.length,2,'janela fecha enquanto envio está em andamento');
  liberarEnvio();await gestor.locator('.usuarios-envio.enviado').waitFor();assert.match(emails.at(-1).text,/Maria Cadastro/);
+ await gestor.locator('.modal [data-copiar]').waitFor();const camposAcesso=await gestor.locator('.modal input').evaluateAll(xs=>xs.map(x=>x.value));assert.equal(camposAcesso[1],'https://positivo.pages.dev/');assert.ok(camposAcesso[2].length>=24);await gestor.locator('.modal-rodape [data-fechar]').click();
  assert.equal((await db.doc('usuarios/cadastro.e2e@empresa.com').get()).data().nome,'Maria Cadastro');
  const quantidade=emails.length;
  await gestor.locator('[data-acao="editar-usuario"][data-email="cadastro.e2e@empresa.com"]').click();await gestor.locator('.modal [name=nome]').fill('Maria Nome Alterado');await gestor.locator('.modal [data-salvar]').click();await gestor.waitForFunction(()=>!document.querySelector('.modal-fundo'));

@@ -201,14 +201,16 @@ protegido. O Google continua disponível; Microsoft foi retirado da tela inicial
 4. Cadastre um acesso de teste em **Cadastro de usuários**, mantenha a opção de
    senha temporária marcada e salve. Confirme o recebimento no e-mail autorizado.
    Em janela anônima, entre com e-mail e senha temporária, defina uma senha com no
-   mínimo 12 caracteres e confira as permissões. Para técnico, confira o vínculo
+   mínimo 6 caracteres e confira as permissões. Para técnico, confira o vínculo
    e a ausência de dados de outros estoques. Nenhum teste automatizado envia
    mensagens reais ou configura o provedor do projeto de produção.
 
 ### Fluxos e proteção
 
 - A senha temporária é criptograficamente aleatória, enviada somente ao endereço
-  do cadastro, não retornada ao administrador e expira em 24 horas. O Firestore
+  do cadastro e exibida uma única vez ao administrador autorizado, com link para
+  compartilhamento manual. Expira em 24 horas. A tela limpa os dados ao fechar;
+  não usa armazenamento do navegador. Falha do Gmail não impede a exibição. O Firestore
   guarda apenas seu hash (alta entropia), UID, versão e estado, nunca a senha.
 - Antes da troca, **as regras do banco bloqueiam até o perfil**, não apenas a UI.
   Ao definir a senha, o servidor atualiza o Firebase, incrementa a claim `cpSenha`

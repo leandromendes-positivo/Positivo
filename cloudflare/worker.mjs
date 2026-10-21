@@ -74,7 +74,7 @@ export default {
   if(caminho.startsWith('/contas/'))return atenderContas(req,env,async()=>{
    const cred=JSON.parse(env.FIREBASE_SERVICE_ACCOUNT||'null');if(cred?.project_id!==env.FIREBASE_PROJECT_ID)throw new Error('Projeto inválido');
    const token=await tokenContas(cred);
-   return {db:firestoreREST(env.FIREBASE_PROJECT_ID,token),authAdmin:authAdministrativa(env.FIREBASE_PROJECT_ID,token),transporte:transporteEmail(env),remetente:env.EMAIL_REMETENTE};
+   return {db:firestoreREST(env.FIREBASE_PROJECT_ID,token),authAdmin:authAdministrativa(env.FIREBASE_PROJECT_ID,token),transporte:{sendMail:mensagem=>transporteEmail(env).sendMail(mensagem)},remetente:env.EMAIL_REMETENTE};
   },headers,ctx);
   if(env.ATIVAR_SERVICO!=='true')return Response.json({erro:'Serviço ainda não ativado'},{status:503,headers});
   // O endpoint não aceita destinatário nem UID no corpo. Usa somente o pedido

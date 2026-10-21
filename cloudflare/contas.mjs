@@ -3,7 +3,7 @@ import {escaparEmail} from '../aviso/layout-email-ferias.mjs';
 const hash=s=>createHash('sha256').update(s).digest('hex');
 const emailValido=s=>typeof s==='string'&&s.length<=254&&/^[a-z0-9.!#$%&'*+\-=?^_`{|}~]+@[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?\.[a-z]{2,}$/i.test(s)&&!s.includes('/');
 const falha=(mensagem='Não foi possível concluir esta solicitação.',status=400)=>Object.assign(new Error(mensagem),{status,publica:true});
-export function senhaValida(s){return typeof s==='string'&&s.length>=12&&s.length<=128&&/\S/.test(s)&&!/[\u0000-\u001f\u007f]/.test(s);}
+export function senhaValida(s){return typeof s==='string'&&s.length>=6&&s.length<=128&&/\S/.test(s)&&!/[\u0000-\u001f\u007f]/.test(s);}
 export function authAdministrativa(projeto,token,fetcher=fetch){
  const base=`https://identitytoolkit.googleapis.com/v1/projects/${encodeURIComponent(projeto)}`;
  async function chamar(caminho,body){
@@ -86,7 +86,7 @@ async function gravarNovaSenha(servico,email,conta,senha,ref,operacao,agora){
  return {alterada:true,liberadoApartir};
 }
 export async function trocarTemporaria(servico,id,senha,agora=Date.now()){
- if(!senhaValida(senha))throw falha('Use uma senha de 12 a 128 caracteres.');
+ if(!senhaValida(senha))throw falha('Use uma senha de 6 a 128 caracteres.');
  await servico.authAdmin.verificar?.();
  const {db}=servico,ref=db.doc('credenciais_usuarios/'+id.email),operacao=randomBytes(16).toString('hex');
  const conta=await servico.authAdmin.buscar(id.email);

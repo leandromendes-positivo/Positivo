@@ -17,7 +17,7 @@ function montarTelaAcesso(titulo,descricao,corpo){
   Tema.atualizarBotoes();return tela;
 }
 function erroTelaAcesso(tela,mensagem){const el=tela.querySelector('.acesso-erro');if(el){el.hidden=false;el.classList.remove('acesso-sucesso');el.setAttribute('role','alert');el.textContent=mensagem;}}
-function formularioNovaSenha(){return `<form class="form acesso-form" data-nova-senha><label class="campo"><span>Nova senha</span><input name="senha" type="password" required minlength="12" maxlength="128" autocomplete="new-password" aria-describedby="senha-ajuda"></label><label class="campo"><span>Confirme a nova senha</span><input name="confirmacao" type="password" required minlength="12" maxlength="128" autocomplete="new-password"></label><small id="senha-ajuda">Use pelo menos 12 caracteres. Prefira uma frase que só você conheça.</small><button class="btn prim" type="submit">Definir minha senha</button></form>`;}
+function formularioNovaSenha(){return `<form class="form acesso-form" data-nova-senha><label class="campo"><span>Nova senha</span><input name="senha" type="password" required minlength="6" maxlength="128" autocomplete="new-password" aria-describedby="senha-ajuda"></label><label class="campo"><span>Confirme a nova senha</span><input name="confirmacao" type="password" required minlength="6" maxlength="128" autocomplete="new-password"></label><small id="senha-ajuda">Use pelo menos 6 caracteres. Prefira uma frase que só você conheça.</small><button class="btn prim" type="submit">Definir minha senha</button></form>`;}
 async function prepararAcessoSenha(auth,usuario){
   if(!usuario.providerData.some(p=>p.providerId==='password'))return usuario;
   // O provedor da sessão importa: contas antigas podem ter Google e senha vinculados.

@@ -35,6 +35,9 @@ await assert.rejects(()=>concluirRecuperacao(servico,antigo,ultima,'ip-teste',ag
 const recente=emails.at(-1).text.match(/#redefinir-senha=([-\w]+)/)[1];await assert.rejects(()=>concluirRecuperacao(servico,recente,ultima,'ip-novo',agora+16*60000));
 await limitarContas(db,'limite',1,60000,agora);await assert.rejects(()=>limitarContas(db,'limite',1,60000,agora),e=>e.status===429);
 assert.equal(senhaValida('curta'),false);
+assert.equal(senhaValida('abc123'),true);
+assert.equal(senhaValida('123456789'),true);
+assert.equal(senhaValida('a'.repeat(129)),false);
 const headers={'Cache-Control':'no-store'};let abriu=false;
 const enorme=await atenderContas(new Request('https://worker/contas/redefinir',{method:'POST',headers:{'Content-Type':'application/json'},body:'x'.repeat(5000)}),env,async()=>{abriu=true;},headers);
 assert.equal(enorme.status,413);assert.equal(abriu,false);

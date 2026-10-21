@@ -142,11 +142,11 @@
 /* Login compacto: a imagem acompanha o cartão e o espaço disponível. */
 .acesso { padding: 12px clamp(16px,3vw,48px); gap: 10px; }
 .acesso-layout { width: min(1160px,100%); gap: clamp(24px,4vw,56px); }
-.acesso-cartao { padding: 20px 24px; gap: 8px; }
-.acesso-cartao .logo-positivo { width: 130px; height: 48px; margin-bottom: 4px; flex-shrink: 0; }
-.acesso-cartao h1 { font-size: 26px; }
-.acesso-cartao > p { margin-bottom: 0; line-height: 1.4; }
-.acesso-form { gap: 10px; margin-top: 2px; }
+.acesso-cartao { padding: 22px 24px; gap: 10px; }
+.acesso-cartao .logo-positivo { width: 130px; height: 48px; margin-bottom: 8px; flex-shrink: 0; background-position: 100% 68%; }
+.acesso-cartao h1 { font-size: 26px; line-height: 1.2; letter-spacing: -.02em; margin: 0; overflow-wrap: normal; }
+.acesso-cartao > p { margin: 0; font-size: 13px; line-height: 1.5; }
+.acesso-form { gap: 10px; margin-top: 6px; }
 .acesso-form input { min-height: 40px; padding: 8px 12px; }
 .acesso-form .btn, .acesso-provedor { min-height: 40px; padding-top: 8px; padding-bottom: 8px; }
 .acesso-link { padding: 3px; }
@@ -159,7 +159,7 @@
   .acesso-cartao { padding: 14px 22px; gap: 6px; }
   .acesso-cartao .logo-positivo { width: 110px; height: 38px; margin-bottom: 0; }
   .acesso-cartao h1 { font-size: 24px; }
-  .acesso-form { gap: 7px; }
+  .acesso-form { gap: 7px; margin-top: 2px; }
   .acesso-restrito { padding-top: 6px; }
 }
 @media (max-width: 900px) {
@@ -173,6 +173,6 @@
   .acesso-etiqueta { display: none; }
   .acesso-cartao h1 { font-size: 23px; }
   .acesso-cartao > p { font-size: 12px; }
-  .acesso-form { gap: 7px; }
+  .acesso-form { gap: 7px; margin-top: 2px; }
   .acesso-restrito { padding-top: 6px; }
 }

@@ -17,7 +17,17 @@ Sem credencial, administrador inicial ou permissão para publicar regras, o work
 
 Em **Firebase → Authentication → Sign-in method → Google**, habilite o provedor. Em **Settings → Authorized domains**, mantenha `leandromendes-positivo.github.io` e o domínio de autenticação do Firebase. E-mails de qualquer domínio podem usar Google quando vinculados a uma Conta Google.
 
-## Microsoft: Outlook e Microsoft 365 corporativo
+## E-mail e senha do painel
+
+O cadastro agora pode gerar e enviar uma senha temporária pelo Worker. A troca no
+primeiro acesso é exigida pelas regras do Firestore. A recuperação por e-mail usa
+link de uso único; administradores também podem gerar outra senha temporária.
+Consulte [ativação, IAM e fluxos de senha](../cloudflare/README.md#login-próprio-com-e-mail-e-senha).
+Contas com senha não podem ser liberadas apenas criando um perfil: precisam do
+estado e da versão de credencial emitidos pelo servidor. O Google é preservado
+para acessos existentes e recuperação administrativa do proprietário.
+
+## Microsoft: Outlook e Microsoft 365 corporativo (conexão opcional do Outlook)
 
 1. No **Microsoft Entra admin center → App registrations → New registration**, registre uma aplicação para o painel. Em **Supported account types**, escolha **Accounts in any organizational directory and personal Microsoft accounts**. Isso permite contas corporativas de outros domínios e contas Outlook/Hotmail.
 2. Cadastre a plataforma **Web** com o endereço de retorno:
@@ -25,7 +35,7 @@ Em **Firebase → Authentication → Sign-in method → Google**, habilite o pro
 3. Copie o **Application (client) ID** e crie um **client secret**. Guarde o **Value** do segredo, não seu identificador. Configure um lembrete de expiração para renová-lo no Firebase antes de vencer.
 4. No **Firebase → Authentication → Sign-in method → Microsoft**, habilite o provedor e informe o client ID e o secret. O segredo fica no Firebase, nunca no JavaScript ou no GitHub.
 5. O login no painel usa `tenant: common` e pede apenas a autenticação padrão do provedor. O acesso à caixa de e-mail é opcional e solicitado separadamente, somente ao conectar o Outlook na preparação de uma cobrança. Uma organização Microsoft 365 pode exigir consentimento do administrador de TI para permitir a aplicação. Autorizar um usuário no painel não contorna as políticas da empresa.
-6. Teste o botão **Entrar com Microsoft** com uma conta previamente cadastrada. Os emuladores testam os fluxos internos e as regras; não substituem esse teste de autenticação real.
+6. O botão Microsoft foi removido da tela inicial. Para a conexão opcional do Outlook, teste **Conectar minha conta Outlook** em uma sessão já autorizada. Os emuladores testam os fluxos internos e as regras; não substituem esse teste de autenticação real.
 
 O endereço retornado pelo provedor deve ser exatamente o cadastrado. Aliases diferentes são acessos diferentes; use o endereço principal apresentado na conta. Se o mesmo e-mail já tiver sido registrado por outro provedor, entre pela opção original. O painel não vincula identidades automaticamente pelo endereço.
 

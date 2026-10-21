@@ -109,3 +109,25 @@
 .acesso-diagnostico summary { cursor: pointer; padding: 8px 0; }
 .acesso-diagnostico pre { white-space: pre-wrap; overflow-wrap: anywhere; padding: 12px; border: 1px solid var(--line); border-radius: 8px; font: 12px/1.7 monospace; }
 .acesso-diagnostico p { font-size: 11px; line-height: 1.5; }
+
+/* Login com senha: imagem estática e brilho discreto, sem reprodução de vídeo. */
+.acesso { padding: 16px clamp(16px,3vw,48px); gap:16px; grid-template-rows:auto minmax(min-content,1fr) auto; overflow:auto; }
+.acesso-layout { width:min(1160px,100%); grid-template-columns:minmax(0,1.1fr) minmax(320px,440px); gap:clamp(24px,4vw,64px); align-items:center; }
+.acesso-apresentacao { aspect-ratio:4/3; max-height:650px; }
+.login-imagem { width:100%; height:100%; object-fit:cover; object-position:center; display:block; }
+.login-luz { position:absolute; inset:0; background:linear-gradient(110deg,transparent 30%,#70c9b720 50%,transparent 70%); background-size:250% 100%; animation:login-reflexo 14s ease-in-out infinite; pointer-events:none; }
+@keyframes login-reflexo { 0%,100%{background-position:100% 50%}50%{background-position:0 50%} }
+.acesso-cartao { min-width:0; max-width:none; padding:28px; gap:12px; }
+.acesso-cartao .logo-positivo { width:150px; height:58px; margin-bottom:8px; }
+.acesso-cartao h1 { font-size:28px; line-height:1.15; }
+.acesso-form { gap:14px; margin-top:4px; }
+.acesso-form input { width:100%; min-width:0; font-size:16px; }
+.acesso-form .btn { min-height:46px; width:100%; justify-content:center; }
+.acesso-link { border:0; background:none; color:var(--ink); text-decoration:underline; text-underline-offset:4px; padding:6px; cursor:pointer; font:13px var(--f-ui); justify-self:center; }
+.acesso-ou { display:flex; align-items:center; gap:14px; color:var(--muted); font-size:12px; }
+.acesso-ou::before,.acesso-ou::after { content:''; height:1px; background:var(--line); flex:1; }
+.acesso-restrito { padding-top:12px; margin-top:0; }
+@media(max-width:900px){.acesso-layout{grid-template-columns:minmax(0,440px);gap:16px;justify-content:center}.acesso-apresentacao{aspect-ratio:4/1;max-height:120px}.acesso-cartao{padding:24px}}
+@media(max-width:600px){.acesso{padding:12px;gap:12px}.acesso-cartao{padding:20px}.acesso-cartao h1{font-size:25px}.acesso-rodape{text-align:center;font-size:9px}}
+@media(max-height:820px) and (max-width:900px){.acesso-apresentacao{display:none}}
+@media(prefers-reduced-motion:reduce){.login-luz{animation:none}}

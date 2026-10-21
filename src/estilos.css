@@ -363,7 +363,7 @@ th.ordenado { color: var(--ink); }
 .lote-acoes { display: flex; flex-wrap: wrap; gap: 8px; }
 
 /* ------------------------------------------------------------ formulários */
-input[type="text"], input[type="search"], input[type="date"], input[type="number"], input[type="email"], input[type="tel"], select, textarea {
+input[type="text"], input[type="search"], input[type="date"], input[type="number"], input[type="email"], input[type="password"], input[type="tel"], select, textarea {
   font: inherit; font-size: 14px; color: var(--ink); background: var(--surface); border: 1px solid var(--line-2);
   border-radius: var(--raio-p); padding: 7px 10px; min-height: 36px; box-sizing: border-box; max-width: 100%;
 }

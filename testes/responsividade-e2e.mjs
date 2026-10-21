@@ -172,8 +172,8 @@ try {
     for (const [width,height] of [[320,568],[390,844],[844,390],[768,1024],[1024,600],[1920,1080]]) {
       await page.setViewportSize({ width, height });
       assert.equal(await page.locator('#acesso').evaluate(el => el.scrollWidth <= el.clientWidth + 1), true, 'login sem corte lateral');
-      await page.locator('#entrar-microsoft').scrollIntoViewIfNeeded();
-      assert.equal(await page.locator('#entrar-microsoft').evaluate(el => { const r = el.getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; }), true, 'provedores alcançáveis na tela de login');
+      await page.locator('#login-senha [type=submit]').scrollIntoViewIfNeeded();
+      assert.equal(await page.locator('#login-senha [type=submit]').evaluate(el => { const r = el.getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; }), true, 'provedores alcançáveis na tela de login');
       if (width === 390) await page.screenshot({ path: `${pasta}/login-${tema}.png` });
     }
   }

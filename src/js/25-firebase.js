@@ -175,54 +175,36 @@ function diagnosticoSessao(auth) {
   ].join('\n');
 }
 
-/** Entrada federada; a autorização é verificada no banco antes de carregar dados. */
+/** A autenticação não libera dados: as regras verificam perfil e troca de senha. */
 function pedirLogin(auth, firebase, mensagem = '') {
   return new Promise(resolver => {
-    const tela = document.getElementById('acesso'); tela.hidden = false;
-    tela.innerHTML = `<div class="circuitos-login" aria-hidden="true"><div class="circuito-grade"></div><svg viewBox="0 0 1200 900" preserveAspectRatio="xMidYMid slice"><g class="trilhas"><path d="M0 180H250L400 330H620L750 200H1200"/><path d="M0 680H300L460 520H780L960 700H1200"/><path d="M200 0V170L360 330V660L220 800V900"/><path d="M980 0V280L850 410V620L1040 810V900"/><path d="M0 440H1200"/></g><g class="pulsos"><path d="M0 180H250L400 330H620L750 200H1200"/><path d="M0 680H300L460 520H780L960 700H1200"/><path d="M200 0V170L360 330V660L220 800V900"/></g><g class="nos"><circle cx="400" cy="330" r="5"/><circle cx="780" cy="520" r="5"/><circle cx="850" cy="410" r="5"/><circle cx="250" cy="180" r="5"/></g></svg></div>
-      <div class="acesso-tema">${document.getElementById('botao-tema').innerHTML}</div>
-      <div class="acesso-layout"><div class="acesso-apresentacao"><video class="login-video" autoplay muted loop playsinline preload="auto" poster="/*__LOGIN_POSTER__*/" disablepictureinpicture disableremoteplayback aria-hidden="true" tabindex="-1"><source src="/*__LOGIN_WEBM__*/" type="video/webm"><source src="/*__LOGIN_MP4__*/" type="video/mp4"></video></div>
-      <div class="acesso-cartao"><span class="logo-positivo" role="img" aria-label="Positivo Tecnologia"></span><span class="acesso-etiqueta">ACESSO À OPERAÇÃO</span><h1>Entre na sua conta</h1><p>Use o e-mail autorizado pelo administrador.</p><p class="acesso-erro" role="alert" ${mensagem ? '' : 'hidden'}></p>
-        <button class="btn grande acesso-provedor" id="entrar-google"><span class="marca-google" aria-hidden="true">G</span>Entrar com Google${icone('direita')}</button>
-        <button class="btn grande acesso-provedor" id="entrar-microsoft"><span class="marca-microsoft" aria-hidden="true"><i></i><i></i><i></i><i></i></span>Entrar com Microsoft${icone('direita')}</button>
-        <small class="acesso-microsoft">Outlook, Hotmail ou conta corporativa do Microsoft 365.</small><details class="acesso-diagnostico"><summary>Diagnóstico de acesso</summary><pre></pre><p>Este diagnóstico não contém e-mail, senha nem tokens de acesso.</p></details><div class="acesso-restrito">${icone('info')}Somente e-mails cadastrados podem acessar. Não há cadastro público.</div>
-      </div></div><footer class="acesso-rodape">Positivo Tecnologia · Controle de Peças</footer>`;
-    const diagnostico = tela.querySelector('.acesso-diagnostico');
-    diagnostico.querySelector('pre').textContent = diagnosticoSessao(auth);
-    diagnostico.addEventListener('toggle', () => { if (diagnostico.open) diagnostico.querySelector('pre').textContent = diagnosticoSessao(auth); });
-    Tema.atualizarBotoes(); tela.querySelector('.acesso-erro').textContent = mensagem;
-    const video = tela.querySelector('.login-video'), eventosVideo = new AbortController();
-    const reproduzir = () => {
-      if (video.isConnected && !document.hidden) { video.muted = true; video.play().catch(() => {}); }
+    const tela=montarTelaAcesso('Entre na sua conta','Use o e-mail cadastrado e sua senha do painel.',`<form class="form acesso-form" id="login-senha"><label class="campo"><span>E-mail</span><input type="email" name="email" required maxlength="254" autocomplete="username" autocapitalize="none" spellcheck="false"></label><label class="campo"><span>Senha</span><input type="password" name="senha" required maxlength="128" autocomplete="current-password"></label><button class="btn prim" type="submit">Entrar</button><button class="acesso-link" type="button" data-esqueci>Esqueci minha senha</button></form><div class="acesso-ou"><span>ou</span></div><button class="btn acesso-provedor" id="entrar-google"><span class="marca-google" aria-hidden="true">G</span>Entrar com Google${icone('direita')}</button><details class="acesso-diagnostico"><summary>Diagnóstico de acesso</summary><pre></pre><p>Este diagnóstico não contém e-mail, senha nem tokens.</p></details>`);
+    const diagnostico=tela.querySelector('.acesso-diagnostico');
+    diagnostico.querySelector('pre').textContent=diagnosticoSessao(auth);
+    diagnostico.addEventListener('toggle',()=>{if(diagnostico.open)diagnostico.querySelector('pre').textContent=diagnosticoSessao(auth);});
+    if(mensagem)erroTelaAcesso(tela,mensagem);
+    const parar=auth.onAuthStateChanged(u=>{if(!u)return;parar();tela.hidden=true;tela.innerHTML='';resolver(u);});
+    const f=tela.querySelector('form');
+    f.onsubmit=async e=>{
+      e.preventDefault();if(!f.reportValidity())return;const b=f.querySelector('[type=submit]');b.disabled=true;
+      try{await auth.signInWithEmailAndPassword(f.email.value.trim().toLowerCase(),f.senha.value);}
+      catch(e){f.senha.value='';erroTelaAcesso(tela,e.code==='auth/operation-not-allowed'?'O administrador precisa habilitar E-mail/senha no Firebase.':e.code==='auth/too-many-requests'?'Muitas tentativas. Aguarde alguns minutos.':'Não foi possível entrar. Confira seu e-mail e sua senha ou use a recuperação de acesso.');b.disabled=false;}
     };
-    reproduzir();
-    // Retoma se o navegador suspender a aba ou exigir a primeira interação.
-    document.addEventListener('visibilitychange', reproduzir, { signal: eventosVideo.signal });
-    tela.addEventListener('pointerdown', reproduzir, { signal: eventosVideo.signal });
-    tela.addEventListener('keydown', reproduzir, { signal: eventosVideo.signal });
-    const parar = auth.onAuthStateChanged(u => {
-      if (!u) return; parar(); eventosVideo.abort(); video.pause(); tela.hidden = true; tela.innerHTML = ''; resolver(u);
-    });
-    for (const tipo of ['google','microsoft']) tela.querySelector(`#entrar-${tipo}`).addEventListener('click', async () => {
-      const p = tipo === 'google' ? new firebase.auth.GoogleAuthProvider() : new firebase.auth.OAuthProvider('microsoft.com');
-      p.setCustomParameters(tipo === 'google' ? { prompt: 'select_account' } : { prompt: 'select_account', tenant: 'common' });
-      tela.querySelectorAll('.acesso-provedor').forEach(b => b.disabled = true);
-      try { await auth.signInWithPopup(p); }
-      catch (e) {
-        if (e.code === 'auth/popup-blocked') {
-          try { await auth.signInWithRedirect(p); return; } catch (erro) { e = erro; }
-        }
-        if (e.code !== 'auth/popup-closed-by-user' && e.code !== 'auth/cancelled-popup-request') {
-          const erros = {
-            'auth/operation-not-allowed': 'Esta opção de entrada ainda precisa ser habilitada pelo administrador.',
-            'auth/unauthorized-domain': 'O endereço deste painel precisa ser autorizado no Firebase pelo administrador.',
-            'auth/account-exists-with-different-credential': 'Este e-mail já usa outro provedor. Entre pela opção usada no primeiro acesso; o administrador pode orientar a vinculação das contas.',
-            'auth/network-request-failed': 'Confira sua conexão e tente novamente.',
-          };
-          const aviso = tela.querySelector('.acesso-erro'); if (aviso) { aviso.hidden = false; aviso.textContent = erros[e.code] || 'Não foi possível entrar. Tente novamente ou consulte o administrador.'; }
-        }
-      } finally { tela.querySelectorAll('.acesso-provedor').forEach(b => b.disabled = false); }
-    });
+    tela.querySelector('[data-esqueci]').onclick=()=>{
+      const email=f.email.value;f.senha.value='';
+      const cartao=tela.querySelector('.acesso-cartao'),titulo=cartao.querySelector('h1'),descricao=cartao.querySelector(':scope > p');
+      const anteriores=[titulo.textContent,descricao.textContent];titulo.textContent='Recuperar acesso';descricao.textContent='Enviaremos instruções para o e-mail cadastrado.';
+      const ocultar=[f,tela.querySelector('.acesso-ou'),tela.querySelector('#entrar-google'),diagnostico];ocultar.forEach(el=>el.hidden=true);
+      const area=document.createElement('section');area.innerHTML=`<form class="form acesso-form"><label class="campo"><span>E-mail cadastrado</span><input name="email" type="email" required maxlength="254" autocomplete="email" value="${esc(email)}"></label><small>Solicitar a recuperação não altera sua senha atual.</small><p role="status" aria-live="polite"></p><button class="btn prim" type="submit">Enviar instruções</button><button class="acesso-link" type="button" data-voltar>Voltar ao login</button></form>`;
+      cartao.insertBefore(area,cartao.querySelector('.acesso-restrito'));
+      area.querySelector('[data-voltar]').onclick=()=>{area.remove();ocultar.forEach(el=>el.hidden=false);[titulo.textContent,descricao.textContent]=anteriores;};
+      const form=area.querySelector('form'),b=form.querySelector('[type=submit]');
+      form.onsubmit=async e=>{e.preventDefault();if(!form.reportValidity()||b.disabled)return;b.disabled=true;try{const d=await solicitarConta('recuperar',{email:form.email.value});form.querySelector('[role=status]').textContent=d.mensagem;}catch(e){form.querySelector('[role=status]').textContent=e.message;b.disabled=false;}};
+    };
+    tela.querySelector('#entrar-google').onclick=async()=>{
+      const p=new firebase.auth.GoogleAuthProvider();p.setCustomParameters({prompt:'select_account'});
+      try{await auth.signInWithPopup(p);}catch(e){if(e.code==='auth/popup-blocked'){try{await auth.signInWithRedirect(p);return;}catch{}}if(e.code!=='auth/popup-closed-by-user')erroTelaAcesso(tela,'Não foi possível entrar com Google. Tente novamente ou use e-mail e senha.');}
+    };
   });
 }
 
@@ -245,12 +227,17 @@ async function iniciarFirebase(cfg) {
   // Não concede acesso: token atualizado e perfil ativo continuam obrigatórios em cada abertura.
   await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
   try { await auth.getRedirectResult(); } catch (e) { console.warn("login por redirecionamento", e); }
+  const recuperada=await abrirRecuperacaoPublica(auth);
   let usuario = await new Promise((ok) => { const parar = auth.onAuthStateChanged((u) => { parar(); ok(u); }); });
   if (window.__CP_FIREBASE_EMULADOR__ && /^(localhost|127\.0\.0\.1)$/.test(location.hostname) && window.__CP_LOGIN_TESTE__ && !usuario) {
     const cred = firebase.auth.GoogleAuthProvider.credential(JSON.stringify(window.__CP_LOGIN_TESTE__));
     usuario = (await auth.signInWithCredential(cred)).user;
   }
-  if (!usuario) usuario = await pedirLogin(auth, firebase);
+  if (!usuario) usuario = await pedirLogin(auth, firebase,recuperada?'Senha redefinida. Entre com sua nova senha.':'');
+  for(;;){
+    try{usuario=await prepararAcessoSenha(auth,usuario);break;}
+    catch(e){await auth.signOut();usuario=await pedirLogin(auth,firebase,e.message||'Solicite a recuperação do acesso.');}
+  }
   await usuario.reload();
   await usuario.getIdToken(true);
   Acesso.usuario = { uid: usuario.uid, email: usuario.email || '', nome: primeiroNomeEmail(usuario.email), verificado: usuario.emailVerified };

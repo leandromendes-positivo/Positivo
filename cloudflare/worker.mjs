@@ -1,3 +1,4 @@
+import {atenderContas,authAdministrativa,credencialLiberada} from './contas.mjs';
 import {firestoreREST,tokenServico} from './firestore.mjs';
 import {transporteEmail} from './email.mjs';
 import {processarTestesFerias} from '../aviso/testes-ferias.mjs';
@@ -21,6 +22,7 @@ export async function autenticar(req,env,db,fetcher=fetch){
  const conexao=typeof db==='function'?await db():db;
  const perfil=(await conexao.doc('usuarios/'+email).get()).data();
  if(!perfil?.ativo||!['usuario','administrador'].includes(perfil.perfil))throw new Error('Não autorizado');
+ if(!await credencialLiberada(conexao,{uid:u.localId,email,claims,usuario:u}))throw new Error('Não autorizado');
  return {uid:u.localId,email};
 }
 export function limitarTeste(db,uid){
@@ -56,9 +58,15 @@ export default {
  async fetch(req,env,ctx){
   if(!origemPermitida(req,env))return new Response(null,{status:403});
   const headers={'Access-Control-Allow-Origin':new URL(env.PAINEL_URL).origin,'Access-Control-Allow-Methods':'POST, OPTIONS','Access-Control-Allow-Headers':'Authorization, Content-Type','Vary':'Origin','Cache-Control':'no-store'};
-  if(new URL(req.url).pathname!=='/testar')return new Response(null,{status:404,headers});
+  const caminho=new URL(req.url).pathname;
+  if(!['/testar','/contas/situacao','/contas/primeiro-acesso','/contas/temporaria','/contas/recuperar','/contas/redefinir'].includes(caminho))return new Response(null,{status:404,headers});
   if(req.method==='OPTIONS')return new Response(null,{status:204,headers});
   if(req.method!=='POST')return new Response(null,{status:405,headers});
+  if(caminho.startsWith('/contas/'))return atenderContas(req,env,async()=>{
+   const cred=JSON.parse(env.FIREBASE_SERVICE_ACCOUNT||'null');if(cred?.project_id!==env.FIREBASE_PROJECT_ID)throw new Error('Projeto inválido');
+   const token=await tokenServico(cred,fetch,'https://www.googleapis.com/auth/cloud-platform');
+   return {db:firestoreREST(env.FIREBASE_PROJECT_ID,token),authAdmin:authAdministrativa(env.FIREBASE_PROJECT_ID,token),transporte:transporteEmail(env),remetente:env.EMAIL_REMETENTE};
+  },headers,ctx);
   if(env.ATIVAR_SERVICO!=='true')return Response.json({erro:'Serviço ainda não ativado'},{status:503,headers});
   // O endpoint não aceita destinatário nem UID no corpo. Usa somente o pedido
   // que as regras do Firestore já autorizaram para a própria conta.

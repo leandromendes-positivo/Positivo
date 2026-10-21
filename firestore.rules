@@ -5,7 +5,16 @@ service cloud.firestore {
     function identidade() {
       return request.auth != null && request.auth.token.email is string
         && request.auth.token.email_verified == true
-        && request.auth.token.firebase.sign_in_provider in ['google.com', 'microsoft.com'];
+        && request.auth.token.firebase.sign_in_provider in ['google.com', 'microsoft.com', 'password']
+        && senhaLiberada();
+    }
+    function senhaLiberada() {
+      let caminho = /databases/$(database)/documents/credenciais_usuarios/$(request.auth.token.email.lower());
+      return (!exists(caminho) && request.auth.token.firebase.sign_in_provider != 'password')
+        || (exists(caminho) && get(caminho).data.uid == request.auth.uid
+          && get(caminho).data.exigirTroca == false && get(caminho).data.estado == 'ativo'
+          && request.auth.token.get('cpSenha', -1) == get(caminho).data.versao
+          && request.auth.token.auth_time >= get(caminho).data.liberadoApartir);
     }
     function email() { return request.auth.token.email.lower(); }
     function perfil() { return get(/databases/$(database)/documents/usuarios/$(email())).data; }

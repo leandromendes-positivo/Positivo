@@ -17,7 +17,7 @@ async function abrir(email='teste@exemplo.com') {
  await p.addInitScript(email=>{window.CP_FIREBASE={apiKey:'chave-de-teste',projectId:'demo-controle-pecas',authDomain:'demo-controle-pecas.firebaseapp.com'};window.__CP_FIREBASE_EMULADOR__=true;window.__CP_AGORA='2026-10-06T09:00:00';if(email)window.__CP_LOGIN_TESTE__={sub:'uid-'+email,email,email_verified:true};},email);
  await p.goto(process.env.URL_PAINEL_TESTE||'http://127.0.0.1:8002/pagina-completa.html');
  if(email)await p.waitForFunction(()=>E.status==='pronto'||E.status==='erro');
- else await p.locator('#entrar-microsoft').waitFor();
+ else await p.locator('#login-senha').waitFor();
  if(email)await instalarAgendaTeste(p);
  return p;
 }
@@ -35,7 +35,7 @@ try {
  await admin.reload();await admin.waitForFunction(()=>E.status==='pronto');
  assert.equal(await admin.evaluate(tid=>E.cadastro[tid].localidade,tid),'interior');
  await admin.locator('[data-nav="usuarios"]').click();await admin.locator('[data-acao="novo-usuario"]').click();
- await admin.locator('.modal [name="email"]').fill('Maria.Silva@empresa.com');await admin.locator('.modal [data-salvar]').click();
+ await admin.locator('.modal [name="email"]').fill('Maria.Silva@empresa.com');await admin.locator('.modal [name="gerarSenha"]').uncheck();await admin.locator('.modal [data-salvar]').click();
  await admin.waitForFunction(()=>E.usuarios.some(u=>u.email==='maria.silva@empresa.com'&&u.perfil==='usuario'));
  const normal=await abrir('maria.silva@empresa.com');
  assert.equal(await normal.evaluate(()=>E.status),'pronto');
@@ -116,21 +116,12 @@ try {
   if(await login.evaluate(()=>document.documentElement.dataset.theme)!==tema)await login.locator('.acesso-tema [data-acao="tema"]').click();
   for(const width of [1440,390,320]) {await login.setViewportSize({width,height:900});await login.screenshot({path:`${saida}/login-${tema}-${width}.png`});assert.equal(await login.evaluate(()=>document.querySelector('#acesso').scrollWidth>innerWidth),false);}
  }
- // Vídeo real: inicia sem clique, continua nos dois temas e retorna ao início em loop.
- await login.waitForFunction(()=>{const v=document.querySelector('.login-video');return v.readyState>=2&&!v.paused&&v.currentTime>0;});
- assert.deepEqual(await login.locator('.login-video').evaluate(v=>({loop:v.loop,muted:v.muted,controls:v.controls,inline:v.playsInline})),{loop:true,muted:true,controls:false,inline:true});
- assert.equal(await login.getByRole('button',{name:/pausar/i}).count(),0);
- await login.locator('.login-video').evaluate(v=>v.currentTime=v.duration-.3);
- await login.waitForFunction(()=>document.querySelector('.login-video').currentTime<2);
- const tempo=await login.locator('.login-video').evaluate(v=>v.currentTime);
- await login.waitForFunction(t=>document.querySelector('.login-video').currentTime>t+.25,tempo);
- await login.locator('.login-video').evaluate(async v=>{v.src=v.querySelector('source[type="video/mp4"]').src;v.load();await v.play();});
- await login.waitForFunction(()=>document.querySelector('.login-video').currentTime>.25);
- // Confere os dois provedores e o tenant comum sem abrir login externo nos testes.
- await login.evaluate(()=>{window.__provedores=[];Acesso.auth.signInWithPopup=async p=>{window.__provedores.push([p.providerId,p.customParameters]);throw {code:'auth/popup-closed-by-user'};};});
- await login.locator('#entrar-google').click();await login.locator('#entrar-microsoft').click();
- assert.deepEqual(await login.evaluate(()=>window.__provedores.map(p=>p[0])),['google.com','microsoft.com']);
- assert.equal(await login.evaluate(()=>window.__provedores[1][1].tenant),'common');
+ // Login com senha e imagem estática, sem Microsoft ou reprodução automática.
+ await login.waitForFunction(()=>{const i=document.querySelector('.login-imagem');return i.complete&&i.naturalWidth>0;});
+ assert.equal(await login.locator('video,#entrar-microsoft').count(),0);
+ assert.equal(await login.locator('#login-senha input[type=password]').count(),1);
+ await login.evaluate(()=>{window.__provedores=[];Acesso.auth.signInWithPopup=async p=>{window.__provedores.push(p.providerId);throw {code:'auth/popup-closed-by-user'};};});
+ await login.locator('#entrar-google').click();assert.deepEqual(await login.evaluate(()=>window.__provedores),['google.com']);
  // Trocar a identidade de autenticação invalida os dados carregados da conta anterior.
  await admin.evaluate(async()=>{
   const email='outra.identidade@empresa.com';
@@ -139,5 +130,5 @@ try {
  await admin.waitForFunction(()=>E.status==='erro');
  assert.equal(await admin.evaluate(()=>Acesso.perfil),null);assert.equal(await admin.evaluate(()=>E.usuarios.length),0);
  assert.match(await admin.locator('#conteudo').innerText(),/sessão foi alterada ou encerrada/);
- assert.deepEqual(erros,[]);console.log('PASSOU: gestão somente por administradores, principal protegido, rebaixamento e revogação com limpeza imediata, troca de identidade, cadastro de usuários, capital/interior, autoria e auditoria, sincronização, resumo diário, dois provedores, temas e celular.');
+ assert.deepEqual(erros,[]);console.log('PASSOU: gestão somente por administradores, principal protegido, rebaixamento e revogação com limpeza imediata, troca de identidade, cadastro de usuários, capital/interior, autoria e auditoria, sincronização, resumo diário, login com senha e Google, imagem, temas e celular.');
 } finally {await browser.close();}

@@ -16,9 +16,9 @@ export function decodificar(v){
  return v.stringValue??v.booleanValue??v.timestampValue;
 }
 const lerCampos=o=>Object.fromEntries(Object.entries(o).map(([k,v])=>[k,decodificar(v)]));
-export async function tokenServico(cred,fetcher=fetch){
+export async function tokenServico(cred,fetcher=fetch,scope='https://www.googleapis.com/auth/datastore'){
  const agora=Math.floor(Date.now()/1000),cab=b64(JSON.stringify({alg:'RS256',typ:'JWT'}));
- const corpo=b64(JSON.stringify({iss:cred.client_email,scope:'https://www.googleapis.com/auth/datastore',aud:'https://oauth2.googleapis.com/token',iat:agora,exp:agora+3600}));
+ const corpo=b64(JSON.stringify({iss:cred.client_email,scope,aud:'https://oauth2.googleapis.com/token',iat:agora,exp:agora+3600}));
  const der=Buffer.from(cred.private_key.replace(/-----[^-]+-----/g,'').replace(/\s/g,''),'base64');
  const key=await crypto.subtle.importKey('pkcs8',der,{name:'RSASSA-PKCS1-v1_5',hash:'SHA-256'},false,['sign']);
  const assinatura=await crypto.subtle.sign('RSASSA-PKCS1-v1_5',key,new TextEncoder().encode(cab+'.'+corpo));

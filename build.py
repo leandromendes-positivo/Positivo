@@ -67,9 +67,8 @@ def main() -> int:
     tema = (SRC / "tema.js").read_text(encoding="utf-8")
     js = "\n".join(p.read_text(encoding="utf-8") for p in sorted((SRC / "js").glob("*.js")))
     js = js.replace("/*__VERSAO_ACESSO__*/", hashlib.sha256(js.encode("utf-8")).hexdigest()[:12])
-    for extensao, mime, marcador in (("webm", "video/webm", "WEBM"), ("mp4", "video/mp4", "MP4"), ("jpg", "image/jpeg", "POSTER")):
-        video = base64.b64encode((SRC / "assets" / f"login-circuitos.{extensao}").read_bytes()).decode("ascii")
-        js = js.replace(f"/*__LOGIN_{marcador}__*/", f"data:{mime};base64," + video)
+    imagem_login = base64.b64encode((SRC / "assets" / "login-operacao.png").read_bytes()).decode("ascii")
+    js = js.replace("/*__LOGIN_IMAGEM__*/", "data:image/png;base64," + imagem_login)
     mapa = json.loads((SRC / "assets" / "mapa-brasil.json").read_text(encoding="utf-8"))
     js = js.replace("/*__MAPA_BRASIL__*/", json.dumps(mapa, ensure_ascii=False, separators=(",", ":")))
     if re.search(r"</script", js + tema, re.IGNORECASE):

@@ -26,7 +26,7 @@ try{
   if(!opcoesVinculoTecnico().some(t=>t.id==='SC--ANA_PORTAL'))throw new Error('O estoque da segunda UF precisa estar disponível para vínculo explícito.');
   irPara('usuarios');
  });
- await admin.locator('[data-acao="novo-acesso-tecnico"]').click();await admin.locator('.modal [name="email"]').fill('ana@empresa.com');await admin.locator('.modal [name="tecnicoId"]').selectOption('PR--ANA_PORTAL');await admin.locator('.modal [data-salvar]').click();
+ await admin.locator('[data-acao="novo-acesso-tecnico"]').click();await admin.locator('.modal [name="email"]').fill('ana@empresa.com');await admin.locator('.modal [name="gerarSenha"]').uncheck();await admin.locator('.modal [name="tecnicoId"]').selectOption('PR--ANA_PORTAL');await admin.locator('.modal [data-salvar]').click();
  await admin.waitForFunction(()=>E.usuarios.some(u=>u.email==='ana@empresa.com'&&u.perfil==='tecnico'));
  const duplicado=await admin.evaluate(async()=>{try{await salvarUsuario('duplicado@empresa.com','tecnico',true,'PR--ANA_PORTAL');return '';}catch(e){return e.message;}});assert.match(duplicado,/já está vinculado/);
  const tec=await abrir('ana@empresa.com');

@@ -174,3 +174,63 @@ tudo e usa a data da última edição para detectar alterações posteriores ao 
 antigo. Nesses casos o e-mail pode mostrar apenas a programação atual, pois não
 há dados suficientes para reconstruir a anterior. A assinatura do agendador foi
 versionada para executar essa conferência na implantação, após o horário devido.
+
+## Login próprio com e-mail e senha
+
+O login usa **Firebase Authentication**, não uma tabela de senhas. No cadastro de
+usuários e técnicos, **Gerar senha temporária e enviar por e-mail** vem marcado
+para novos acessos. Em acessos existentes, marcar a mesma opção substitui a senha
+anterior por uma aleatória. A geração exige administrador ativo, autenticação
+recente e permite somente outro cadastro ativo. O administrador principal é
+protegido. O Google continua disponível; Microsoft foi retirado da tela inicial
+(a conexão opcional do Outlook para rascunhos é independente e foi preservada).
+
+### Ativação necessária, uma vez
+
+1. No [Firebase Authentication](https://console.firebase.google.com/project/controle-pecas-positivo/authentication/providers),
+   em **Método de login → E-mail/senha**, habilite **E-mail/senha** e salve.
+2. Em [Google Cloud → IAM](https://console.cloud.google.com/iam-admin/iam?project=controle-pecas-positivo),
+   localize a conta de serviço cujo `client_email` pertence ao JSON já guardado no
+   Secret `FIREBASE_SERVICE_ACCOUNT` do Worker. Acrescente **Firebase Authentication
+   Admin** (`roles/firebaseauth.admin`). Preserve o papel **Cloud Datastore User**
+   usado pelo serviço. Não é necessário criar outra chave ou publicar o JSON.
+3. Confira que o Worker tem o remetente Gmail e as credenciais já usados pelos
+   lembretes. O código e as regras devem estar na mesma versão implantada. O
+   Worker confere a configuração do provedor antes de gerar senhas; configuração
+   ausente não deve invalidar o acesso atual durante essa conferência.
+4. Cadastre um acesso de teste em **Cadastro de usuários**, mantenha a opção de
+   senha temporária marcada e salve. Confirme o recebimento no e-mail autorizado.
+   Em janela anônima, entre com e-mail e senha temporária, defina uma senha com no
+   mínimo 12 caracteres e confira as permissões. Para técnico, confira o vínculo
+   e a ausência de dados de outros estoques. Nenhum teste automatizado envia
+   mensagens reais ou configura o provedor do projeto de produção.
+
+### Fluxos e proteção
+
+- A senha temporária é criptograficamente aleatória, enviada somente ao endereço
+  do cadastro, não retornada ao administrador e expira em 24 horas. O Firestore
+  guarda apenas seu hash (alta entropia), UID, versão e estado, nunca a senha.
+- Antes da troca, **as regras do banco bloqueiam até o perfil**, não apenas a UI.
+  Ao definir a senha, o servidor atualiza o Firebase, incrementa a claim `cpSenha`
+  e exige uma nova autenticação. Tokens antigos, inclusive sessões federadas de
+  contas que receberam uma senha temporária, não podem contornar a barreira.
+- **Esqueci minha senha** envia um link secreto válido por 15 minutos. Pedir o
+  link não altera a senha e não encerra sessões. Só quem possuir o link pode
+  definir outra senha. Apenas o link mais recente vale, o uso é único e o token
+  é armazenado como hash. O fragmento é removido do histórico ao abrir a tela.
+- A redefinição administrativa gera outra senha aleatória, invalida as sessões
+  antigas no banco e exige a troca novamente. A recuperação pública usa o link,
+  em vez de trocar a senha antes de comprovar a posse do e-mail; isso impede que
+  terceiros bloqueiem a conta apenas conhecendo o endereço corporativo.
+- `credenciais_usuarios`, `recuperacoes_senha`, `pedidos_recuperacao` e
+  `limites_contas` são exclusivamente do servidor. As APIs conferem o token no
+  Firebase, projeto, UID, revogação e perfil; não aceitam permissões/estoque do
+  corpo. CORS é restrito à origem configurada. Há limites por IP, conta e
+  administrador, respostas de recuperação uniformes e corpos limitados a 4 KB.
+- Se o cadastro for salvo e o envio falhar, a tela informa **cadastro salvo, envio
+  não confirmado** e permite nova tentativa. Confira spam antes de reenviar; uma
+  nova geração substitui a temporária anterior. Conta desativada não recebe
+  credenciais nem pode concluir recuperação. A senha não altera perfil ou vínculo.
+- Depois de resetar, abas antigas podem continuar exibindo conteúdo já visto;
+  as regras bloqueiam novas leituras e escritas. Recarregar/entrar limpa a sessão.
+  Permissões, revogação do perfil e isolamento dos técnicos continuam aplicados.

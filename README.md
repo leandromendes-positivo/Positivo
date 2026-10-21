@@ -263,7 +263,7 @@ src/acesso.css                     login, contas e histórico de inventário
 src/tema.js, src/botao-tema.html   escolha de tema e preferência local
 src/assets/                      logos, favicon, ilustração e mapa (atribuição em MAPA-LICENCA.txt)
 src/js/00…80                       lógica e telas (JavaScript puro, sem framework)
-src/js/25-firebase.js              banco Firebase + login Google/Microsoft
+src/js/25-firebase.js              banco Firebase + login com senha/Google
 src/js/26-identidade.js            autorização e autoria dos agendamentos
 src/js/32-inventario.js            acervo completo de responsabilidades
 src/js/33-confirmacoes.js          quantidades previstas e acompanhamento de respostas por e-mail
@@ -421,3 +421,5 @@ seleção de estados ou controles de zoom nesta seção.
 ```bash
 PW_PATH=/workspace/positivo-tools/node_modules/playwright CHROMIUM=/usr/bin/chromium node testes/historico-estados-ferias-e2e.mjs
 ```
+
+O cadastro de acessos permite gerar senha temporária por e-mail, com troca obrigatória e recuperação segura. Consulte [ativação do login próprio](cloudflare/README.md#login-próprio-com-e-mail-e-senha).

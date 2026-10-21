@@ -1,5 +1,7 @@
 // Anota falhas no resumo do Actions antes de impedir a publicação das regras.
 try {
+  await import('./contas-regras.mjs');
+  await import('./contas-e2e.mjs');
   await import('./seguranca-regras.mjs');
   await import('./portal-regras.mjs');
   await import('./portal-e2e.mjs');

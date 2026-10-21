@@ -66,6 +66,7 @@ jobs:
           node testes/portal-projecao.mjs
           node testes/lembretes-ferias.mjs
           node testes/cloudflare-ferias.mjs
+          node testes/contas.mjs
       - name: Testar regras reais de acesso e isolamento
         env:
           PW_PATH: ${{ github.workspace }}/seguranca

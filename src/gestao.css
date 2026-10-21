@@ -800,3 +800,8 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 /* Identificação do canal sem depender apenas da cor; ícones acompanham o texto. */
 .contato-whatsapp, .contato-canal { display: inline-flex; align-items: center; gap: 6px; vertical-align: middle; }
 .contato-whatsapp .ic-whatsapp, .contato-canal .ic-whatsapp { width: 16px; height: 16px; flex: none; color: var(--good-ink); }
+
+/* Cópia individual dos dados de acesso, com botão ao final do campo. */
+.acesso-campo-copia { display: flex; align-items: stretch; gap: 8px; margin-top: 6px; min-width: 0; }
+.acesso-campo-copia input { flex: 1; min-width: 0; width: 0; }
+.acesso-campo-copia .btn { flex: none; align-self: stretch; }

@@ -77,7 +77,7 @@ function renderRankings(D) {
   const r = dadosDesempenhoRanking(D), intervalo = intervaloRanking(), novas = UIranking.tipo === 'novas';
   if (!r && historicoRanking.chave !== chaveHistoricoRanking()) UI.posRender = carregarHistoricoRanking;
   const registros = precisaHistoricoRanking() && r ? [...historicoRanking.devolucoes, ...historicoRanking.movimentos] : [...E.devolucoes, ...E.movimentos];
-  const regioes = [...new Set([...D.regioes, ...registros.map(i => i.regiao), UIranking.regiao].filter(Boolean))].sort();
+  const regioes = regioesOperacionais([...D.regioes, ...registros.map(i => i.regiao), UIranking.regiao]);
   const prazo = novas ? Number(D.cfg.prazoNovas) || 7 : D.cfg.prazo;
   const seg = (campo, opcoes) => `<div class="filtros-segmentados" role="group" aria-label="${campo === 'tipo' ? 'Tipo de peça do ranking' : 'Período do ranking'}">${opcoes.map(([v,n]) => `<button type="button" data-acao="ranking-filtro" data-campo="${campo}" data-valor="${v}" class="${UIranking[campo] === v ? 'ativo' : ''}" aria-pressed="${UIranking[campo] === v}">${n}</button>`).join('')}</div>`;
   const cabecalho = `<section class="desempenho" aria-labelledby="titulo-desempenho">

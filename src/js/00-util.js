@@ -54,6 +54,7 @@ const UFS = {
 
 // Estado encerrado: reconhece também registros legados e vínculos TO--técnico.
 function regiaoDesativada(valor){return /^(?:TO|TOCANTINS)(?:$|[^A-Z])/.test(semAcentos(String(valor||'')).trim().toUpperCase());}
+function regioesOperacionais(valores){return [...new Set(valores.filter(r=>r&&!regiaoDesativada(r)))].sort();}
 function perfilForaDaOperacao(perfil){return perfil?.perfil==='tecnico'&&regiaoDesativada(perfil.tecnicoId);}
 
 /** Sigla do estado no nome do arquivo: 'PR Usadas.csv' -> 'PR' */

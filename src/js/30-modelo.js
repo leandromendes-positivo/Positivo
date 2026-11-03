@@ -441,7 +441,7 @@ function derivar() {
   }
 
   // ---- por região
-  const regioes = [...new Set([...itens.map((i) => i.regiao), ...E.novas.map((n) => n.regiao), ...regioesEstoque])].sort();
+  const regioes = regioesOperacionais([...itens.map((i) => i.regiao), ...E.novas.map((n) => n.regiao), ...regioesEstoque]);
   const porRegiao = regioes.map((r) => {
     const its = itens.filter((i) => i.regiao === r);
     const q = (f) => somar(its.filter(f), (i) => i.qtd);
@@ -462,7 +462,7 @@ function derivar() {
 
   // ---- atualização das planilhas
   const frescor = [];
-  for (const r of new Set([...regioes, ...Object.keys(E.indice.arquivos || {}).map((k) => k.split(":")[1])])) {
+  for (const r of regioesOperacionais([...regioes, ...Object.keys(E.indice.arquivos || {}).map((k) => k.split(":")[1])])) {
     for (const tipo of ["novas", "usadas", "rmdf"]) {
       if (tipo === "rmdf" && !E.indice.arquivos?.[`rmdf:${r}`]) continue;
       const ent = (E.indice.arquivos || {})[`${tipo}:${r}`];

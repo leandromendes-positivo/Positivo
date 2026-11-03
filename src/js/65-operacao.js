@@ -45,12 +45,11 @@ function mapaOperacao(D) {
   const r = dados.find((x) => x.regiao === UIpainel.regiao);
   const riscos = new Map(dados.map((x) => [x.regiao, riscoEstado(D, x, novas)]));
   const caminho = [...MAPA_BRASIL].sort((a, b) => (a.uf === UIpainel.regiao) - (b.uf === UIpainel.regiao)).map((uf) => {
-    // O território permanece na base geográfica, sem dados ou interação da operação encerrada.
-    if (regiaoDesativada(uf.uf)) return `<g class="mapa-estado sem-dados" aria-hidden="true" pointer-events="none"><path d="${uf.d}"/></g>`;
-    const risco = riscos.get(uf.uf), selecionado = UIpainel.regiao === uf.uf;
-    const texto = risco ? `${fmtNum1(risco.percentual)}% ${novas ? "dos técnicos acima do limite" : "das peças acima do prazo"}` : "sem planilha importada";
-    const dica = `<strong>${esc(UFS[uf.uf])}</strong><span>${texto}</span>`;
-    return `<g data-uf="${uf.uf}" data-dica="${esc(dica)}" class="mapa-estado ${risco ? `risco-${risco.nivel}` : "sem-dados"} ${selecionado ? "selecionado" : ""}" ${risco ? `role="button" tabindex="0" data-acao="painel-regiao" data-regiao="${uf.uf}" aria-pressed="${selecionado}"` : 'role="img"'} aria-label="${esc(UFS[uf.uf] + ', ' + texto)}"><title>${esc(UFS[uf.uf] + ': ' + texto)}</title><path d="${uf.d}"/>${risco ? `<text x="${uf.centro[0]}" y="${uf.centro[1]}">${uf.uf}</text>` : ""}${selecionado ? `<circle class="mapa-sinal" cx="${uf.centro[0]}" cy="${uf.centro[1]}" r="13"/>` : ""}</g>`;
+    const encerrada = regiaoDesativada(uf.uf), nome = UFS[uf.uf] || uf.uf;
+    const risco = encerrada ? null : riscos.get(uf.uf), selecionado = !encerrada && UIpainel.regiao === uf.uf;
+    const texto = risco ? `${fmtNum1(risco.percentual)}% ${novas ? "dos técnicos acima do limite" : "das peças acima do prazo"}` : encerrada ? "fora da área de atuação" : "sem planilha importada";
+    const dica = `<strong>${esc(nome)}</strong><span>${texto}</span>`;
+    return `<g data-uf="${uf.uf}" data-dica="${esc(dica)}" class="mapa-estado ${risco ? `risco-${risco.nivel}` : "sem-dados"} ${selecionado ? "selecionado" : ""}" ${risco ? `role="button" tabindex="0" data-acao="painel-regiao" data-regiao="${uf.uf}" aria-pressed="${selecionado}"` : 'role="img"'} aria-label="${esc(nome + ', ' + texto)}"><title>${esc(nome + ': ' + texto)}</title><path d="${uf.d}"/>${risco ? `<text x="${uf.centro[0]}" y="${uf.centro[1]}">${uf.uf}</text>` : ""}${selecionado ? `<circle class="mapa-sinal" cx="${uf.centro[0]}" cy="${uf.centro[1]}" r="13"/>` : ""}</g>`;
   }).join("");
   const seletor = `<div class="filtros-segmentados">${[["usadas", "Usadas"], ["novas", "Novas"]].map(([id, nome]) => `<button type="button" data-acao="painel-mapa-modo" data-modo="${id}" aria-pressed="${UIpainel.mapaModo === id}" class="${UIpainel.mapaModo === id ? "ativo" : ""}">${nome}</button>`).join("")}</div>`;
   const frescor = r && D.frescor.find((f) => f.regiao === r.regiao && f.tipo === UIpainel.mapaModo);
@@ -170,7 +169,7 @@ function ligarMapaPainel() {
     Movimento.animar(destaque, [{ transform: "scale(1)", opacity: .65 }, { transform: `scale(${fator})`, opacity: 1 }], 320);
   }
   mapa.addEventListener("mapa-reset", () => recolher(true));
-  mapa.querySelectorAll('.mapa-estado:not([aria-hidden="true"])').forEach((el) => {
+  mapa.querySelectorAll('.mapa-estado').forEach((el) => {
     el.addEventListener("pointerenter", (ev) => { if (ev.pointerType !== "touch" && ponteiroPreciso.matches) ampliar(el); });
     el.addEventListener("pointerleave", () => { if (origem === el && !el.matches(":focus-visible")) recolher(); });
     el.addEventListener("focus", () => { if (el.matches(":focus-visible")) ampliar(el); });

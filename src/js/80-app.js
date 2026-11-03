@@ -70,6 +70,15 @@ function irPara(pagina, { tid = null } = {}) {
   Dica.esconder();
 }
 
+function limparFiltrosForaDaOperacao() {
+  const filtros = [UI.cob, UI.us, UI.es, UI.tc, UIpainel, UIranking, UIrmdf,
+    UIconsulta.filtros, UIconsultaNovas.filtros, UIrelatorios.filtros, UIrelatorios.rascunho,
+    UIferias, UIcolaboradores];
+  for (const filtro of filtros) if (filtro) {
+    for (const campo of ['regiao', 'uf']) if (regiaoDesativada(filtro[campo])) filtro[campo] = '';
+  }
+}
+
 let renderPendente = false;
 function renderizar(forcar = false) {
   if (!document.querySelector('.app[data-acesso-liberado]')) return;
@@ -85,6 +94,7 @@ function renderizar(forcar = false) {
     return;
   }
   renderPendente = false;
+  limparFiltrosForaDaOperacao();
   Pesquisas.fechar(conteudo);
   if (!paginaPermitida(UI.pagina)) UI.pagina = perfilTecnico() ? 'meu-painel' : 'painel';
   atualizarMoldura();

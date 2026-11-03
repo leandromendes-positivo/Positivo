@@ -8,6 +8,7 @@ const E={cadastro:{ANTIGO:{nome:'Pessoa encerrada',regiao:'TO'},ATUAL:{nome:'Pes
 const ctx=vm.createContext({E});vm.runInContext(fs.readFileSync('src/js/00-util.js','utf8')+'\n'+fs.readFileSync('src/js/19-escopo-operacao.js','utf8'),ctx);
 for(const valor of ['TO','to',' TO Interior ','Tocantins','TO--TEC','TO-capital','PR','SC','RS','SP','','TOM'])assert.equal(ctx.regiaoDesativada(valor),backend(valor),valor);
 assert.equal(ctx.regiaoDesativada('TO'),true);assert.equal(ctx.regiaoDesativada('PR'),false);
+assert.deepEqual([...ctx.regioesOperacionais(['TO','PR','SC','RS','PR','Tocantins',' TO Interior ',''])],['PR','RS','SC'],'opções antigas e do histórico não reintroduzem TO nos filtros');
 ctx.documentoOperacional('cadastro/tecnicos',{t:E.cadastro});ctx.aplicarEscopoOperacao();
 assert.equal(E.usadas.reduce((s,p)=>s+p.qtd,0),5);assert.equal(E.cadastro.ANTIGO,undefined);assert.equal(E.cadastro.MISTO.regiao,'PR');assert.equal(E.cadastro.MISTO.nome,'Pessoa em duas UFs');assert.equal(E.ferias.length,1);assert.equal(E.usuarios.length,1);assert.equal(E.indice.arquivos['usadas:TO'],undefined);assert.equal(E.indice.anterior['usadas:TO'],undefined);
 const doc={itens:[['k','ANTIGO','','','','',1,'','TO'],['k2','ATUAL','','','','',2,'','PR']]};

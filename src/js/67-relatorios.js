@@ -206,9 +206,9 @@ function modalPecasRelatorio() {
 function renderRelatorios() {
   if (relatorioHistorico.chave !== chaveHistoricoRelatorio()) UI.posRender = carregarHistoricoRelatorio;
   const pronto = relatorioPronto(), f = UIrelatorios.rascunho || UIrelatorios.filtros, D = derivar();
-  const tids = [...new Set([...D.tecnicos, ...relatorioHistorico.devolucoes, ...relatorioHistorico.movimentos].map(i => i.tid))];
+  const tids = [...new Set([...D.tecnicos, ...relatorioHistorico.devolucoes, ...relatorioHistorico.movimentos].filter(i=>!regiaoDesativada(i.regiao)).map(i => i.tid))];
   const tecnicos = tids.map(tid => ({ tid, nome: nomeTecnico(tid) })).sort((a, b) => comparar(a.nome, b.nome));
-  const regioes = [...new Set([...D.regioes, ...relatorioHistorico.devolucoes.map(i => i.regiao), ...relatorioHistorico.movimentos.map(i => i.regiao)].filter(Boolean))].sort();
+  const regioes = regioesOperacionais([...D.regioes, ...relatorioHistorico.devolucoes.map(i => i.regiao), ...relatorioHistorico.movimentos.map(i => i.regiao)]);
   const select = (campo, titulo, opcoes) => `<label class="campo"><span>${titulo}</span><select name="${campo}">${opcoes.map(([v, t]) => `<option value="${esc(v)}" ${f[campo] === v ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></label>`;
   const formatos = [
     ['simples', 'Exportação simples', 'Excel · dados completos, sem gráficos', 'tabela'],

@@ -317,7 +317,7 @@ service cloud.firestore {
     match /{colecao}/{id} {
       allow read: if autorizado() && colecao in ['config','cadastro','dados','devolucoes','movimentos','historico','importacoes','resumo'];
       allow write: if administrador() && colecao in ['config','cadastro','dados','devolucoes','movimentos','historico','importacoes','resumo']
-        && (!('regiao' in request.resource.data) || regiaoOperacional(request.resource.data.regiao))
+        && (request.method == 'delete' || !('regiao' in request.resource.data) || regiaoOperacional(request.resource.data.regiao))
         && (colecao != 'dados' || id != 'indice' || (request.resource.data.versao is int
           && getAfter(/databases/$(database)/documents/portal/controle).data.versao == request.resource.data.versao
           && (!exists(/databases/$(database)/documents/dados/indice) || request.resource.data.versao == resource.data.get('versao',0) + 1)));

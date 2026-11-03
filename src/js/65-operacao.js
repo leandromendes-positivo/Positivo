@@ -27,7 +27,7 @@ function filaHoje(D) {
 
 function dadosMapa(D) {
   const tipo = UIpainel.mapaModo === "novas" ? "novas" : "usadas";
-  return D.frescor.filter((f) => f.tipo === tipo && f.em).map((f) => D.porRegiao.find((r) => r.regiao === f.regiao) || { regiao: f.regiao, no_prazo: 0, vencendo: 0, cobrar: 0, aguardando: 0, total: 0, ideal: 0, acima: 0, excessoNovas: 0, novas: 0 });
+  return D.frescor.filter((f) => f.tipo === tipo && f.em && !regiaoDesativada(f.regiao)).map((f) => D.porRegiao.find((r) => r.regiao === f.regiao) || { regiao: f.regiao, no_prazo: 0, vencendo: 0, cobrar: 0, aguardando: 0, total: 0, ideal: 0, acima: 0, excessoNovas: 0, novas: 0 });
 }
 
 function riscoEstado(D, r, novas = UIpainel.mapaModo === "novas") {
@@ -44,7 +44,9 @@ function mapaOperacao(D) {
   if (!dados.some((r) => r.regiao === UIpainel.regiao)) UIpainel.regiao = [...dados].sort((a, b) => metrica(b) - metrica(a))[0]?.regiao || "";
   const r = dados.find((x) => x.regiao === UIpainel.regiao);
   const riscos = new Map(dados.map((x) => [x.regiao, riscoEstado(D, x, novas)]));
-  const caminho = MAPA_BRASIL.filter(uf=>!regiaoDesativada(uf.uf)).sort((a, b) => (a.uf === UIpainel.regiao) - (b.uf === UIpainel.regiao)).map((uf) => {
+  const caminho = [...MAPA_BRASIL].sort((a, b) => (a.uf === UIpainel.regiao) - (b.uf === UIpainel.regiao)).map((uf) => {
+    // O território permanece na base geográfica, sem dados ou interação da operação encerrada.
+    if (regiaoDesativada(uf.uf)) return `<g class="mapa-estado sem-dados" aria-hidden="true" pointer-events="none"><path d="${uf.d}"/></g>`;
     const risco = riscos.get(uf.uf), selecionado = UIpainel.regiao === uf.uf;
     const texto = risco ? `${fmtNum1(risco.percentual)}% ${novas ? "dos técnicos acima do limite" : "das peças acima do prazo"}` : "sem planilha importada";
     const dica = `<strong>${esc(UFS[uf.uf])}</strong><span>${texto}</span>`;
@@ -168,7 +170,7 @@ function ligarMapaPainel() {
     Movimento.animar(destaque, [{ transform: "scale(1)", opacity: .65 }, { transform: `scale(${fator})`, opacity: 1 }], 320);
   }
   mapa.addEventListener("mapa-reset", () => recolher(true));
-  mapa.querySelectorAll(".mapa-estado").forEach((el) => {
+  mapa.querySelectorAll('.mapa-estado:not([aria-hidden="true"])').forEach((el) => {
     el.addEventListener("pointerenter", (ev) => { if (ev.pointerType !== "touch" && ponteiroPreciso.matches) ampliar(el); });
     el.addEventListener("pointerleave", () => { if (origem === el && !el.matches(":focus-visible")) recolher(); });
     el.addEventListener("focus", () => { if (el.matches(":focus-visible")) ampliar(el); });

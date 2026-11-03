@@ -18,7 +18,11 @@ try{
  });
  const estado=await p.evaluate(()=>({ufs:derivar().regioes,usadas:derivar().kpi.usadas,novas:derivar().kpi.novas,tecnicos:derivar().tecnicos.map(t=>t.tid),devolucoes:E.devolucoes.reduce((s,p)=>s+p.qtd,0)}));
  assert.equal(estado.usadas,2);assert.equal(estado.novas,0);assert.deepEqual(estado.tecnicos,['PR1']);assert.equal(estado.devolucoes,1);assert.ok(!estado.ufs.includes('TO'));
- assert.equal(await p.locator('[data-uf="TO"]').count(),0,'TO não aparece no mapa');
+ assert.equal(await p.locator('[data-uf="TO"]').count(),0,'TO não tem dados ou seleção no mapa');
+ assert.equal(await p.locator('.mapa-cena > .mapa-estado > path').count(),27,'o desenho do Brasil permanece completo');
+ const baseNeutra=p.locator('.mapa-cena > .mapa-estado[aria-hidden="true"]');
+ assert.equal(await baseNeutra.count(),1);assert.equal(await baseNeutra.getAttribute('pointer-events'),'none');
+ assert.equal(await baseNeutra.locator('text, title, [tabindex], [data-acao]').count(),0,'o território neutro não expõe nomes, indicadores ou ações');
  for(const pagina of ['usadas','novas','rmdf','tecnicos','ferias','colaboradores','importar']){
   await p.evaluate(pagina=>irPara(pagina),pagina);
   assert.doesNotMatch(await p.locator('#conteudo').innerText(),/Pessoa encerrada|Colaborador encerrado|Tocantins/);

@@ -47,7 +47,7 @@ function mapaOperacao(D) {
   const caminho = [...MAPA_BRASIL].sort((a, b) => (a.uf === UIpainel.regiao) - (b.uf === UIpainel.regiao)).map((uf) => {
     const encerrada = regiaoDesativada(uf.uf), nome = UFS[uf.uf] || uf.uf;
     const risco = encerrada ? null : riscos.get(uf.uf), selecionado = !encerrada && UIpainel.regiao === uf.uf;
-    const texto = risco ? `${fmtNum1(risco.percentual)}% ${novas ? "dos técnicos acima do limite" : "das peças acima do prazo"}` : encerrada ? "fora da área de atuação" : "sem planilha importada";
+    const texto = risco ? `${fmtNum1(risco.percentual)}% ${novas ? "dos técnicos acima do limite" : "das peças acima do prazo"}` : "sem planilha importada";
     const dica = `<strong>${esc(nome)}</strong><span>${texto}</span>`;
     return `<g data-uf="${uf.uf}" data-dica="${esc(dica)}" class="mapa-estado ${risco ? `risco-${risco.nivel}` : "sem-dados"} ${selecionado ? "selecionado" : ""}" ${risco ? `role="button" tabindex="0" data-acao="painel-regiao" data-regiao="${uf.uf}" aria-pressed="${selecionado}"` : 'role="img"'} aria-label="${esc(nome + ', ' + texto)}"><title>${esc(nome + ': ' + texto)}</title><path d="${uf.d}"/>${risco ? `<text x="${uf.centro[0]}" y="${uf.centro[1]}">${uf.uf}</text>` : ""}${selecionado ? `<circle class="mapa-sinal" cx="${uf.centro[0]}" cy="${uf.centro[1]}" r="13"/>` : ""}</g>`;
   }).join("");

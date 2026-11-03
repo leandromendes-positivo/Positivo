@@ -21,7 +21,7 @@ try{
  assert.equal(await p.locator('.mapa-cena > .mapa-estado > path').count(),27,'o desenho do Brasil permanece completo');
  const territorio=p.locator('.mapa-estado[data-uf="TO"]');
  assert.equal(await territorio.getAttribute('role'),'img');assert.equal(await territorio.getAttribute('data-acao'),null);assert.equal(await territorio.getAttribute('tabindex'),null);
- assert.match(await territorio.locator('title').textContent(),/fora da área de atuação/);
+ assert.match(await territorio.locator('title').textContent(),/sem planilha importada/);
  await p.emulateMedia({reducedMotion:'no-preference'});
  await p.locator('.mapa-figura').scrollIntoViewIfNeeded();
  for(const uf of ['TO','SP','PR']){

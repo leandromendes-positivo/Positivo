@@ -1,4 +1,5 @@
 import {randomBytes,createHash} from 'node:crypto';
+import {perfilForaDaOperacao,manutencaoAtiva} from '../aviso/escopo-operacao.mjs';
 import {emailAcessoTemporario,emailRecuperacao} from '../aviso/layout-email-contas.mjs';
 const hash=s=>createHash('sha256').update(s).digest('hex');
 const emailValido=s=>typeof s==='string'&&s.length<=254&&/^[a-z0-9.!#$%&'*+\-=?^_`{|}~]+@[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?\.[a-z]{2,}$/i.test(s)&&!s.includes('/');
@@ -27,7 +28,7 @@ export async function identidadeConta(req,env,db,fetcher=fetch){
  const email=u?.email?.toLowerCase();
  if(!u?.localId||u.disabled||!emailValido(email)||c.sub!==u.localId||c.aud!==env.FIREBASE_PROJECT_ID||c.iss!==`https://securetoken.google.com/${env.FIREBASE_PROJECT_ID}`||!Number.isFinite(c.auth_time)||c.auth_time<Number(u.validSince||0)||!['google.com','microsoft.com','password'].includes(c.firebase?.sign_in_provider))throw falha('Entre novamente para continuar.',401);
  const p=(await db.doc('usuarios/'+email).get()).data();
- if(!p?.ativo||!['administrador','usuario','tecnico'].includes(p.perfil))throw falha('Este acesso não está ativo.',403);
+ if(!p?.ativo||perfilForaDaOperacao(p)||!['administrador','usuario','tecnico'].includes(p.perfil))throw falha('Este acesso não está ativo.',403);
  return {uid:u.localId,email,claims:c,usuario:u,perfil:p};
 }
 export async function credencialLiberada(db,id){
@@ -56,7 +57,7 @@ export async function gerarTemporaria(servico,id,email,operacao,agora=Date.now()
  const reserva=await db.runTransaction(async tx=>{
   const [alvo,estado,autor]=await Promise.all([tx.get(db.doc('usuarios/'+email)),tx.get(ref),tx.get(db.doc('usuarios/'+id.email))]);
   const p=alvo.data(),d=estado.data();
-  if(!autor.data()?.ativo||autor.data()?.perfil!=='administrador'||!p?.ativo||p.principal)throw falha('Este cadastro não pode receber uma senha temporária por esta ação.',403);
+  if(!autor.data()?.ativo||autor.data()?.perfil!=='administrador'||!p?.ativo||perfilForaDaOperacao(p)||p.principal)throw falha('Este cadastro não pode receber uma senha temporária por esta ação.',403);
   if(d?.operacao===operacao)return {repetida:true,estado:d.estado,emailEnviado:d.emailEnviado===true};
   if(d?.bloqueioAte>agora)throw falha('Há uma operação em andamento. Aguarde alguns minutos.',409);
   const versao=(d?.versao||0)+1;
@@ -91,7 +92,7 @@ export async function trocarTemporaria(servico,id,senha,agora=Date.now()){
  const conta=await servico.authAdmin.buscar(id.email);
  await db.runTransaction(async tx=>{
   const [s,p]=await Promise.all([tx.get(ref),tx.get(db.doc('usuarios/'+id.email))]);const d=s.data();
-  if(!p.data()?.ativo||!d||d.uid!==id.uid||conta?.localId!==id.uid||id.claims.firebase.sign_in_provider!=='password'||!d.exigirTroca||d.estado!=='temporaria'||d.expiraEm<agora||d.bloqueioAte>agora||d.versao!==id.claims.cpSenha)throw falha('A senha temporária expirou ou foi substituída. Solicite outra.',403);
+  if(!p.data()?.ativo||perfilForaDaOperacao(p.data())||!d||d.uid!==id.uid||conta?.localId!==id.uid||id.claims.firebase.sign_in_provider!=='password'||!d.exigirTroca||d.estado!=='temporaria'||d.expiraEm<agora||d.bloqueioAte>agora||d.versao!==id.claims.cpSenha)throw falha('A senha temporária expirou ou foi substituída. Solicite outra.',403);
   if(hash(senha)===d.hashTemporaria)throw falha('Escolha uma senha diferente da temporária.');
   tx.set(ref,{...d,operacao,bloqueioAte:agora+5*60000});
  });
@@ -103,7 +104,7 @@ export async function recuperarSenha(servico,email,ip,agora=Date.now()){
   await limitarContas(servico.db,'recuperar-ip:'+ip,8,15*60000,agora);
   if(!emailValido(email))return generica;
   await limitarContas(servico.db,'recuperar-email:'+email,3,15*60000,agora);
-  const p=(await servico.db.doc('usuarios/'+email).get()).data();if(!p?.ativo)return generica;
+  const p=(await servico.db.doc('usuarios/'+email).get()).data();if(!p?.ativo||perfilForaDaOperacao(p))return generica;
   const conta=await servico.authAdmin.buscar(email);if(!conta||conta.disabled)return generica;
   const token=randomBytes(32).toString('base64url');
   const ref=servico.db.doc('recuperacoes_senha/'+hash(token)),geracao=randomBytes(16).toString('hex');
@@ -126,7 +127,7 @@ export async function concluirRecuperacao(servico,token,senha,ip,agora=Date.now(
  const conta=await servico.authAdmin.buscar(inicial.email),ref=servico.db.doc('credenciais_usuarios/'+inicial.email),operacao=randomBytes(16).toString('hex');
  await servico.db.runTransaction(async tx=>{
   const [t,p,s,pedido]=await Promise.all([tx.get(refToken),tx.get(servico.db.doc('usuarios/'+inicial.email)),tx.get(ref),tx.get(servico.db.doc('pedidos_recuperacao/'+hash(inicial.email)))]);const d=t.data(),estado=s.data();
-  if(!d||d.usado||d.expiraEm<agora||!p.data()?.ativo||!conta||conta.disabled||conta.localId!==d.uid||estado?.bloqueioAte>agora||pedido.data()?.geracao!==d.geracao||(estado?.versao||0)!==d.versaoBase)throw falha('O link expirou ou o acesso mudou. Solicite outro.');
+  if(!d||d.usado||d.expiraEm<agora||!p.data()?.ativo||perfilForaDaOperacao(p.data())||!conta||conta.disabled||conta.localId!==d.uid||estado?.bloqueioAte>agora||pedido.data()?.geracao!==d.geracao||(estado?.versao||0)!==d.versaoBase)throw falha('O link expirou ou o acesso mudou. Solicite outro.');
   tx.set(refToken,{...d,usado:true,usadoEm:agora});
   tx.set(ref,{...(estado||{}),uid:conta.localId,exigirTroca:true,estado:'redefinindo',operacao,bloqueioAte:agora+5*60000});
  });
@@ -141,7 +142,7 @@ export async function atenderContas(req,env,abrir,headers,ctx,fetcher=fetch){
   if(reader){const decoder=new TextDecoder();for(;;){const {done,value}=await reader.read();if(done)break;bytes+=value.byteLength;if(bytes>4096){await reader.cancel();throw falha('Solicitação muito grande.',413);}bruto+=decoder.decode(value,{stream:true});}bruto+=decoder.decode();}
   let body;try{body=JSON.parse(bruto);}catch{throw falha('Solicitação inválida.');}
   if(!body||typeof body!=='object'||Array.isArray(body))throw falha('Solicitação inválida.');
-  const s=await abrir();s.env=env;const ip=req.headers.get('CF-Connecting-IP')||'sem-ip';
+  const s=await abrir();if(await manutencaoAtiva(s.db))throw falha('Serviço em manutenção. Tente novamente em alguns minutos.',503);s.env=env;const ip=req.headers.get('CF-Connecting-IP')||'sem-ip';
   if(caminho==='/contas/recuperar'){
    const generica={mensagem:'Se o endereço tiver acesso ativo, enviaremos as instruções. Confira também o spam.'};
    const tarefa=recuperarSenha(s,String(body.email||'').trim().toLowerCase(),ip);if(ctx?.waitUntil){ctx.waitUntil(tarefa);return Response.json(generica,{headers});}return Response.json(await tarefa,{headers});

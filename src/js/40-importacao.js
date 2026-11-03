@@ -171,7 +171,7 @@ async function importarLote(lidos, aoProgresso = () => {}) {
 
   const grupos = new Map();
   for (const l of lidos) {
-    if (!["usadas","novas","rmdf"].includes(l.tipo) || !Object.hasOwn(UFS,l.regiao)) throw new Error("Tipo ou UF inválidos na importação.");
+    if (!["usadas","novas","rmdf"].includes(l.tipo) || !Object.hasOwn(UFS,l.regiao) || regiaoDesativada(l.regiao)) throw new Error("Tipo ou UF inválidos na importação.");
     const chave = `${l.tipo}:${l.regiao}`;
     if (grupos.has(chave) && l.tipo === "rmdf") throw new Error(`Há mais de uma planilha RMDF de ${l.regiao} no mesmo lote. Selecione somente a relação atual para evitar substituição ambígua.`);
     if (grupos.has(chave)) avisos.push(`Havia mais de um arquivo de ${l.tipo} de ${l.regiao}; usei "${l.nome}".`);
@@ -299,6 +299,8 @@ async function importarLote(lidos, aoProgresso = () => {}) {
 /** Volta a foto anterior das planilhas de uma importação (só a mais recente). */
 async function desfazerImportacao(imp) {
   exigirAdministrador();
+  if(imp.escopoParcial)throw new Error('Esta importação antiga inclui uma UF fora da operação e não pode ser desfeita pelo painel atual.');
+  if((imp.chaves||[]).some(c=>regiaoDesativada(c.split(':')[1])))throw new Error('Esta importação contém uma UF fora da operação.');
   const chaves = imp.chaves || [], versaoAnterior = E.indice.versao || 0;
   for (const chave of chaves) {
     if (E.indice.arquivos?.[chave]?.lote !== imp.id) throw new Error('Só dá para desfazer a importação mais recente de cada planilha.');
@@ -309,9 +311,9 @@ async function desfazerImportacao(imp) {
     arquivos[chave] = E.indice.anterior?.[chave] || null; anterior[chave] = null;
     for (let i=0;i<(atual.partes||0);i++) apagar.push(caminhoParte(tipo,regiao,atual.gen,i));
   }
-  let devs = await Armazem.consultar('devolucoes',{onde:[['lote','==',imp.id]]});
-  if (!devs.length && imp.devolvidas) devs = (await Armazem.consultar('devolucoes')).filter(d=>(d.itens||[]).some(l=>l[9]===imp.id));
-  const movs = await Armazem.consultar('movimentos',{onde:[['lote','==',imp.id]]});
+  let devs = await Armazem.consultar('devolucoes',{onde:[['lote','==',imp.id]],preservarHistorico:true});
+  if (!devs.length && imp.devolvidas) devs = (await Armazem.consultar('devolucoes',{preservarHistorico:true})).filter(d=>(d.itens||[]).some(l=>l[9]===imp.id));
+  const movs = await Armazem.consultar('movimentos',{onde:[['lote','==',imp.id]],preservarHistorico:true});
   const alteracoes = devs.map(d=>[`devolucoes/${d.id}`,{...d,itens:(d.itens||[]).filter(l=>l[9]!==imp.id)}]);
   const indice = {arquivos,anterior,versao:versaoAnterior+1,atualizadoEm:agoraISO(),origemSessao:Acesso.sessao};
   const registro = {desfeito:true,desfeitoEm:agoraISO(),desfeitoPor:identidadeAtual()};

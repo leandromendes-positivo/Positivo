@@ -132,6 +132,7 @@ function acharCabecalho(linhas) {
 async function lerRelatorio(arquivo, opcoes = {}) {
   const buf = await arquivo.arrayBuffer();
   const nome = arquivo.name || "arquivo";
+  if (regiaoDesativada(opcoes.regiao) || semAcentos(nome.replace(/\.[^.]+$/,'')).split(/[^A-Za-z]+/).some(t=>regiaoDesativada(t))) throw new ErroLeitura('Este arquivo pertence a uma UF fora da operação e não pode ser importado.');
   if (!buf.byteLength) throw new ErroLeitura("O arquivo está vazio.");
   const b = new Uint8Array(buf, 0, Math.min(8, buf.byteLength));
   let linhas, assinatura;

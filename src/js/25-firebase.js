@@ -241,7 +241,7 @@ async function iniciarFirebase(cfg) {
   try {
     const ref = fs.doc(`usuarios/${usuario.email.toLowerCase()}`);
     const perfil = await ref.get({ source: 'server' });
-    if (!usuario.emailVerified || !perfil.exists || !perfil.data().ativo || !PERFIS[perfil.data().perfil]) throw new Error('sem_permissao');
+    if (!usuario.emailVerified || !perfil.exists || !perfil.data().ativo || !PERFIS[perfil.data().perfil] || perfilForaDaOperacao(perfil.data())) throw new Error('sem_permissao');
     const versao = await fs.doc(perfil.data().perfil==='tecnico'?'seguranca/portal':'seguranca/controle').get({ source: 'server' });
     if (versao.data()?.versao !== 2) throw new Error('seguranca_pendente');
     Acesso.perfil = decodificarFS(perfil.data());
@@ -249,7 +249,7 @@ async function iniciarFirebase(cfg) {
     Acesso.pararPerfil?.();
     Acesso.pararPerfil = ref.onSnapshot(s => {
       if (s.metadata.hasPendingWrites) return;
-      if (!s.exists || !s.data().ativo || !PERFIS[s.data().perfil]) { bloquearSessao(); return; }
+      if (!s.exists || !s.data().ativo || !PERFIS[s.data().perfil] || perfilForaDaOperacao(s.data())) { bloquearSessao(); return; }
       const mudouPerfil = Acesso.perfil?.perfil !== s.data().perfil || Acesso.perfil?.tecnicoId !== s.data().tecnicoId;
       const mudouNome = Acesso.perfil?.nome !== s.data().nome;
       Acesso.perfil = decodificarFS(s.data());

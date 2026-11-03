@@ -50,7 +50,7 @@ try {
  // Editing an old record preserves dates and offers fixed UF, area and conditional locality.
  const idB=await page.evaluate(()=>E.ferias.find(f=>f.matricula==='TESTE-B').id);
  await page.locator(`[data-ferias="editar"][data-id="${idB}"]`).click();
- assert.deepEqual(await form.locator('[name="regiao"] option').evaluateAll(xs=>xs.map(x=>x.value)),['','PR','SC','TO','RS']);
+ assert.deepEqual(await form.locator('[name="regiao"] option').evaluateAll(xs=>xs.map(x=>x.value)),['','PR','SC','RS']);
  assert.equal(await form.locator('[name="regiao"]').inputValue(),'PR');
  assert.equal(await form.locator('[name="area"]').inputValue(),'','legacy does not invent an area');
  assert.equal(await form.locator('[data-ferias-localidade]').isVisible(),false);

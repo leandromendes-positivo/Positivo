@@ -11,19 +11,21 @@ function decodificar(v) {
   }
   return v;
 }
-export async function recalcularResumo(db, dia) {
+export async function recalcularResumo(db, dia, {duranteManutencao=false}={}) {
+  if(!duranteManutencao&&(await db.doc('manutencao/limpeza-pecas').get()).exists)throw new Error('Serviço em manutenção.');
+  let contexto;
   const armazem = {
     online: false,
-    ler: async caminho => { const d=await db.doc(caminho).get();return d.exists?decodificar(d.data()):null; },
+    ler: async caminho => { const d=await db.doc(caminho).get();return contexto.documentoOperacional(caminho,d.exists?decodificar(d.data()):null); },
     consultar: async (caminho,op={}) => {
       let q=db.collection(caminho);
       for(const [f,operador,v] of op.onde || [])q=q.where(f,operador,v);
       if(op.ordem)q=q.orderBy(...op.ordem);if(op.limite)q=q.limit(op.limite);
-      const s=await q.get();return s.docs.map(d=>({id:d.id,...decodificar(d.data())}));
+      const s=await q.get();return contexto.documentosOperacionais(caminho,s.docs.map(d=>({id:d.id,...decodificar(d.data())})));
     },
   };
-  const contexto=vm.createContext({ window:{__CP_AGORA:`${dia}T09:00:00`}, Armazem:armazem, Acesso:{modo:'servidor'}, console, setTimeout, clearTimeout });
-  const arquivos=['00-util.js','26-identidade.js','30-modelo.js','33-confirmacoes.js'];
+  contexto=vm.createContext({ window:{__CP_AGORA:`${dia}T09:00:00`}, Armazem:armazem, Acesso:{modo:'servidor'}, console, setTimeout, clearTimeout });
+  const arquivos=['00-util.js','19-escopo-operacao.js','26-identidade.js','27-portal.js','30-modelo.js','33-confirmacoes.js'];
   const codigo=(await Promise.all(arquivos.map(n=>readFile(new URL(`../src/js/${n}`,import.meta.url),'utf8')))).join('\n');
   vm.runInContext(codigo,contexto);
   return await vm.runInContext('(async()=>{await carregarTudo();if(E.status!=="pronto")throw new Error("Não foi possível calcular o resumo atualizado.");return montarResumo();})()',contexto);

@@ -71,7 +71,7 @@ const E = {
   ouvintes: [],
 };
 const aoMudar = new Set();
-function mudou() { E.rev++; for (const f of aoMudar) f(); }
+function mudou() { aplicarEscopoOperacao(); E.rev++; for (const f of aoMudar) f(); }
 
 const caminhoParte = (tipo, regiao, gen, parte) => `dados/${tipo === "usadas" ? "u" : tipo === "rmdf" ? "r" : "n"}-${regiao}-${gen}-${parte}`;
 
@@ -181,8 +181,9 @@ function assinarMudancas() {
     E.indice = { arquivos: {}, anterior: {}, ...d };
     E.existe.indice = true;
     try {
-      const cat = await Armazem.ler("dados/catalogo");
+      const [cat,cad] = await Promise.all([Armazem.ler("dados/catalogo"),Armazem.ler("cadastro/tecnicos")]);
       E.catalogo = (cat && cat.m) || E.catalogo;
+      if(cad)E.cadastro=cad.t||{};
       await Promise.all([carregarFotos(), carregarHistoricos()]);
       mudou();
       if (typeof toast === "function") toast("Os dados foram atualizados em outro dispositivo.", "info");
@@ -546,7 +547,7 @@ function montarResumo() {
   }
   const k = D.kpi;
   return {
-    geradoEm: agoraISO(), hoje, prazo: cfg.prazo, meta: cfg.meta,
+    geradoEm: agoraISO(), hoje, regioes: D.regioes, prazo: cfg.prazo, meta: cfg.meta,
     dias,
     estoque: {
       regra: 'limite_maximo', excesso: k.excessoNovas,
@@ -573,7 +574,7 @@ async function gravarHistoricoDoDia() {
   const t = {};
   for (const x of D.tecnicos) if (x.temDados) t[x.tid] = [x.nUsadas, x.nAtrasadas, x.maxDias, x.novasQtd];
   const doc = {
-    data: D.hoje, em: agoraISO(), t,
+    data: D.hoje, em: agoraISO(), t, regioes: D.regioes,
     tot: {
       usadas: D.kpi.usadas, atrasadas: D.kpi.atrasadas, cobrarTec: D.kpi.cobrarTecnicos, cobrarPecas: D.kpi.cobrarPecas,
       novas: D.kpi.novas, ideal: D.kpi.ideal, acima: D.kpi.acima, excessoNovas: D.kpi.excessoNovas,

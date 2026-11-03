@@ -6,12 +6,12 @@ function paginaPermitida(id) {
   return !PAGINAS[id].tecnico && (!PAGINAS[id].admin || podeAdministrar());
 }
 function chaveSaldoTecnico(tid, regiao) {
-  if (!/^[A-Z0-9_.-]{1,120}$/.test(tid) || !['PR','SC','TO','RS'].includes(regiao)) throw new Error('Identificação ou UF do técnico inválida.');
+  if (!/^[A-Z0-9_.-]{1,120}$/.test(tid) || !['PR','SC','RS'].includes(regiao)) throw new Error('Identificação ou UF do técnico inválida.');
   return `${regiao}--${tid}`;
 }
 function opcoesVinculoTecnico() {
   const opcoes=new Map();
-  const incluir=(tid,regiao)=>{if(E.cadastro[tid] && /^[A-Z0-9_.-]{1,120}$/.test(tid) && ['PR','SC','TO','RS'].includes(regiao)) {
+  const incluir=(tid,regiao)=>{if(E.cadastro[tid] && /^[A-Z0-9_.-]{1,120}$/.test(tid) && ['PR','SC','RS'].includes(regiao)) {
     const id=chaveSaldoTecnico(tid,regiao);opcoes.set(id,{id,tid,regiao,nome:E.cadastro[tid].nome});
   }};
   for(const [tid,t] of Object.entries(E.cadastro))incluir(tid,t.regiao);
@@ -22,7 +22,7 @@ function opcoesVinculoTecnico() {
 function montarSaldosTecnicos(usadas, novas, cadastro, catalogo, rmdf = []) {
   const saldos = new Map();
   for (const [tipo, lista] of [['usadas', usadas], ['novas', novas], ['rmdf', rmdf]]) for (const linha of lista) {
-    if (!['PR','SC','TO','RS'].includes(linha.regiao)) continue;
+    if (!['PR','SC','RS'].includes(linha.regiao)) continue;
     const id = chaveSaldoTecnico(linha.tid, linha.regiao);
     if (!saldos.has(id)) saldos.set(id, { nome: cadastro[linha.tid]?.nome || linha.tid, tid: linha.tid, regiao: linha.regiao, pecas: new Map() });
     // Codificação reversível e sem colisões para novas; usadas conservam a chave oficial.

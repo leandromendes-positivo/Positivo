@@ -12,6 +12,7 @@
 //   FIRESTORE_EMULATOR_HOST + FIREBASE_PROJETO   para testar com o emulador
 
 import { fileURLToPath } from "node:url";
+import {regiaoDesativada} from './escopo-operacao.mjs';
 
 const pad = (n) => String(n).padStart(2, "0");
 const ddmm = (iso) => (iso ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}` : "");
@@ -39,6 +40,8 @@ export function montarAviso(resumo, hoje, painel = "") {
     const texto = `${titulo}\n\nO painel ainda não tem dados. Importe as planilhas do dia.${painel ? `\n\n${painel}` : ""}`;
     return { assunto: titulo, texto, html: `<p>${escHtml(texto).replace(/\n/g, "<br>")}</p>` };
   }
+  const foraEscopo=(resumo.regioes||[]).some(regiaoDesativada)||(resumo.atualizacao||[]).some(a=>regiaoDesativada(a.arquivo))||Object.values(resumo.dias||{}).some(d=>[...(d.cobrar||[]),...(d.previsoes||[])].some(p=>regiaoDesativada(p.regiao)));
+  if(foraEscopo){const texto='O resumo anterior inclui regiões fora da operação atual. Abra o painel e atualize as planilhas para gerar os indicadores corretos.';return {assunto:titulo+' (atualização necessária)',texto,html:`<p>${escHtml(texto)}</p>`};}
   const dia = resumo.dias && resumo.dias[hoje];
   if (!dia) {
     const texto = `${titulo}\n\nAs planilhas não são importadas há vários dias e o controle está desatualizado. Importe as planilhas do dia no painel.${painel ? `\n\n${painel}` : ""}`;

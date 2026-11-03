@@ -2,6 +2,7 @@
 import {readFile} from 'node:fs/promises';
 import {runInNewContext} from 'node:vm';
 import {randomUUID} from 'node:crypto';
+import {regiaoDesativada} from '../aviso/escopo-operacao.mjs';
 export async function prepararPortalExistente(db) {
   const [indiceSnap,controleSnap,cadastroSnap,catalogoSnap]=await Promise.all(['dados/indice','portal/controle','cadastro/tecnicos','dados/catalogo'].map(p=>db.doc(p).get()));
   const indice=indiceSnap.data()||{},versao=indice.versao||0;
@@ -10,6 +11,7 @@ export async function prepararPortalExistente(db) {
   for(const [chave,ent] of Object.entries(indice.arquivos||{})) {
     if(!ent?.gen)continue;
     const [tipo,regiao]=chave.split(':');
+    if(regiaoDesativada(regiao))continue;
     const prefixo=tipo==='usadas'?'u':tipo==='rmdf'?'r':'n';
     for(let parte=0;parte<(ent.partes||0);parte++) {
       const snap=await db.doc(`dados/${prefixo}-${regiao}-${ent.gen}-${parte}`).get();

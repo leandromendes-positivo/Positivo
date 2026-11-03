@@ -44,7 +44,7 @@ function mapaOperacao(D) {
   if (!dados.some((r) => r.regiao === UIpainel.regiao)) UIpainel.regiao = [...dados].sort((a, b) => metrica(b) - metrica(a))[0]?.regiao || "";
   const r = dados.find((x) => x.regiao === UIpainel.regiao);
   const riscos = new Map(dados.map((x) => [x.regiao, riscoEstado(D, x, novas)]));
-  const caminho = [...MAPA_BRASIL].sort((a, b) => (a.uf === UIpainel.regiao) - (b.uf === UIpainel.regiao)).map((uf) => {
+  const caminho = MAPA_BRASIL.filter(uf=>!regiaoDesativada(uf.uf)).sort((a, b) => (a.uf === UIpainel.regiao) - (b.uf === UIpainel.regiao)).map((uf) => {
     const risco = riscos.get(uf.uf), selecionado = UIpainel.regiao === uf.uf;
     const texto = risco ? `${fmtNum1(risco.percentual)}% ${novas ? "dos técnicos acima do limite" : "das peças acima do prazo"}` : "sem planilha importada";
     const dica = `<strong>${esc(UFS[uf.uf])}</strong><span>${texto}</span>`;

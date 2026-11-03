@@ -8,7 +8,7 @@ try{
  await p.goto(process.env.URL_PAINEL_TESTE||'http://127.0.0.1:8000/pagina-completa.html');await p.waitForFunction(()=>E.status==='pronto');assert.equal(await p.evaluate(()=>Acesso.modo),'memoria');
  await p.evaluate(async()=>{
   const pessoa=(id,nome,regiao,inicio,fim,extra={})=>({id,matricula:id,nome,regiao,ciclo:'2027',direito:30,vendidos:0,status:'planejado',obs:'',periodos:[{inicio,fim,retorno:''}],...extra});
-  for(const f of [pessoa('pr','Pessoa Paraná','PR','2027-01-20','2027-02-08'),pessoa('sc','Pessoa Santa Catarina','SC','2027-01-10','2027-01-29'),pessoa('to','Pessoa Tocantins','TO','2027-02-01','2027-02-20'),pessoa('rs','Pessoa Rio Grande','RS','2027-02-10','2027-03-01'),pessoa('retirada','Pessoa Retirada','PR','2027-01-16','2027-02-04',{arquivado:true}),pessoa('cancelada','Pessoa Cancelada','PR','2027-01-17','2027-02-05',{status:'cancelado'}),pessoa('semuf','Pessoa Sem UF','','2027-01-21','2027-02-09')])await salvarFerias(f);
+  for(const f of [pessoa('pr','Pessoa Paraná','PR','2027-01-20','2027-02-08'),pessoa('sc','Pessoa Santa Catarina','SC','2027-01-10','2027-01-29'),pessoa('rs','Pessoa Rio Grande','RS','2027-02-10','2027-03-01'),pessoa('retirada','Pessoa Retirada','PR','2027-01-16','2027-02-04',{arquivado:true}),pessoa('cancelada','Pessoa Cancelada','PR','2027-01-17','2027-02-05',{status:'cancelado'}),pessoa('semuf','Pessoa Sem UF','','2027-01-21','2027-02-09')])await salvarFerias(f);
   // Simulate the original automatic load without exposing its technical identity in the history title.
   const h=await Armazem.consultar('historico_ferias',{onde:[['id','==','pr']]});
   const d=h[0];await Armazem.gravar(`historico_ferias/${d.evento}`,{...d,atualizadoPor:{uid:'carga-inicial-ferias',email:'firebase-adminsdk@example.iam.gserviceaccount.com'}});
@@ -16,17 +16,17 @@ try{
   irPara('ferias');
  });
  assert.equal(await p.locator('.ferias-card [data-ferias="excluir"]').count(),0);
- assert.equal(await p.locator('.ferias-estado').count(),4);
+ assert.equal(await p.locator('.ferias-estado').count(),3);
  assert.equal(await p.locator('.ferias-mapa-brasil').count(),0);
  assert.match(await p.locator('[data-ferias-estado="PR"]').innerText(),/Pessoa Paraná/);
  assert.doesNotMatch(await p.locator('[data-ferias-estado="PR"]').innerText(),/Pessoa Retirada|Pessoa Cancelada/);
  assert.match(await p.locator('[data-ferias-estado="SC"] [data-estado-ferias-atuais]').innerText(),/Pessoa Santa Catarina/);
  assert.match(await p.locator('[data-ferias-estado="SC"] [data-estado-ferias-atuais]').innerText(),/30\/01\/2027/);
- assert.match(await p.locator('[data-ferias-estado="TO"] [data-estado-ferias-proximas]').innerText(),/Pessoa Tocantins/);
+ assert.equal(await p.locator('[data-ferias-estado="TO"]').count(),0);
  assert.match(await p.locator('[data-ferias-estado="RS"]').innerText(),/Pessoa Rio Grande/);
- await p.locator('[data-ferias-estado-cadastros="TO"]').click();assert.equal(await p.evaluate(()=>UI.pagina),'colaboradores');
- assert.equal(await p.locator('[data-colaborador]').count(),1);assert.match(await p.locator('[data-colaborador]').innerText(),/Pessoa Tocantins/);
- await p.click('[data-ferias="limpar-cadastro"]');assert.equal(await p.locator('[data-colaborador]').count(),7,'complete list includes cancelled, withdrawn and missing-UF records');
+ await p.locator('[data-ferias-estado-cadastros="RS"]').click();assert.equal(await p.evaluate(()=>UI.pagina),'colaboradores');
+ assert.equal(await p.locator('[data-colaborador]').count(),1);assert.match(await p.locator('[data-colaborador]').innerText(),/Pessoa Rio Grande/);
+ await p.click('[data-ferias="limpar-cadastro"]');assert.equal(await p.locator('[data-colaborador]').count(),6,'complete list includes cancelled, withdrawn and missing-UF records');
  await p.locator('[data-colaborador="pr"] [data-ferias="historico"]').click();
  assert.equal(await p.locator('.ferias-historico-evento').count(),2);
  assert.match(await p.locator('.ferias-historico-evento').first().innerText(),/Períodos de férias alterados/);

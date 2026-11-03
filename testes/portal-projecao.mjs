@@ -11,13 +11,14 @@ assert.equal(saldos.get('PR--ANA').pecas.get('u-1').quantidade,2);assert.equal(s
 assert.equal(saldos.get('PR--ANA').pecas.get('u-1').descricao,'Placa');
 const comRmdf=montar(usadas,novas,{ANA:{nome:'Ana'}},{},[{...usadas[0],qtd:8}]);
 assert.equal(comRmdf.get('PR--ANA').pecas.get('r-1').tipo,'rmdf');assert.equal(comRmdf.get('PR--ANA').pecas.get('r-1').quantidade,8);assert.equal(comRmdf.get('PR--ANA').pecas.get('u-1').quantidade,2);
+assert.equal(montar(usadas.map(p=>({...p,regiao:'TO'})),novas.map(p=>({...p,regiao:'TO'})),{},{}).size,0,'TO não integra saldos publicados');
 assert.equal(montar([],[],{},{}).size,0);
 assert.throws(()=>montar([...usadas,usadas[0]],[],{},{}),/ambíguo/);
 for(const qtd of [-1,0,1.5,Infinity,NaN])assert.throws(()=>montar([{...usadas[0],qtd}],[],{},{}),/quantidades/);
 assert.throws(()=>montar([{...usadas[0],tid:'../OUTRA'}],[],{},{}),/inválida/);
 // Exercita também a publicação inicial, inclusive o formato compacto real cp_lista.
 const docs=new Map([
- ['dados/indice',{versao:7,arquivos:{'usadas:PR':{gen:'g-antiga',partes:1},'rmdf:PR':{gen:'g-antiga',partes:1}}}],
+ ['dados/indice',{versao:7,arquivos:{'usadas:TO':{gen:'g-ausente',partes:1},'usadas:PR':{gen:'g-antiga',partes:1},'rmdf:PR':{gen:'g-antiga',partes:1}}}],
  ['cadastro/tecnicos',{t:{ANA:{nome:'Ana'}}}],['dados/catalogo',{m:{A:'Placa'}}],
  ['dados/r-PR-g-antiga-0',{itens:[{cp_lista:['abc','ANA','NF-R','REM','A','CH-R','',8,'2026-10-19']}]}],
  ['dados/u-PR-g-antiga-0',{itens:[{cp_lista:['abc','ANA','NF','REM','A','CH','',4,'2026-10-19']}]}]

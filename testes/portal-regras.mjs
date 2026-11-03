@@ -38,6 +38,16 @@ try{
    await db.doc(`saldos_tecnicos/${t}/geracoes/${g}/pecas/u-1`).set(peca('usadas'));
   }
  });
+ await env.withSecurityRulesDisabled(async c=>{
+  await c.firestore().doc('usuarios/to@empresa.com').set(usuario('to@empresa.com','tecnico','TO--ANA'));
+  await c.firestore().doc('vinculos_tecnicos/TO--ANA').set({email:'to@empresa.com',tid:'ANA',regiao:'TO'});
+  await c.firestore().doc(`saldos_tecnicos/TO--ANA/geracoes/${gen}/pecas/u-1`).set(peca('usadas'));
+ });
+ const foraEscopo=conta('to','to@empresa.com');
+ await nao(foraEscopo.doc('portal/controle').get());
+ await nao(foraEscopo.doc(`saldos_tecnicos/TO--ANA/geracoes/${gen}/pecas/u-1`).get());
+ await nao(foraEscopo.doc('vinculos_tecnicos/TO--ANA').get());
+ const novoTO=admin.batch();novoTO.set(admin.doc('usuarios/novo.to@empresa.com'),usuario('novo.to@empresa.com','tecnico','TO--ANA'));novoTO.set(admin.doc('vinculos_tecnicos/TO--ANA'),{email:'novo.to@empresa.com',tid:'ANA',regiao:'TO'});await nao(novoTO.commit());
  await sim(ana.doc('usuarios/ana@empresa.com').get());await sim(ana.doc('seguranca/portal').get());await nao(ana.doc('seguranca/controle').get());await sim(ana.doc('portal/controle').get());
  await sim(ana.doc(`vinculos_tecnicos/${id}`).get());await sim(ana.doc(`saldos_tecnicos/${id}/geracoes/${gen}`).get());
  await sim(ana.collection(`saldos_tecnicos/${id}/geracoes/${gen}/pecas`).get());

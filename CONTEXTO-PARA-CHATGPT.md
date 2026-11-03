@@ -11,7 +11,7 @@ Painel web para um **coordenador de técnicos de campo** controlar:
 1. **Peças usadas**: a peça com defeito que o técnico tirou num chamado. Ele tem **7 dias** para devolver. O painel mostra há quantos dias cada técnico está com cada peça, quem cobrar hoje, registra cobranças e a **previsão de devolução** que o técnico informou.
 2. **Peças novas**: o estoque que cada técnico carrega. O padrão é **no máximo 10 peças** por técnico. De 0 a 10 está dentro do limite; acima disso é excesso. Estoque menor é desejável e não gera alerta de reposição.
 
-Todo dia o coordenador exporta 8 planilhas do sistema da empresa (Novas e Usadas de PR, RS, SC e TO) e arrasta para o painel, que atualiza tudo e mostra as pendências.
+Todo dia o coordenador exporta as planilhas do sistema da empresa (Novas, Usadas e RMDF de PR, RS e SC) e arrasta para o painel, que atualiza tudo e mostra as pendências.
 
 **Onde está:**
 - **Site:** https://leandromendes-positivo.github.io/Positivo/ (GitHub Pages), com login Google.
@@ -59,7 +59,7 @@ Colunas (as duas planilhas têm as mesmas, mudando só a penúltima):
 
 Exemplos fictícios (mesmo formato) estão em `exemplos/` dentro do zip.
 
-Tamanho real das planilhas de 05/10/2026: PR Novas 8.871 linhas (122.505 peças, incluindo os identificadores numéricos), PR Usadas 1.952, RS/SC/TO bem menores. Técnicos: ~90 (13 códigos numéricos no PR).
+Tamanho real das planilhas de 05/10/2026: PR Novas 8.871 linhas (122.505 peças, incluindo os identificadores numéricos), PR Usadas 1.952, RS/SC bem menores (TO saiu da operação em 03/11/2026). Técnicos: ~90 (13 códigos numéricos no PR).
 
 ---
 

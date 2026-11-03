@@ -3,6 +3,7 @@ import {firestoreREST,tokenServico} from './firestore.mjs';
 import {transporteEmail} from './email.mjs';
 import {processarTestesFerias} from '../aviso/testes-ferias.mjs';
 import {createHash} from 'node:crypto';
+import {manutencaoAtiva} from '../aviso/escopo-operacao.mjs';
 import {hojeBrasilia} from '../aviso/data-brasilia.mjs';
 import {processarLembretes,destinatariosLembretes} from '../aviso/lembretes-ferias.mjs';
 // Cache somente da credencial de serviço, nunca de permissões ou de tokens do usuário.
@@ -58,6 +59,7 @@ async function abrir(env){
 }
 async function disponivel(env,servico){
  if(env.ATIVAR_SERVICO!=='true')throw new Error('Serviço não ativado');
+ if(await manutencaoAtiva(servico.db))throw new Error('Serviço em manutenção.');
  const painel=new URL(env.PAINEL_URL),worker=new URL(env.WORKER_URL);
  if(painel.protocol!=='https:'||worker.protocol!=='https:'||worker.pathname!=='/'||worker.search||worker.hash)throw new Error('URL inválida');
  await servico.transporte.verify();

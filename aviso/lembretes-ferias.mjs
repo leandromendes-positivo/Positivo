@@ -1,3 +1,4 @@
+import {regiaoDesativada,manutencaoAtiva} from './escopo-operacao.mjs';
 import {programacaoFerias,mesmaProgramacao,resumoProgramacao,camposAlterados} from './alteracoes-ferias.mjs';
 import {layoutEmailFerias} from './layout-email-ferias.mjs';
 import {createHash,randomUUID} from 'node:crypto';
@@ -11,7 +12,7 @@ export function saidasParaLembrar(ferias,hoje=hojeBrasilia(),limite=10){
   if(!dataValida(hoje))throw new Error('Data de processamento inválida.');
   const saidas=new Map();
   for(const f of ferias){
-    if(f.arquivado || !['planejado','confirmado'].includes(f.status) || !f.id || !f.nome)continue;
+    if(regiaoDesativada(f.regiao) || f.arquivado || !['planejado','confirmado'].includes(f.status) || !f.id || !f.nome)continue;
     for(const p of f.periodos||[]){
       if(!p||!dataValida(p.inicio)||!dataValida(p.fim)||p.fim<p.inicio)continue;
       const antecedencia=Math.round((Date.parse(p.inicio+'T00:00:00Z')-Date.parse(hoje+'T00:00:00Z'))/diaMs);
@@ -57,6 +58,7 @@ export async function destinatariosLembretes(db){
 // O SMTP não participa da transação do Firestore. Uma tentativa de resultado incerto
 // permanece reservada para conferência, evitando reenvio automático de e-mail já aceito.
 export async function processarLembretes({db,transporte,remetente,hoje=hojeBrasilia(),painel='',simular=false,agora=()=>new Date().toISOString(),horario=new Intl.DateTimeFormat('en-GB',{timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date())}){
+  if(await manutencaoAtiva(db))throw new Error('Serviço em manutenção.');
   const ferias=await db.collection('ferias').get();
   const registros=new Map(ferias.docs.map(s=>[s.id,{...s.data(),id:s.id}]));
   const saidas=saidasParaLembrar([...registros.values()],hoje,90);
@@ -102,10 +104,12 @@ export async function processarLembretes({db,transporte,remetente,hoje=hojeBrasi
         const eventos=[],novos=[],estadosEnvio=[];let pendentes=0;
         for(let i=0;i<idsLote.length;i++){
           const id=idsLote[i],estado=estados[i].data(),f=atuais[i].exists?atuais[i].data():null;
+          if(regiaoDesativada(f?.regiao)||(!f&&regiaoDesativada(estado?.programacao?.regiao)))continue;
           if(estado&&['em_envio','incerto'].includes(estado.estado)){pendentes++;continue;}
           const atual=programacaoFerias(f),legados=historico.filter(d=>d.feriasId===id&&d.estado==='enviado');
           let anterior=estado?.programacao??null;
           let avisado=estado?.avisado===true||legados.length>0;
+          if(regiaoDesativada(anterior?.regiao)){anterior=null;avisado=false;}
           // Registros antigos só continham a saída. Não inventa uma versão anterior:
           // usa a data da edição para reconhecer mudanças posteriores ao envio antigo.
           let migracaoAlterada=false;

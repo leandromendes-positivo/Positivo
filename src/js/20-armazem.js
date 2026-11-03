@@ -207,9 +207,9 @@ const Armazem = {
     return p;
   },
 
-  async ler(caminho) {
+  async ler(caminho, { preservarHistorico = false } = {}) {
     const snap = await this.tentar(() => this.db.doc(caminho).get());
-    return snap.exists ? snap.data() : null;
+    const d=snap.exists?snap.data():null;return preservarHistorico?d:documentoOperacional(caminho,d);
   },
   gravar(caminho, dados) { return this.enfileirar(() => this.db.doc(caminho).set(dados)); },
   /** Mescla campos (objetos aninhados se fundem; listas são trocadas). */
@@ -227,24 +227,24 @@ const Armazem = {
     });
   },
   apagar(caminho) { return this.enfileirar(() => this.db.doc(caminho).delete()); },
-  async consultar(colecao, { onde = [], ordem = null, limite = null } = {}) {
+  async consultar(colecao, { onde = [], ordem = null, limite = null, preservarHistorico = false } = {}) {
     let q = this.db.collection(colecao);
     for (const [f, op, v] of onde) q = q.where(f, op, v);
     if (ordem) q = q.orderBy(ordem[0], ordem[1] || "asc");
     if (limite) q = q.limit(limite);
     const snap = await this.tentar(() => q.get());
-    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    const docs=snap.docs.map(d=>({id:d.id,...d.data()}));return preservarHistorico?docs:documentosOperacionais(colecao,docs);
   },
   ouvirDoc(caminho, cb) {
     try {
-      return this.db.doc(caminho).onSnapshot((s) => cb(s.exists ? s.data() : null), (e) => console.warn("assinatura", caminho, e));
+      return this.db.doc(caminho).onSnapshot((s) => cb(documentoOperacional(caminho,s.exists ? s.data() : null)), (e) => console.warn("assinatura", caminho, e));
     } catch (e) { console.warn(e); return () => {}; }
   },
   ouvirColecao(colecao, cb, montar) {
     try {
       let q = this.db.collection(colecao);
       if (montar) q = montar(q);
-      return q.onSnapshot((s) => cb(s.docs.map((d) => ({ id: d.id, ...d.data() }))), (e) => console.warn("assinatura", colecao, e));
+      return q.onSnapshot((s) => cb(documentosOperacionais(colecao,s.docs.map(d=>({id:d.id,...d.data()})))), (e) => console.warn("assinatura", colecao, e));
     } catch (e) { console.warn(e); return () => {}; }
   },
 };

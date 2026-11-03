@@ -49,8 +49,12 @@ const UFS = {
   MS: "Mato Grosso do Sul", MG: "Minas Gerais", PA: "Pará", PB: "Paraíba", PR: "Paraná",
   PE: "Pernambuco", PI: "Piauí", RJ: "Rio de Janeiro", RN: "Rio Grande do Norte",
   RS: "Rio Grande do Sul", RO: "Rondônia", RR: "Roraima", SC: "Santa Catarina", SP: "São Paulo",
-  SE: "Sergipe", TO: "Tocantins",
+  SE: "Sergipe",
 };
+
+// Estado encerrado: reconhece também registros legados e vínculos TO--técnico.
+function regiaoDesativada(valor){return /^(?:TO|TOCANTINS)(?:$|[^A-Z])/.test(semAcentos(String(valor||'')).trim().toUpperCase());}
+function perfilForaDaOperacao(perfil){return perfil?.perfil==='tecnico'&&regiaoDesativada(perfil.tecnicoId);}
 
 /** Sigla do estado no nome do arquivo: 'PR Usadas.csv' -> 'PR' */
 function regiaoDoNome(nome) {

@@ -191,7 +191,7 @@ async function classificarSaida(k, destino, quantidade = null, opcoes = {}) {
     });
   } else {
     salvo = await Armazem.enfileirar(async () => {
-      const doc = atualizar(await Armazem.ler(caminho));
+      const doc = atualizar(await Armazem.ler(caminho,{preservarHistorico:true}));
       await Armazem.db.doc(caminho).set(doc); return doc;
     });
   }

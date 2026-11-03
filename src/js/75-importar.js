@@ -94,7 +94,7 @@ function renderImportar() {
   if (s.resultado) partes.push(cartaoResultado(s.resultado));
   partes.push(`<div class="grade-2">${cartao("Última atualização de cada planilha", tabelaFrescor(D), { sub: "Importe todo dia para os prazos ficarem certos" })}${cartao("Como nomear os arquivos", `<div class="dicas-nome">
       <p>O sistema reconhece a região e o tipo pelo nome do arquivo e confere pelas colunas:</p>
-      <ul><li><span class="mono">PR Novas.csv</span> · <span class="mono">PR Usadas.csv</span> · <span class="mono">PR RMDF.csv</span></li><li><span class="mono">RS Novas.csv</span> · <span class="mono">RS Usadas.csv</span> · <span class="mono">RS RMDF.csv</span></li><li><span class="mono">SC …</span> e <span class="mono">TO …</span> do mesmo jeito</li></ul>
+      <ul><li><span class="mono">PR Novas.csv</span> · <span class="mono">PR Usadas.csv</span> · <span class="mono">PR RMDF.csv</span></li><li><span class="mono">RS Novas.csv</span> · <span class="mono">RS Usadas.csv</span> · <span class="mono">RS RMDF.csv</span></li><li><span class="mono">SC Novas.csv</span> · <span class="mono">SC Usadas.csv</span> · <span class="mono">SC RMDF.csv</span></li></ul>
       <p>Cada planilha substitui somente a foto anterior do mesmo tipo e UF. RMDF fica em uma relação separada, sem somar ao estoque de novas/usadas e sem baixar peças automaticamente. Peça usada que sumiu do relatório conta como <strong>devolvida</strong> naquele dia.</p></div>`)}</div>`);
   partes.push(cartao("Histórico de importações", tabelaImportacoes(), { sub: "Desfazer volta as planilhas daquela importação para a versão anterior" }));
   return partes.join("");
@@ -153,7 +153,7 @@ function tabelaFrescor(D) {
 }
 
 function podeDesfazer(imp) {
-  if (imp.desfeito) return false;
+  if (imp.desfeito || imp.escopoParcial) return false;
   const chaves = imp.chaves || [];
   return chaves.length > 0 && chaves.every((c) => E.indice.arquivos && E.indice.arquivos[c] && E.indice.arquivos[c].lote === imp.id);
 }

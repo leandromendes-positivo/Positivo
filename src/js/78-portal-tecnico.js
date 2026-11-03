@@ -58,7 +58,7 @@ async function carregarRespostasTecnicos() {
   try {
     const s=await Acesso.fs.collection('eventos_tecnicos').orderBy('em','desc').limit(200).get({source:'server'});
     if(perfilTecnico()||!Acesso.perfil?.ativo)return;
-    RespostasTecnicos.eventos=s.docs.map(d=>decodificarFS(d.data()));
+    RespostasTecnicos.eventos=s.docs.map(d=>decodificarFS(d.data())).filter(d=>!regiaoDesativada(d.tecnicoId));
   }catch(e){RespostasTecnicos.erro='Não foi possível carregar as respostas. Tente atualizar.';}
   finally{RespostasTecnicos.carregando=false;RespostasTecnicos.chave=String(E.rev);if(UI.pagina==='respostas-tecnicos'&&!perfilTecnico())renderizar(true);}
 }

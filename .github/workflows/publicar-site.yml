@@ -72,6 +72,8 @@ jobs:
           node testes/cloudflare-ferias.mjs
           node testes/contas.mjs
           node testes/conflitos-ferias.mjs
+          node testes/escopo-operacao.mjs
+          node testes/retirar-to.mjs
           node testes/rmdf-leitura.mjs
           node testes/acesso-gerado.mjs
       - name: Testar regras reais de acesso e isolamento
@@ -108,6 +110,19 @@ jobs:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           INITIAL_ADMIN_EMAIL: ${{ inputs.administrador_inicial || vars.INITIAL_ADMIN_EMAIL }}
         run: node publicar.mjs
+      - name: Conferir dados de TO para a exclusão autorizada
+        if: github.event_name == 'push' && startsWith(github.event.head_commit.message, 'Retirar TO da operacao')
+        working-directory: seguranca
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: node retirar-to.mjs
+      - name: Excluir definitivamente somente os dados de TO
+        if: github.event_name == 'push' && startsWith(github.event.head_commit.message, 'Excluir definitivamente somente TO 2026-11-03')
+        working-directory: seguranca
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          RETIRAR_TO_AUTORIZACAO: retirada-to-2026-11-03
+        run: node retirar-to.mjs --aplicar
       - name: Executar limpeza única autorizada das peças
         if: github.event_name == 'push' && startsWith(github.event.head_commit.message, 'Executar limpeza autorizada das peças 2026-10-20')
         working-directory: seguranca

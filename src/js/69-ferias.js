@@ -1,7 +1,7 @@
 /* Gestão de pessoas e férias. Cadastro direto, sem dependência de planilhas. */
 const UIferias = { busca: '', uf: '', ano: '', situacao: '', mes: '', arquivados: false };
 const UIcolaboradores = { busca: '', uf: '', area: '', situacao: '' };
-const UFS_FERIAS = ['PR', 'SC', 'TO', 'RS'];
+const UFS_FERIAS = ['PR', 'SC', 'RS'];
 const AREAS_FERIAS = { administrativo: 'Administrativo', tecnico: 'Técnico' };
 const LOCALIDADES_FERIAS = { interior: 'Interior', capital: 'Capital' };
 function localidadeFerias(f) {
@@ -56,11 +56,12 @@ function situacaoFerias(f, hoje = hojeISO()) {
   return f.periodos.every(p => retornoFerias(p) <= hoje) ? 'Concluído' : 'Programado';
 }
 function validarFerias(f) {
+  if(regiaoDesativada(f.regiao))throw new Error('Selecione uma UF da operação atual.');
   for (const [chave, limite] of [['nome',120],['matricula',40],['ciclo',40]]) if (!String(f[chave] || '').trim() || f[chave].length > limite) throw new Error('Informe nome, matrícula e ciclo de referência válidos.');
   if (!/^[A-Za-z0-9_-]+$/.test(f.matricula)) throw new Error('Use apenas letras, números, hífen ou sublinhado na matrícula.');
   if (f.regiao.length > 40 || f.obs.length > 1000 || !['planejado','confirmado','cancelado'].includes(f.status)) throw new Error('Revise região, situação e observações.');
   if (Object.hasOwn(f, 'area') || Object.hasOwn(f, 'localidade')) {
-    if (!UFS_FERIAS.includes(f.regiao)) throw new Error('Selecione a UF: PR, SC, TO ou RS.');
+    if (!UFS_FERIAS.includes(f.regiao)) throw new Error('Selecione a UF: PR, SC ou RS.');
     if (!Object.hasOwn(AREAS_FERIAS, f.area)) throw new Error('Selecione a área: Administrativo ou Técnico.');
     if (f.area === 'tecnico' ? f.localidade !== '' && !Object.hasOwn(LOCALIDADES_FERIAS, f.localidade) : f.localidade !== '') throw new Error('Localidade inválida. Use Interior, Capital ou deixe sem informar para técnicos.');
   }

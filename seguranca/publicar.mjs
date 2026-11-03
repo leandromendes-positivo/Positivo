@@ -17,6 +17,7 @@ catch { throw falhaConfiguracao("O Secret FIREBASE_SERVICE_ACCOUNT não contém 
 if (credencial.project_id !== config.projectId) throw falhaConfiguracao('A credencial pertence a outro projeto. Publicação interrompida.');
 const app = initializeApp({credential:cert(credencial),projectId:config.projectId});
 const db = getFirestore(app);
+if((await db.doc('manutencao/limpeza-pecas').get()).exists){console.log('Manutenção em andamento: publicação de regras adiada para preservar a trava.');process.exit(0);}
 const controle = db.doc('seguranca/controle');
 const atual = await controle.get();
 let email = atual.data()?.administradorPrincipal;

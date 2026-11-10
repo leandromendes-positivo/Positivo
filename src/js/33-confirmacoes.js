@@ -32,7 +32,8 @@ function previsaoDaPeca(i) {
 }
 function novasParaCobranca(t) {
   return [...agrupar(t.novasLinhas, i=>[i.regiao,i.mat].join('|')).values()].map(grupo=>{
-    const i = {...grupo[0], tipo:'novas', qtd:somar(grupo,i=>i.qtd), dias:Math.max(...grupo.map(i=>i.dias)), nome:t.nome, tipoTec:t.tipo, prazo:t.prazoNovas,
+    const maisAntiga = grupo.reduce((a,b)=>a.dias>=b.dias?a:b);
+    const i = {...maisAntiga, tipo:'novas', qtd:somar(grupo,i=>i.qtd), dias:Math.max(...grupo.map(i=>i.dias)), nome:t.nome, tipoTec:t.tipo, prazo:t.prazoNovas,
       chavesAntigas:grupo.map(n=>`nova-${hash36(n.tid+'|'+n.mat+'|'+(n.tipoEnvio||''))}`), tiposEnvio:[...new Set(grupo.map(i=>i.tipoEnvio))].join(', '), alerta:Math.max(0,t.prazoNovas-(t.prazo-t.alerta))};
     i.k=chaveNovaCobranca(i); Object.assign(i,previsaoDaPeca(i));
     i.status=statusUsada(i.dias,i.qtdPrevista===i.qtd?i.previsao:'',{prazo:i.prazo,alerta:i.alerta},hojeISO());

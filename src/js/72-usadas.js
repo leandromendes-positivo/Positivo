@@ -104,7 +104,7 @@ function tabelaUsadas(D) {
       <td><span class="mat"><span class="mono">${esc(i.mat)}</span>${esc(i.desc)}</span></td>
       <td class="num">${fmtNum(i.qtd)}</td>
       <td class="mono nowrap">${fmtData(i.dataFT)}</td>
-      <td class="num"><strong>${i.dias}</strong></td>
+      <td class="num">${marcadorTempoPeca(i)}</td>
       <td>${pillStatus(i, D.cfg)}${i.nCobrancas ? `<small class="sub-celula">${plural(i.nCobrancas, "cobrança", "cobranças")}, última ${fmtQuando(i.ultimaCobranca)}</small>` : ""}</td>
       <td>${campoPrevisao(i)}</td>
       <td><input type="text" class="campo-obs" value="${esc(i.obs)}" placeholder="Anotar…" maxlength="300" data-mudar="obs-item" data-tid="${esc(i.tid)}" data-k="${esc(i.k)}" aria-label="Observação"></td>
@@ -139,7 +139,7 @@ function tabelaDevolvidas(D) {
       <td><span class="mat"><span class="mono">${esc(d.mat)}</span>${esc(E.catalogo[d.mat] || "")}</span></td>
       <td class="mono nowrap">${fmtData(d.dataFT)}</td>
       <td class="nowrap">${fmtDataHora(d.em)}</td>
-      <td class="num"><strong>${d.dias}</strong></td>
+      <td class="num">${marcadorTempoPeca(d)}</td>
       <td>${d.dias <= prazoDaDevolucao(d) ? pill("ok", "No prazo", "ok") : pill("grave", `${d.dias - prazoDaDevolucao(d)} dias após`, "relogio")}</td>
     </tr>`).join("")}</tbody></table></div>
     ${paginacao(lista.length, pag, POR_PAGINA, "dev")}`;

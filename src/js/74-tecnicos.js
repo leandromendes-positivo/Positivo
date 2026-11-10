@@ -142,7 +142,7 @@ function tabelaUsadasFicha(t, D) {
       <td class="mono">${esc(i.chamado || "—")}</td>
       <td><span class="mat"><span class="mono">${esc(i.mat)}</span>${esc(i.desc)}</span></td>
       <td class="mono nowrap">${fmtData(i.dataFT)}</td>
-      <td class="num"><strong>${i.dias}</strong></td>
+      <td class="num">${marcadorTempoPeca(i)}</td>
       <td>${pillStatus(i, D.cfg)}</td>
       <td>${campoPrevisao(i)}</td>
       <td><input type="text" class="campo-obs" value="${esc(i.obs)}" placeholder="Anotar…" maxlength="300" data-mudar="obs-item" data-tid="${esc(i.tid)}" data-k="${esc(i.k)}" aria-label="Observação"></td>

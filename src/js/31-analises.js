@@ -38,7 +38,7 @@ function linhasConsulta(D = derivar()) {
   for (const i of D.itens) completar({ ...i, tipo: 'usadas', origem: 'atual', data: (i.dataFT || i.desde || '').slice(0, 10), referencia: i.dataFT ? 'Data FT' : 'Primeira observação', situacao: STATUS[i.status].rotulo });
   for (const t of D.tecnicos) for (const n of t.novasLinhas) {
     const prazo = prazoDoTecnico(n.tid, 'novas', D.cfg), atraso = Math.max(0, n.dias - prazo);
-    completar({ ...n, prazo, tipo: 'novas', origem: 'atual', data: n.desde, referencia: 'Primeira observação', atraso, atrasada: atraso > 0, status: atraso > 0 ? 'atrasada' : 'no_prazo', situacao: atraso > 0 ? 'Acima de ' + prazo + ' dias' : 'No prazo observado' });
+    completar({ ...n, prazo, tipo: 'novas', origem: 'atual', data: n.contagemDesde, referencia: 'Primeiro relatório acompanhado', atraso, atrasada: atraso > 0, status: atraso > 0 ? 'atrasada' : 'no_prazo', situacao: atraso > 0 ? 'Acima de ' + prazo + ' dias' : 'No prazo observado' });
   }
   for (const d of E.devolucoes) completar({ ...d, prazo: prazoDaDevolucao(d, 'usadas', D.cfg), tipo: 'usadas', origem: 'devolvida', data: d.em.slice(0, 10), referencia: 'Saída do relatório', status: 'devolvida', situacao: 'Devolvida', atrasada: d.dias > prazoDaDevolucao(d, 'usadas', D.cfg), atraso: Math.max(0, d.dias - prazoDaDevolucao(d, 'usadas', D.cfg)) });
   for (const m of E.movimentos) completar({ ...m, prazo: prazoDaDevolucao(m, 'novas', D.cfg), tipo: 'novas', origem: 'saida', data: m.em.slice(0, 10), referencia: 'Saída do relatório', status: m.destino, situacao: situacaoSaidaNova(m), atrasada: m.dias > prazoDaDevolucao(m, 'novas', D.cfg), atraso: Math.max(0, m.dias - prazoDaDevolucao(m, 'novas', D.cfg)) });
@@ -104,16 +104,19 @@ function calcularDesempenho({ tipo = 'usadas', periodo = 'semana', referencia = 
   const avaliarAtraso = (i, encerrada) => {
     if (!permitido(i)) return;
     const prazo = encerrada ? prazoDaDevolucao(i, tipo, D.cfg) : prazoDoTecnico(i.tid, tipo, D.cfg);
-    const base = (i.dataFT || i.desde || (encerrada ? somaDias(i.em.slice(0,10), -i.dias) : '')).slice(0, 10);
-    const observada = (i.desde || base).slice(0, 10);
+    const referenciaContagem = encerrada ? i.em.slice(0,10) : D.hoje;
+    const inclusiva = tipo === 'novas' && (encerrada ? !!i.contagemDesde : referenciaContagem >= INICIO_CONTAGEM_NOVAS);
+    const baseOriginal = (i.dataFT || i.desde || (encerrada ? somaDias(referenciaContagem, -(i.dias - (inclusiva ? 1 : 0))) : '')).slice(0, 10);
+    const base = inclusiva ? i.contagemDesde || inicioContagemNova(baseOriginal, referenciaContagem) : baseOriginal;
+    const observada = tipo === 'novas' ? base : (i.desde || base).slice(0, 10);
     if (!base || observada > fim) return;
     const saida = encerrada ? i.em.slice(0,10) : null;
     const ultimo = saida && saida < fim ? saida : fim;
-    const primeiroAtraso = somaDias(base, prazo + 1);
+    const primeiroAtraso = somaDias(base, prazo + (inclusiva ? 0 : 1));
     if (ultimo < inicio || primeiroAtraso > ultimo) return;
     const t = tecnico(i), encerradaNoPeriodo = saida && saida <= fim;
     t.atrasadas += i.qtd; t[encerradaNoPeriodo ? 'encerradas' : 'abertas'] += i.qtd;
-    const atraso = Math.max(0, diffDias(base, ultimo) - prazo);
+    const atraso = Math.max(0, diffDias(base, ultimo) + (inclusiva ? 1 : 0) - prazo);
     t.maiorAtraso = Math.max(t.maiorAtraso, atraso);
     t.evidencias.atraso.push({ ...i, prazo, atraso, data: saida || '', detalhe: encerradaNoPeriodo ? 'Devolvida com atraso' : 'Pendente no fim do período' });
   };

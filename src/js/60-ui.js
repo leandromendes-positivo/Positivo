@@ -104,6 +104,16 @@ function confirmar({ titulo, texto, ok = "Confirmar", perigo = false }) {
 function pill(classe, texto, ic) {
   return `<span class="pill ${classe}">${ic ? icone(ic) : ""}${esc(texto)}</span>`;
 }
+function marcadorTempoPeca(peca, tipo = peca.tipo || 'usadas') {
+  if (tipo === 'rmdf') return '—';
+  const referencia = (peca.em || hojeISO()).slice(0, 10), nova = tipo === 'novas';
+  const base = nova ? (peca.contagemDesde || (peca.em ? peca.desde : inicioContagemNova(peca.desde, referencia))) : (peca.dataFT || peca.desde);
+  const dias = Number.isFinite(peca.dias) ? peca.dias : nova ? diasComPecaNova(peca.desde, referencia) : Math.max(0, diffDias(base, referencia));
+  if (!Number.isFinite(dias)) return pill('neutro', 'Sem data', 'relogio');
+  const origem = nova ? 'Relatório acompanhado desde' : peca.dataFT ? 'Fechamento do chamado em' : 'Primeiro relatório em';
+  const dica = `${plural(dias, 'dia', 'dias')} com o técnico. ${origem} ${fmtData(base)}.${nova && referencia >= INICIO_CONTAGEM_NOVAS && (!peca.em || peca.contagemDesde) ? ' O primeiro dia conta como 1.' : ''}`;
+  return `<span class="pill tempo-peca ${peca.prazo > 0 && dias > peca.prazo ? 'crit' : 'info'}" data-dias-peca="${dias}" data-tipo-peca="${tipo}" title="${esc(dica)}">${icone('relogio')}<strong>${plural(dias, 'dia', 'dias')}</strong></span>`;
+}
 function pillStatus(i, cfg) {
   const s = STATUS[i.status];
   let texto = s.rotulo;

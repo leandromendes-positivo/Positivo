@@ -49,6 +49,7 @@ const NOTAS_RELATORIO = [
   'Todos os responsáveis são técnicos de campo, inclusive identificadores numéricos. Quantidades são peças, não número de linhas.',
   'Usadas que saem da planilha são tratadas como devolvidas. Novas só entram em devoluções ou uso após classificação; saídas a classificar ficam separadas.',
   'Atrasos respeitam o prazo individual. Devoluções preservam o prazo registrado na saída. Nas novas, a idade conta da primeira observação no inventário.',
+  'Novas: contagem diária a partir de 10/11/2026, com o primeiro relatório acompanhado como dia 1. O mesmo material com o técnico mantém a data inicial nos relatórios seguintes.',
   'O limite de novas é um teto: ficar abaixo dele é adequado. Tipos de envio excluídos nas configurações não contam para o limite, mas aparecem no saldo físico. Limite zero significa sem limite.',
   'As datas das saídas indicam quando a mudança foi observada na importação. Sem movimentação registrada, não é possível reconstruir eventos anteriores ao início do acompanhamento.'
 ];

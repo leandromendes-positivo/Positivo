@@ -4,9 +4,9 @@ import {runInNewContext} from 'node:vm';
 import {randomUUID} from 'node:crypto';
 import {regiaoDesativada} from '../aviso/escopo-operacao.mjs';
 export async function prepararPortalExistente(db) {
-  const [indiceSnap,controleSnap,cadastroSnap,catalogoSnap]=await Promise.all(['dados/indice','portal/controle','cadastro/tecnicos','dados/catalogo'].map(p=>db.doc(p).get()));
+  const [indiceSnap,controleSnap,cadastroSnap,catalogoSnap,tempoSnap]=await Promise.all(['dados/indice','portal/controle','cadastro/tecnicos','dados/catalogo','seguranca/tempo-pecas'].map(p=>db.doc(p).get()));
   const indice=indiceSnap.data()||{},versao=indice.versao||0;
-  if(controleSnap.exists&&controleSnap.data().versao===versao)return;
+  if(controleSnap.exists&&controleSnap.data().versao===versao&&tempoSnap.data()?.versao===1)return;
   const usadas=[],novas=[],rmdf=[];
   for(const [chave,ent] of Object.entries(indice.arquivos||{})) {
     if(!ent?.gen)continue;
@@ -36,10 +36,11 @@ export async function prepararPortalExistente(db) {
   }
   if(n)await batch.commit();
   await db.runTransaction(async tx=>{
-    const [atual,controle]=await Promise.all([tx.get(db.doc('dados/indice')),tx.get(db.doc('portal/controle'))]);
+    const [atual,controle,tempo]=await Promise.all([tx.get(db.doc('dados/indice')),tx.get(db.doc('portal/controle')),tx.get(db.doc('seguranca/tempo-pecas'))]);
     if((atual.data()?.versao||0)!==versao)throw new Error('Uma importação mudou o estoque durante a implantação. Execute novamente.');
-    if(controle.exists&&controle.data().versao===versao)return;
+    if(controle.exists&&controle.data().versao===versao&&tempo.data()?.versao===1)return;
     tx.set(db.doc('portal/controle'),{geracao,versao,atualizadoEm:indice.atualizadoEm||new Date().toISOString()});
+    tx.set(db.doc('seguranca/tempo-pecas'),{versao:1,inicioContagemNovas:'2026-11-10'});
   });
   console.log('Estoque existente preparado em documentos individuais por técnico e UF. Nenhum acesso criado automaticamente.');
 }

@@ -73,6 +73,7 @@ jobs:
           node testes/contas.mjs
           node testes/conflitos-ferias.mjs
           node testes/escopo-operacao.mjs
+          node testes/tempo-pecas.mjs
           node testes/retirar-to.mjs
           node testes/rmdf-leitura.mjs
           node testes/acesso-gerado.mjs

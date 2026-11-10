@@ -63,7 +63,7 @@ function cartaoCobranca(t, aba, D) {
 }
 
 function tabelaPecasCobranca(itens) {
-  return `<div class="tabela-rolagem"><table class="tabela compacta"><thead><tr><th>Peça</th><th>Tipo</th><th>Quantidade</th><th>Dias / prazo</th><th>Previsão por e-mail</th></tr></thead><tbody>${itens.map(i=>`<tr><td><span class="mat"><strong class="mono">${esc(i.mat)}</strong>${esc(i.desc)}</span>${i.chamado?`<small>Chamado ${esc(i.chamado)}</small>`:''}</td><td>${pill(i.tipo==='novas'?'info':'alerta',i.tipo==='novas'?'Nova':'Usada')}</td><td>${fmtNum(i.qtd)}</td><td>${i.dias} / ${i.prazo} dias</td><td>${i.previsao?`${fmtData(i.previsao)} · ${plural(i.qtdPrevista,'peça','peças')}<small class="sub-celula">${esc(descricaoConfirmacao(i))}</small><small class="sub-celula">${esc(autorPrevisao(i))}</small>`:'Sem confirmação'}</td></tr>`).join('')}</tbody></table></div>`;
+  return `<div class="tabela-rolagem"><table class="tabela compacta"><thead><tr><th>Peça</th><th>Tipo</th><th>Quantidade</th><th>Com o técnico / prazo</th><th>Previsão por e-mail</th></tr></thead><tbody>${itens.map(i=>`<tr><td><span class="mat"><strong class="mono">${esc(i.mat)}</strong>${esc(i.desc)}</span>${i.chamado?`<small>Chamado ${esc(i.chamado)}</small>`:''}</td><td>${pill(i.tipo==='novas'?'info':'alerta',i.tipo==='novas'?'Nova':'Usada')}</td><td>${fmtNum(i.qtd)}</td><td>${marcadorTempoPeca(i)}<small class="sub-celula">Prazo ${i.prazo} dias</small></td><td>${i.previsao?`${fmtData(i.previsao)} · ${plural(i.qtdPrevista,'peça','peças')}<small class="sub-celula">${esc(descricaoConfirmacao(i))}</small><small class="sub-celula">${esc(autorPrevisao(i))}</small>`:'Sem confirmação'}</td></tr>`).join('')}</tbody></table></div>`;
 }
 function tabelaItensCurta(itens, D) {
   return `<div class="tabela-rolagem"><table class="tabela compacta">
@@ -72,7 +72,7 @@ function tabelaItensCurta(itens, D) {
       <td class="mono">${esc(i.chamado || "—")}</td>
       <td><span class="mat"><span class="mono">${esc(i.mat)}</span>${esc(i.desc)}</span></td>
       <td class="mono">${fmtData(i.dataFT)}</td>
-      <td class="num"><strong>${i.dias}</strong></td>
+      <td class="num">${marcadorTempoPeca(i)}</td>
       <td>${pillStatus(i, D.cfg)}</td>
       <td>${campoPrevisao(i)}</td>
     </tr>`).join("")}</tbody></table></div>`;

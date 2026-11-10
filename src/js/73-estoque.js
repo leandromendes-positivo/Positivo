@@ -79,13 +79,13 @@ function tabelaLinhasNovas(t) {
   const linhas = [...t.novasLinhas].sort((a, b) => b.qtd - a.qtd);
   if (!linhas.length) return `<p class="nota">Sem peças novas no relatório.</p>`;
   return `<table class="tabela compacta interna">
-    <thead><tr><th>Material</th><th>Tipo</th><th class="num">Qtd</th><th class="num">Linhas</th><th>No relatório desde</th></tr></thead>
+    <thead><tr><th>Material</th><th>Tipo</th><th class="num">Qtd</th><th class="num">Linhas</th><th>Com o técnico</th></tr></thead>
     <tbody>${linhas.slice(0, 200).map((n) => `<tr class="${n.conta ? "" : "apagado"}">
       <td><span class="mat"><span class="mono">${esc(n.mat)}</span>${esc(n.desc)}</span></td>
       <td>${tagTipoEnvio(n.tipoEnvio)}${n.conta ? "" : ` <small>não conta no limite</small>`}</td>
       <td class="num"><strong>${fmtNum(n.qtd)}</strong></td>
       <td class="num">${fmtNum(n.linhas)}</td>
-      <td class="nowrap">${fmtData(n.desde)}${n.dias ? ` <small>(${n.dias} dias)</small>` : ""}</td>
+      <td class="nowrap">${marcadorTempoPeca(n, 'novas')}<small class="sub-celula">Desde ${fmtData(n.contagemDesde)}</small></td>
     </tr>`).join("")}</tbody></table>${linhas.length > 200 ? `<p class="nota">Mostrando 200 de ${fmtNum(linhas.length)} materiais. Exporte para ver todos.</p>` : ""}`;
 }
 
@@ -95,7 +95,7 @@ async function exportarEstoque() {
   const tecs = D.tecnicos.filter((t) => t.novasLinhas.length || (t.estoqueConhecido || t.temDados));
   const resumo = tecs.map((t) => [t.nome, t.regiao, t.estoqueConhecido ? t.novasQtd : "", t.estoqueConhecido ? t.novasItens : "", ...tipos.map((tp) => t.porTipo[tp] || 0), t.meta ? t.meta : "", t.estoqueConhecido && t.meta ? t.excessoNovas : "", STATUS_NOVAS[t.statusNovas].rotulo]);
   const linhas = [];
-  for (const t of tecs) for (const n of t.novasLinhas) linhas.push([t.nome, t.regiao, n.mat, n.desc, n.tipoEnvio, n.qtd, n.linhas, n.desde]);
+  for (const t of tecs) for (const n of t.novasLinhas) linhas.push([t.nome, t.regiao, n.mat, n.desc, n.tipoEnvio, n.qtd, n.linhas, n.contagemDesde, n.dias]);
   await exportarExcel(`estoque-novas-${D.hoje}.xlsx`, [
     {
       nome: "Por técnico",
@@ -105,7 +105,7 @@ async function exportarEstoque() {
     },
     {
       nome: "Materiais",
-      colunas: [{ titulo: "Técnico", largura: 30 }, { titulo: "UF", largura: 5 }, { titulo: "Material", largura: 11 }, { titulo: "Descrição", largura: 42 }, { titulo: "Tipo", largura: 12 }, { titulo: "Qtd", largura: 7, tipo: "numero" }, { titulo: "Linhas no relatório", largura: 9, tipo: "numero" }, { titulo: "No relatório desde", largura: 12, tipo: "data" }],
+      colunas: [{ titulo: "Técnico", largura: 30 }, { titulo: "UF", largura: 5 }, { titulo: "Material", largura: 11 }, { titulo: "Descrição", largura: 42 }, { titulo: "Tipo", largura: 12 }, { titulo: "Qtd", largura: 7, tipo: "numero" }, { titulo: "Linhas no relatório", largura: 9, tipo: "numero" }, { titulo: "Contagem desde o relatório de", largura: 18, tipo: "data" }, { titulo: "Dias com o técnico", largura: 18, tipo: "numero" }],
       linhas,
     },
   ]);

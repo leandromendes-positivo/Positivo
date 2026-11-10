@@ -15,7 +15,7 @@ function renderConfig() {
       <div class="campos-2">
         <label class="campo"><span>Prazo geral para devolver peça usada</span><div class="com-sufixo"><input type="number" min="1" max="90" name="prazo" value="${esc(c.prazo)}" required><em>dias</em></div><small>Vale para quem não tem prazo próprio no cadastro do técnico.</small></label>
         <label class="campo"><span>Avisar "vence em breve" a partir de</span><div class="com-sufixo"><input type="number" min="0" max="90" name="alerta" value="${esc(c.alerta)}" required><em>dias</em></div><small>Para lembrar o técnico antes de atrasar.</small></label>
-        <label class="campo"><span>Prazo geral observado de peças novas</span><div class="com-sufixo"><input type="number" min="1" max="90" name="prazoNovas" value="${esc(c.prazoNovas)}" required><em>dias</em></div><small>Contado da primeira observação do material. Prazos próprios do técnico prevalecem.</small></label>
+        <label class="campo"><span>Prazo geral observado de peças novas</span><div class="com-sufixo"><input type="number" min="1" max="90" name="prazoNovas" value="${esc(c.prazoNovas)}" required><em>dias</em></div><small>O primeiro relatório acompanhado conta como dia 1. Prazos próprios do técnico prevalecem.</small></label>
         <label class="campo"><span>Limite máximo de peças novas por técnico</span><div class="com-sufixo"><input type="number" min="0" max="10000" name="meta" value="${esc(c.meta)}" required><em>peças</em></div><small>Até o limite, inclusive zero, está regular. Pode ser personalizado por técnico; 0 desativa o limite.</small></label>
       </div>
       <fieldset class="campo"><legend>Tipos de envio que contam no estoque de novas</legend>

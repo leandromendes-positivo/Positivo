@@ -100,6 +100,17 @@ function numDia(iso) {
   return m ? Math.round(Date.UTC(+m[1], +m[2] - 1, +m[3]) / 86400000) : NaN;
 }
 const diffDias = (de, ate) => numDia(ate) - numDia(de);
+// Acompanhamento diário de novas ativado em 10/11/2026; o primeiro relatório é o dia 1.
+const INICIO_CONTAGEM_NOVAS = '2026-11-10';
+function inicioContagemNova(desde, referencia = hojeISO()) {
+  const inicio = String(desde || (referencia >= INICIO_CONTAGEM_NOVAS ? INICIO_CONTAGEM_NOVAS : referencia)).slice(0, 10);
+  return referencia >= INICIO_CONTAGEM_NOVAS && inicio < INICIO_CONTAGEM_NOVAS ? INICIO_CONTAGEM_NOVAS : inicio;
+}
+function diasComPecaNova(desde, referencia = hojeISO()) {
+  const dias = diffDias(inicioContagemNova(desde, referencia), referencia);
+  // Eventos anteriores à ativação conservam a contagem histórica registrada.
+  return Number.isFinite(dias) ? Math.max(0, dias + (referencia >= INICIO_CONTAGEM_NOVAS ? 1 : 0)) : null;
+}
 function somaDias(iso, n) {
   const d = new Date(numDia(iso) * 86400000 + n * 86400000);
   return `${d.getUTCFullYear()}-${pad2(d.getUTCMonth() + 1)}-${pad2(d.getUTCDate())}`;

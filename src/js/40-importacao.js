@@ -105,7 +105,8 @@ function compararFoto(lido, hoje, agoraS, lote, foto = E) {
   for (const [chave, ant] of saldosAntes) {
     const qtd = ant.qtd - (saldosDepois.get(chave)?.qtd || 0);
     if (qtd > 0) movimentos.push({ k: `${lote}-${hash36(R + '|' + chave)}`, lote, tid: ant.tid, regiao: R, mat: ant.mat, qtd, desde: ant.desde,
-      em: agoraS, dias: Math.max(0, diffDias(ant.desde, hoje)), prazo: prazoDoTecnico(ant.tid, 'novas'), destino: "pendente" });
+      ...(hoje >= INICIO_CONTAGEM_NOVAS ? {contagemDesde:inicioContagemNova(ant.desde, hoje)} : {}),
+      em: agoraS, dias: diasComPecaNova(ant.desde, hoje), prazo: prazoDoTecnico(ant.tid, 'novas'), destino: "pendente" });
   }
   return {
     linhas, devolvidas: [], movimentos,

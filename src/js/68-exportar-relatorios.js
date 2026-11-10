@@ -48,10 +48,10 @@ function abasRelatorio(r) {
   const c = (titulo, largura = 20, tipo = 'texto') => ({ titulo, largura, tipo });
   const n = (titulo, largura = 16) => c(titulo, largura, 'numero'), d = titulo => c(titulo, 18, 'data');
   return [
-    { nome: 'Inventário atual', colunas: [c('Técnico', 34), c('UF', 8), c('Localidade', 18), c('Tipo', 12), c('Código', 22), c('Descrição', 50), n('Quantidade'), c('Situação', 26), n('Idade em dias'), n('Prazo em dias'), n('Dias de atraso'), d('Primeira observação'), d('Data FT'), d('Previsão'), c('Agendado por', 22), c('Chamado', 22), c('Nota fiscal', 22), c('Tipo de envio', 22), c('Conta para limite', 18)],
-      linhas: r.estoque.map(i => [i.nome, i.regiao, i.localidade, i.tipo === 'usadas' ? 'Usada' : 'Nova', String(i.mat), i.desc, i.qtd, i.situacao, i.dias, i.prazo, i.atraso, i.desde, i.dataFT, i.previsao, i.previsao ? autorPrevisao(i) : '', String(i.chamado || ''), String(i.nf || ''), i.tipoEnvio || '', i.tipo === 'novas' ? i.conta ? 'Sim' : 'Não' : 'Não se aplica']) },
-    { nome: 'Movimentações', colunas: [d('Saída observada'), c('Técnico', 34), c('UF', 8), c('Localidade', 18), c('Tipo', 12), c('Código', 22), c('Descrição', 50), n('Quantidade'), c('Destino', 27), n('Idade na saída'), n('Prazo na saída'), c('Pontualidade', 20), d('Primeira observação'), d('Data FT'), c('Chamado', 22), c('Nota fiscal', 22), c('Condição da devolução', 36), c('Classificado por', 32), c('Classificado em', 23), c('Observação da classificação', 45)],
-      linhas: r.saidas.map(i => [i.em, i.nome, i.regiao, i.localidade, i.tipo === 'usadas' ? 'Usada' : 'Nova', String(i.mat), i.desc, i.qtd, DESTINOS_NOVAS[i.destino] || 'A classificar', i.dias, i.prazo, i.destino !== 'devolucao' ? 'Não se aplica' : i.pontual === null ? 'Sem data suficiente' : i.pontual ? 'No prazo' : 'Com atraso', i.desde, i.dataFT, String(i.chamado || ''), String(i.nf || ''), condicaoDevolucao(i), i.classificadoPor?.email || '', i.classificadoEm || '', i.observacaoClassificacao || '']) },
+    { nome: 'Inventário atual', colunas: [c('Técnico', 34), c('UF', 8), c('Localidade', 18), c('Tipo', 12), c('Código', 22), c('Descrição', 50), n('Quantidade'), c('Situação', 26), n('Dias com o técnico'), n('Prazo em dias'), n('Dias de atraso'), d('Contagem desde'), d('Data FT'), d('Previsão'), c('Agendado por', 22), c('Chamado', 22), c('Nota fiscal', 22), c('Tipo de envio', 22), c('Conta para limite', 18)],
+      linhas: r.estoque.map(i => [i.nome, i.regiao, i.localidade, i.tipo === 'usadas' ? 'Usada' : 'Nova', String(i.mat), i.desc, i.qtd, i.situacao, i.dias, i.prazo, i.atraso, i.tipo === 'novas' ? i.contagemDesde : i.desde, i.dataFT, i.previsao, i.previsao ? autorPrevisao(i) : '', String(i.chamado || ''), String(i.nf || ''), i.tipoEnvio || '', i.tipo === 'novas' ? i.conta ? 'Sim' : 'Não' : 'Não se aplica']) },
+    { nome: 'Movimentações', colunas: [d('Saída observada'), c('Técnico', 34), c('UF', 8), c('Localidade', 18), c('Tipo', 12), c('Código', 22), c('Descrição', 50), n('Quantidade'), c('Destino', 27), n('Dias na saída'), n('Prazo na saída'), c('Pontualidade', 20), d('Contagem desde'), d('Data FT'), c('Chamado', 22), c('Nota fiscal', 22), c('Condição da devolução', 36), c('Classificado por', 32), c('Classificado em', 23), c('Observação da classificação', 45)],
+      linhas: r.saidas.map(i => [i.em, i.nome, i.regiao, i.localidade, i.tipo === 'usadas' ? 'Usada' : 'Nova', String(i.mat), i.desc, i.qtd, DESTINOS_NOVAS[i.destino] || 'A classificar', i.dias, i.prazo, i.destino !== 'devolucao' ? 'Não se aplica' : i.pontual === null ? 'Sem data suficiente' : i.pontual ? 'No prazo' : 'Com atraso', i.contagemDesde || i.desde, i.dataFT, String(i.chamado || ''), String(i.nf || ''), condicaoDevolucao(i), i.classificadoPor?.email || '', i.classificadoEm || '', i.observacaoClassificacao || '']) },
 
   ];
 }
@@ -216,7 +216,7 @@ async function gerarPdfRelatorio(r) {
     [`${t.nome} · ${t.regiao}`, fmtNum(t.atrasadas), fmtNum(t.devolvidas), t.excesso === null ? '—' : fmtNum(t.excesso)].forEach((v, j) => texto(v, xs[j] + 3, y + 3.7, 8, j === 1 && t.atrasadas ? CORES_RELATORIO[1] : XL_COR.tinta, false, larguras[j] - 6));
   });
   if (!fila.length) texto('Nenhum atraso ou excesso identificado neste recorte.', 17, 151, 9, XL_COR.verde);
-  texto('Prazos individuais respeitados. Nas novas, a idade conta da primeira observação. Limite de estoque é um teto.', 14, 191, 7.5, XL_COR.suave);
+  texto('Prazos individuais respeitados. Novas: primeiro relatório = dia 1, a partir de 10/11/2026. Limite é um teto.', 14, 191, 7.5, XL_COR.suave);
   texto('Gráficos e prioridades exibem os maiores saldos. Para consultar todas as peças e movimentações, use Exportação simples.', 14, 195, 7.5, XL_COR.suave);
   return doc.output('blob');
 }

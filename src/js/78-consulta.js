@@ -52,12 +52,12 @@ function paginaConsulta(lista) {
 }
 function tabelaConsultaPecas(lista) {
   const linhas = paginaConsulta(lista);
-  return `<div class="tabela-rolagem"><table class="tabela tabela-consulta"><thead><tr><th>Peça / material</th><th>Responsável</th><th>Tipo</th><th>Qtd.</th><th>Situação</th><th>Data de referência</th><th>Dias</th><th>Documentos / envio</th><th>Ações</th></tr></thead><tbody>${linhas.map((i) => `<tr>
-    <td><span class="consulta-material"><strong class="mono">${esc(i.mat)}</strong><span>${esc(i.desc || 'Sem descrição')}</span><small>${esc(i.familia)}</small></span></td>
+  return `<div class="tabela-rolagem"><table class="tabela tabela-consulta"><thead><tr><th>Peça / material</th><th>Responsável</th><th>Tipo</th><th>Qtd.</th><th>Situação</th><th>Data de referência</th><th>Prazo</th><th>Documentos / envio</th><th>Ações</th></tr></thead><tbody>${linhas.map((i) => `<tr>
+    <td><span class="consulta-material"><span class="peca-identidade"><strong class="mono">${esc(i.mat)}</strong>${marcadorTempoPeca(i)}</span><span>${esc(i.desc || 'Sem descrição')}</span><small>${esc(i.familia)}</small></span></td>
     <td><button class="link-forte" data-acao="tecnico" data-tid="${esc(i.tid)}">${esc(i.nome)}</button><small class="sub-celula">${esc(i.regiao)} · ${LOCALIDADES[i.localidade] || LOCALIDADES[""]}</small></td>
     <td>${pill(i.tipo === 'usadas' ? 'alerta' : 'info',i.tipo === 'usadas' ? 'Usada' : 'Nova')}</td><td class="num"><strong>${fmtNum(i.qtd)}</strong></td>
     <td>${pill(i.origem === 'atual' && i.atrasada ? 'crit' : i.origem === 'atual' ? 'ok' : i.status === 'pendente' ? 'alerta' : 'neutro',i.situacao)}${resumoClassificacao(i)}${i.previsao ? `<small class="sub-celula">Previsão ${fmtData(i.previsao)} · ${esc(autorPrevisao(i))}</small>` : ''}</td>
-    <td class="nowrap">${i.data ? fmtData(i.data) : '—'}<small class="sub-celula">${esc(i.referencia)}</small></td><td class="num">${i.dias == null ? '—' : fmtNum(i.dias)}<small class="sub-celula">Prazo ${i.prazo} d</small></td>
+    <td class="nowrap">${i.data ? fmtData(i.data) : '—'}<small class="sub-celula">${esc(i.referencia)}</small></td><td class="num">${plural(i.prazo, 'dia', 'dias')}</td>
     <td>${i.chamado ? `<span class="mono">${esc(i.chamado)}</span>` : i.tipoEnvio ? esc(i.tipoEnvio) : '—'}${i.nf ? `<small class="sub-celula">NF ${esc(i.nf)}</small>` : ''}${i.remessa ? `<small class="sub-celula">Remessa ${esc(i.remessa)}</small>` : ''}</td>
     <td>${i.origem === 'saida' ? `<button class="btn pequeno" data-acao="consulta-classificar" data-k="${esc(i.k)}">${i.destino === 'pendente' ? 'Classificar saída' : 'Alterar destino'}</button>` : `<button class="btn pequeno" data-acao="tecnico" data-tid="${esc(i.tid)}">Ver técnico</button>`}</td></tr>`).join('')}</tbody></table></div>${paginacao(lista.length,estadoConsulta().pagina,50,'consulta')}`;
 }

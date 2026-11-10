@@ -335,7 +335,7 @@ function derivar() {
     const t = tec(n.tid, n.regiao);
     t.regioes.add(n.regiao);
     tiposEnvio.set(n.tipoEnvio, (tiposEnvio.get(n.tipoEnvio) || 0) + n.qtd);
-    t.novasLinhas.push({ ...n, prazo: t.prazoNovas, desc: E.catalogo[n.mat] || "", conta: !ignorados.has(n.tipoEnvio), dias: Math.max(0, diffDias(n.desde, hoje)) });
+    t.novasLinhas.push({ ...n, prazo: t.prazoNovas, desc: E.catalogo[n.mat] || "", conta: !ignorados.has(n.tipoEnvio), contagemDesde: inicioContagemNova(n.desde, hoje), dias: diasComPecaNova(n.desde, hoje) });
   }
   // Todos os cadastros continuam disponíveis, inclusive sem peças e com tipo legado.
   for (const [tid, c] of Object.entries(E.cadastro)) if (!tecs.has(tid)) tec(tid, c.regiao);

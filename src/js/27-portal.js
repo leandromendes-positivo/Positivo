@@ -31,7 +31,7 @@ function montarSaldosTecnicos(usadas, novas, cadastro, catalogo, rmdf = []) {
     const s = saldos.get(id);
     if (s.pecas.has(peca)) throw new Error('Estoque ambíguo: duas linhas com a mesma identificação. Corrija a origem antes de publicar.');
     if (!Number.isSafeInteger(linha.qtd) || linha.qtd <= 0) throw new Error('O portal exige quantidades inteiras e positivas. Confira o relatório.');
-    s.pecas.set(peca, { tipo, mat: linha.mat, descricao: catalogo[linha.mat] || '', quantidade: linha.qtd, chamado: linha.chamado || '', nf: linha.nf || '', tipoEnvio: linha.tipoEnvio || '', desde: linha.desde || '', ...(tipo==='rmdf'?{remessa:linha.remessa||'',dataFT:linha.dataFT||''}:{}) });
+    s.pecas.set(peca, { tipo, mat: linha.mat, descricao: catalogo[linha.mat] || '', quantidade: linha.qtd, chamado: linha.chamado || '', nf: linha.nf || '', tipoEnvio: linha.tipoEnvio || '', desde: linha.desde || '', ...(tipo!=='novas'?{dataFT:linha.dataFT||''}:{}), ...(tipo==='rmdf'?{remessa:linha.remessa||''}:{}) });
   }
   return saldos;
 }

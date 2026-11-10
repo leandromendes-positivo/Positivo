@@ -40,18 +40,29 @@ jobs:
         with:
           python-version: "3.12"
       - name: Preparar o teste de navegador
+        timeout-minutes: 15
         run: |
           fase_navegador=instalacao
           trap 'echo "::error title=Preparação dos navegadores::Falha na etapa $fase_navegador."' ERR
-          if ! ./seguranca/node_modules/.bin/playwright install --with-deps chromium firefox webkit > /tmp/instalacao-navegadores.log 2>&1; then
+          echo '::notice title=Preparação dos navegadores::Instalando Chromium, Firefox e WebKit.'
+          (
+            while sleep 60; do
+              python3 -c 'from pathlib import Path; p=Path("/tmp/instalacao-navegadores.log"); s="\n".join(p.read_text(errors="replace").splitlines()[-4:]) if p.exists() else "Aguardando instalação."; print("::notice title=Progresso dos navegadores::"+s.replace("%","%25").replace("\r","%0D").replace("\n","%0A"))'
+            done
+          ) &
+          monitor_navegador=$!
+          trap 'kill "$monitor_navegador" 2>/dev/null || true' EXIT
+          if ! timeout 8m ./seguranca/node_modules/.bin/playwright install --with-deps chromium firefox webkit > /tmp/instalacao-navegadores.log 2>&1; then
             cat /tmp/instalacao-navegadores.log
             python3 -c 'from pathlib import Path; s="\n".join(Path("/tmp/instalacao-navegadores.log").read_text()[-10000:].splitlines()[-30:]); print("::error title=Instalação dos navegadores::"+s.replace("%","%25").replace("\r","%0D").replace("\n","%0A"))'
             exit 1
           fi
+          kill "$monitor_navegador" 2>/dev/null || true
           fase_navegador=sdk
+          echo '::notice title=Preparação dos navegadores::Navegadores instalados. Baixando o SDK do Firebase.'
           mkdir -p /tmp/firebase-sdk-portal
           for sdk in app auth firestore; do
-            curl --fail --silent --show-error "https://www.gstatic.com/firebasejs/10.14.1/firebase-${sdk}-compat.js" -o "/tmp/firebase-sdk-portal/firebase-${sdk}-compat.js"
+            curl --fail --silent --show-error --connect-timeout 15 --max-time 45 --retry 2 --retry-all-errors "https://www.gstatic.com/firebasejs/10.14.1/firebase-${sdk}-compat.js" -o "/tmp/firebase-sdk-portal/firebase-${sdk}-compat.js"
           done
           fase_navegador=montagem
           python3 build.py

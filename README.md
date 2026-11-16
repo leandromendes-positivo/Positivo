@@ -10,7 +10,7 @@ Painel web para acompanhar, todo dia, as **peças usadas** que cada técnico ain
 
 **Regiões:** TO foi retirado da operação. As telas de férias e os vínculos técnicos utilizam PR, SC e RS. Novas importações de TO são bloqueadas.
 
-**RMDF:** a importação também aceita uma relação RMDF separada das novas e usadas, com consulta por técnico/UF e exportação própria. Veja [como importar e conferir RMDF](IMPORTACAO-RMDF.md).
+**RMDF:** peças recebidas como novas que apresentaram defeito no atendimento. Integram o estoque como terceira categoria, com dias, prazos, cobranças, previsões, devoluções e relatórios. Veja [as regras e a importação de RMDF](IMPORTACAO-RMDF.md).
 
 Detalhes do funcionamento (regras, formato das planilhas, banco, arquitetura): [CONTEXTO-PARA-CHATGPT.md](CONTEXTO-PARA-CHATGPT.md).
 
@@ -196,19 +196,19 @@ O mapa amplia o estado ao passar o cursor ou receber foco por teclado; sair do e
 
 ### Histórico completo de inventário
 
-**Histórico de inventário**, no menu lateral, ou **Técnicos → nome → Histórico de peças**, reúne o saldo atual e todas as saídas preservadas no banco, sem o corte operacional de 120 dias. Filtre por técnico, novas/usadas, situação, código, descrição, chamado ou NF e exporte o resultado completo.
+**Histórico de inventário**, no menu lateral, ou **Técnicos → nome → Histórico de peças**, reúne o saldo atual e todas as saídas preservadas no banco, sem o corte operacional de 120 dias. Filtre por técnico, novas/usadas/RMDF, situação, código, descrição, chamado ou NF e exporte o resultado completo.
 
-Usadas que desaparecem da planilha ficam como devolvidas; reduções parciais encerram apenas a quantidade que saiu. Nas novas, uma saída sem destino informado aparece como **Devolução presumida**, separada de uso, transferência e devolução confirmada. O administrador pode confirmar/reclassificar o destino, inclusive em registros antigos. Novas presumidas não entram como devoluções confirmadas no ranking.
+Usadas e RMDF que saem da planilha ficam como devolvidas; reduções parciais encerram apenas a quantidade que saiu. RMDF segue a Data FT ou a primeira observação e o prazo de usadas, inclusive o personalizado. Nas novas, uma saída sem destino informado aparece como **Devolução presumida**, separada de uso, transferência e devolução confirmada. O administrador pode confirmar/reclassificar o destino, inclusive em registros antigos. Novas presumidas não entram como devoluções confirmadas no ranking.
 
 **Peças novas com defeito (RMDF):** em **Estoque de novas → Cobrar novas** (também disponível na ficha do técnico e no filtro **Novas** de Cobranças), a mensagem do WhatsApp e o e-mail do Outlook orientam o técnico a informar código, quantidade e se o RMDF será aplicado ou já foi aplicado. WhatsApp é apenas aviso; a cobrança formal e a resposta do técnico devem ser por e-mail, sem formulário ou acesso dele ao painel. O operador registra a resposta com peças, quantidades e condição em **Respostas e confirmações**, incluindo as novas na agenda de devoluções.
 
 Após a saída aparecer na planilha, abra **Estoque de novas → Devoluções de novas → Confirmar destino**. Um administrador escolhe **Devolvida** e marca **Nova — retorno ao estoque** ou **RMDF aplicado — peça com defeito**; não há escolha automática. Para quantidades mistas, classifique uma parte de cada vez (por exemplo, 2 novas e 1 RMDF). Se houver apenas promessa de aplicar RMDF, mantenha **A classificar** e anote a informação. A data da saída continua sendo a observada na planilha.
 
-A classificação guarda condição, quantidade, responsável, horário do registro e observação, mantendo as classificações anteriores. No histórico, o filtro **RMDF aplicado · novas** e as exportações do inventário, consulta e relatórios permitem conferir esses registros. Uma peça com RMDF mantém sua origem **nova**, conta como devolução confirmada e não como uso em atendimento; a classificação não repõe estoque. Registros antigos sem condição permanecem como **Condição não informada**. No Firebase, a gravação usa transação e recusa uma edição cuja versão já tenha mudado.
+A classificação guarda condição, quantidade, responsável, horário do registro e observação, mantendo as classificações anteriores. No histórico, o filtro **Peças com defeito · RMDF** e as exportações permitem conferir esses registros. Reclassificar nova como RMDF mantém a peça no estoque como defeituosa; não é devolução nem uso. Quando novas diminuem e RMDF aumenta no mesmo lote para o mesmo técnico/UF/material, essa quantidade é registrada como reclassificação. Uma saída de novas classificada explicitamente como **Devolvida**, com condição RMDF, representa uma devolução de peça defeituosa e preserva sua origem. Registros antigos sem condição permanecem como **Condição não informada**. No Firebase, a gravação usa transação e recusa uma edição cuja versão já tenha mudado.
 
 Uma linha representa um saldo ou uma saída registrada. O mesmo material pode aparecer em várias movimentações; o relatório não identifica unidades físicas únicas. O sistema mantém primeira observação, saída, quantidade e referências disponíveis. Não é possível reconstruir movimentações anteriores ao início do acompanhamento que nunca foram gravadas. Desfazer a última importação retira somente os registros produzidos por ela e restaura o saldo anterior.
 
-No Firebase, as saídas de usadas e novas, o registro de importação e a troca do saldo oficial são confirmados na mesma transação. Assim, uma falha ao salvar o arquivo histórico não avança a foto do inventário.
+No Firebase, as saídas de usadas, novas e RMDF, o registro de importação e a troca do saldo oficial são confirmados na mesma transação. Assim, uma falha ao salvar o arquivo histórico não avança a foto do inventário.
 
 O botão **Recolher**, no topo do menu lateral, amplia a área do painel no computador. Use **Mostrar menu lateral**, ao lado do título, para reabrir; a preferência é lembrada no navegador. As setas do topo e do rodapé percorrem as seções permitidas para o usuário, e as tabelas mantêm setas próprias de paginação.
 

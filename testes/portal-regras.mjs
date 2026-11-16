@@ -65,7 +65,10 @@ try{
  await env.withSecurityRulesDisabled(async c=>{for(const t of [id,outroId])await c.firestore().doc(`saldos_tecnicos/${t}/geracoes/${gen}/pecas/r-1`).set(peca('rmdf'));});
  await sim(ana.doc(`saldos_tecnicos/${id}/geracoes/${gen}/pecas/r-1`).get());
  await nao(ana.doc(`saldos_tecnicos/${outroId}/geracoes/${gen}/pecas/r-1`).get());
- await nao(enviar(ana,declaracao({peca:'r-1',tipo:'rmdf',quantidadeDevolver:1,quantidadeRmdf:0,rmdf:'nenhum'})));
+ await sim(enviar(ana,declaracao({peca:'r-1',tipo:'rmdf',quantidadeDevolver:1,quantidadeRmdf:0,rmdf:'nenhum'})));
+ await nao(enviar(ana,declaracao({peca:'r-1',tipo:'rmdf',versao:2,quantidadeDevolver:0,quantidadeRmdf:1,rmdf:'previsto'})));
+ await nao(enviar(ana,declaracao({peca:'r-1',tipo:'rmdf',versao:2,quantidadeDevolver:999,quantidadeRmdf:0,rmdf:'nenhum'})));
+ await nao(enviar(ana,declaracao({tecnicoId:outroId,peca:'r-1',tipo:'rmdf',quantidadeDevolver:1,quantidadeRmdf:0,rmdf:'nenhum'})));
  await nao(ana.doc(`saldos_tecnicos/${id}/geracoes/${gen}/pecas/n-1`).update({quantidade:999}));
  for(const perfil of ['administrador','usuario'])await nao(ana.doc('usuarios/ana@empresa.com').update({perfil,tecnicoId:firebase.firestore.FieldValue.delete(),atualizadoPor:{uid:'ana',email:'ana@empresa.com'},atualizadoEm:stamp()}));
  await nao(ana.doc('usuarios/ana@empresa.com').update({tecnicoId:outroId,atualizadoPor:{uid:'ana',email:'ana@empresa.com'},atualizadoEm:stamp()}));

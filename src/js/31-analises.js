@@ -1,7 +1,8 @@
 /* Consulta e desempenho: quantidades físicas, períodos civis e origem explícita. */
-const DESTINOS_NOVAS = { pendente: 'A classificar', devolucao: 'Devolvida', uso: 'Usada em atendimento', transferencia: 'Transferência / ajuste' };
+const DESTINOS_NOVAS = { pendente: 'A classificar', devolucao: 'Devolvida', uso: 'Usada em atendimento', rmdf: 'Reclassificada como RMDF', transferencia: 'Transferência / ajuste' };
 const CONDICOES_DEVOLUCAO = { nova: 'Nova — retorno ao estoque', rmdf: 'RMDF aplicado — peça com defeito' };
 function condicaoDevolucao(i) {
+  if(i.tipo==='rmdf' && (i.destino==='devolucao'||i.origem==='devolvida'||i.estado==='devolvida'))return CONDICOES_DEVOLUCAO.rmdf;
   return i.destino === 'devolucao' && i.tipo !== 'usadas' ? (CONDICOES_DEVOLUCAO[i.condicaoDevolucao] || 'Condição não informada') : '';
 }
 function situacaoSaidaNova(i) {
@@ -35,12 +36,12 @@ function linhasConsulta(D = derivar()) {
     const desc = E.catalogo[i.mat] || '';
     linhas.push({ ...i, nome: t?.nome || nomeTecnico(i.tid), nomeOriginal: cad?.nome || '', localidade: cad?.localidade || '', tipoTec: 'tecnico', desc, familia: familiaPeca(desc) });
   };
-  for (const i of D.itens) completar({ ...i, tipo: 'usadas', origem: 'atual', data: (i.dataFT || i.desde || '').slice(0, 10), referencia: i.dataFT ? 'Data FT' : 'Primeira observação', situacao: STATUS[i.status].rotulo });
+  for (const i of D.retornos) completar({ ...i, origem: 'atual', data: (i.dataFT || i.desde || '').slice(0, 10), referencia: i.dataFT ? 'Data FT' : 'Primeira observação', situacao: STATUS[i.status].rotulo });
   for (const t of D.tecnicos) for (const n of t.novasLinhas) {
     const prazo = prazoDoTecnico(n.tid, 'novas', D.cfg), atraso = Math.max(0, n.dias - prazo);
     completar({ ...n, prazo, tipo: 'novas', origem: 'atual', data: n.contagemDesde, referencia: 'Primeiro relatório acompanhado', atraso, atrasada: atraso > 0, status: atraso > 0 ? 'atrasada' : 'no_prazo', situacao: atraso > 0 ? 'Acima de ' + prazo + ' dias' : 'No prazo observado' });
   }
-  for (const d of E.devolucoes) completar({ ...d, prazo: prazoDaDevolucao(d, 'usadas', D.cfg), tipo: 'usadas', origem: 'devolvida', data: d.em.slice(0, 10), referencia: 'Saída do relatório', status: 'devolvida', situacao: 'Devolvida', atrasada: d.dias > prazoDaDevolucao(d, 'usadas', D.cfg), atraso: Math.max(0, d.dias - prazoDaDevolucao(d, 'usadas', D.cfg)) });
+  for (const d of E.devolucoes) completar({ ...d, prazo: prazoDaDevolucao(d, d.tipo, D.cfg), tipo: d.tipo || 'usadas', origem: 'devolvida', data: d.em.slice(0, 10), referencia: 'Saída do relatório', status: 'devolvida', situacao: 'Devolvida', atrasada: d.dias > prazoDaDevolucao(d, d.tipo, D.cfg), atraso: Math.max(0, d.dias - prazoDaDevolucao(d, d.tipo, D.cfg)) });
   for (const m of E.movimentos) completar({ ...m, prazo: prazoDaDevolucao(m, 'novas', D.cfg), tipo: 'novas', origem: 'saida', data: m.em.slice(0, 10), referencia: 'Saída do relatório', status: m.destino, situacao: situacaoSaidaNova(m), atrasada: m.dias > prazoDaDevolucao(m, 'novas', D.cfg), atraso: Math.max(0, m.dias - prazoDaDevolucao(m, 'novas', D.cfg)) });
   return linhas;
 }
@@ -50,7 +51,7 @@ function filtrarConsulta(linhas, f) {
   const nomes = normBusca(limpar(f.tecnico)).split(/\s+/).filter(Boolean);
   return linhas.filter((i) => {
     if (f.tid && i.tid !== f.tid) return false;
-    if (f.tipo && i.tipo !== f.tipo) return false;
+    if (f.tipo && (f.tipo==='retornos' ? i.tipo==='novas' : i.tipo!==f.tipo)) return false;
     if (f.origem === 'atual' && i.origem !== 'atual') return false;
     if (f.origem === 'devolvida' && !(i.origem === 'devolvida' || (i.origem === 'saida' && i.destino === 'devolucao'))) return false;
     if (f.origem === 'saida' && i.origem !== 'saida') return false;
@@ -98,8 +99,8 @@ function calcularDesempenho({ tipo = 'usadas', periodo = 'semana', referencia = 
     if (!mapa.has(i.tid)) mapa.set(i.tid, { tid: i.tid, nome: nomeTecnico(i.tid), regiao: i.regiao, atrasadas: 0, abertas: 0, encerradas: 0, maiorAtraso: 0, noPrazo: 0, devolvidas: 0, uso: 0, materiais: new Map(), evidencias: { atraso: [], pontualidade: [], uso: [] } });
     return mapa.get(i.tid);
   };
-  const atual = tipo === 'usadas' ? D.itens : D.tecnicos.flatMap((t) => t.novasLinhas);
-  const devolucoes = tipo === 'usadas' ? devolvidas : movimentos.filter((m) => m.destino === 'devolucao');
+  const atual = tipo === 'novas' ? D.tecnicos.flatMap((t) => t.novasLinhas) : tipo === 'rmdf' ? D.rmdf : D.itens;
+  const devolucoes = tipo === 'novas' ? movimentos.filter((m) => m.destino === 'devolucao') : devolvidas.filter(i=>(i.tipo||'usadas')===tipo);
   // No histórico, uma peça conta uma vez; não somamos repetidamente as fotos diárias.
   const avaliarAtraso = (i, encerrada) => {
     if (!permitido(i)) return;
@@ -130,7 +131,7 @@ function calcularDesempenho({ tipo = 'usadas', periodo = 'semana', referencia = 
   });
   const usos = new Map();
   if (tipo === 'usadas') {
-    for (const i of [...devolvidas, ...D.itens]) {
+    for (const i of [...devolucoes, ...D.itens]) {
       if (!i.dataFT || !permitido(i)) continue;
       const data = i.dataFT.slice(0,10);
       if (data < inicio || data > fim) continue;
@@ -139,7 +140,7 @@ function calcularDesempenho({ tipo = 'usadas', periodo = 'semana', referencia = 
       const qtd = i.qtdUso || i.qtd;
       if (!anterior || qtd > anterior.qtd) usos.set(chave, { ...i, qtd, data, detalhe: 'Troca registrada por Data FT' });
     }
-  } else {
+  } else if(tipo==='novas') {
     for (const m of movimentos) if (m.destino === 'uso' && permitido(m) && m.em.slice(0,10) >= inicio && m.em.slice(0,10) <= fim) usos.set(m.k, { ...m, data: m.em.slice(0,10), detalhe: 'Uso confirmado pelo operador' });
   }
   for (const i of usos.values()) {
@@ -154,8 +155,8 @@ function calcularDesempenho({ tipo = 'usadas', periodo = 'semana', referencia = 
     atraso: lista.filter((t) => t.atrasadas > 0).sort((a,b) => b.atrasadas - a.atrasadas || b.maiorAtraso - a.maiorAtraso || nome(a,b)),
     pontualidade: lista.filter((t) => t.noPrazo > 0).sort((a,b) => b.taxa - a.taxa || b.noPrazo - a.noPrazo || nome(a,b)),
     uso: lista.filter((t) => t.uso > 0).sort((a,b) => b.uso - a.uso || nome(a,b)),
-    pendentes: movimentos.filter((m) => permitido(m) && m.destino === 'pendente' && m.em.slice(0,10) >= inicio && m.em.slice(0,10) <= fim),
-    semData: tipo === 'usadas' ? D.itens.filter((i) => permitido(i) && !i.dataFT).length : 0,
+    pendentes: tipo==='novas' ? movimentos.filter((m) => permitido(m) && m.destino === 'pendente' && m.em.slice(0,10) >= inicio && m.em.slice(0,10) <= fim) : [],
+    semData: tipo !== 'novas' ? atual.filter((i) => permitido(i) && !i.dataFT).length : 0,
   };
 }
 async function classificarSaida(k, destino, quantidade = null, opcoes = {}) {

@@ -20,7 +20,7 @@ try {
     E.novas = [{ tid: 'ana', regiao: 'PR', qtd: 12, desde: '2026-09-29', mat: 'SSD', tipoEnvio: 'BACKUP', linhas: 1 }];
     E.indice.arquivos = Object.fromEntries(['novas:PR','usadas:PR','usadas:SC'].map(k => [k,{ em: '2026-10-05 09:00', arquivo: k + '.csv' }]));
     E.acomp = { ana: { itens: { vencida: { p: '2026-10-04' } } }, bruno: { itens: { futura: { p: '2026-10-07' }, hoje: { p: '2026-10-05' } } } };
-    mudou(); irPara('cobrancas');
+    UI.cob.tipo='usadas';mudou(); irPara('cobrancas');
     window.__exportarResumoOriginal = exportarExcel;
     exportarExcel = async (nome, abas) => { window.__exportacaoResumo = { nome, abas }; };
     copiarTexto = async texto => { window.__resumoCopiado = texto; };
@@ -55,7 +55,7 @@ try {
   assert.match(filtrado, /2 peças, mais antiga nesta lista com 6 dias/);
   assert.doesNotMatch(filtrado, /20 dias|previsão vencida|Bruno/);
   // Exportação de novas e de ambos os tipos segue a seleção, sem misturar totais globais.
-  for (const [tipo, rotulo, qtd] of [['novas','Peças novas',12], ['todas','Peças novas e usadas',14]]) {
+  for (const [tipo, rotulo, qtd] of [['novas','Peças novas',12], ['todas','Peças novas, usadas e RMDF',14]]) {
     await page.locator(`[data-acao="tipo-cob"][data-tipo="${tipo}"]`).click();
     await page.locator('[data-acao="exportar-cobrancas"]').click();
     const x = await page.evaluate(() => __exportacaoResumo), resumo = Object.fromEntries(x.abas[0].linhas);

@@ -17,8 +17,8 @@ try{
  await p.locator('[data-acao="tentar-importar"]').click();await p.waitForFunction(()=>!UI.im.processando&&E.rmdf.length===2);
  const estado=()=>p.evaluate(()=>({rmdf:E.rmdf.reduce((s,p)=>s+p.qtd,0),novas:E.novas.reduce((s,p)=>s+p.qtd,0),usadas:E.usadas.reduce((s,p)=>s+p.qtd,0),devolucoes:E.devolucoes.length,movimentos:E.movimentos.length}));
  assert.deepEqual(await estado(),{rmdf:5,novas:4,usadas:2,devolucoes:0,movimentos:0});
- await p.evaluate(async()=>{E.rmdf=[];await carregarFotos();});assert.equal((await estado()).rmdf,5,'relação serializa e recarrega em partes próprias');
- await p.locator('[data-nav="rmdf"]').click();assert.match(await p.locator('#conteudo').innerText(),/Mesma referência também em usadas/);
+ await p.evaluate(async()=>{E.rmdf=[];await carregarFotos();});assert.equal((await estado()).rmdf,5,'estoque RMDF serializa e recarrega em partes próprias');
+ await p.locator('[data-nav="rmdf"]').click();assert.equal(await p.locator('[data-tipo-peca="rmdf"]').count(),2);assert.match(await p.locator('#conteudo').innerText(),/acima do prazo/);
  await p.locator('[data-digitar="rmdf-busca"]').fill('BRUNO');await p.waitForFunction(()=>UIrmdf.busca==='BRUNO');await p.waitForTimeout(350);assert.equal(await p.locator('#conteudo tbody tr').count(),1);
  await p.evaluate(async()=>{window.__exportacaoRmdf=null;exportarExcel=async(nome,abas)=>{window.__exportacaoRmdf={nome,abas};};await exportarRmdf();});
  assert.equal(await p.evaluate(()=>window.__exportacaoRmdf.abas[0].linhas.length),1,'exportação respeita filtro');
@@ -30,10 +30,10 @@ try{
   const mapa=montarSaldosTecnicos(E.usadas,E.novas,E.cadastro,E.catalogo,[...E.rmdf,outro]);
   return {pr:mapa.get('PR--'+original.tid).pecas.get('r-'+original.k).quantidade,sc:mapa.get('SC--'+original.tid).pecas.get('r-'+original.k).quantidade,tipos:[...mapa.get('PR--'+original.tid).pecas.values()].map(p=>p.tipo).sort()};
  });assert.equal(isolamento.pr,2);assert.equal(isolamento.sc,9);assert.deepEqual(isolamento.tipos,['novas','rmdf','usadas']);
- // Uma nova foto RMDF não altera usadas/novas nem gera devolução ao desaparecer uma linha.
+ // Uma nova foto RMDF não altera usadas/novas e registra a devolução ao sair uma linha.
  await upload([['PR RMDF.csv',cab+linhas[1]]]);await p.waitForFunction(()=>UI.im.fila.length===1);await p.locator('[data-acao="tentar-importar"]').click();await p.waitForFunction(()=>!UI.im.processando&&E.rmdf.length===1);
- assert.deepEqual(await estado(),{rmdf:3,novas:4,usadas:2,devolucoes:0,movimentos:0});
- await p.evaluate(async()=>{await desfazerImportacao(E.importacoes[0]);});assert.equal((await estado()).rmdf,5,'desfazer restaura somente a relação');
+ assert.deepEqual(await estado(),{rmdf:3,novas:4,usadas:2,devolucoes:1,movimentos:0});
+ await p.evaluate(async()=>{await desfazerImportacao(E.importacoes[0]);});assert.equal((await estado()).rmdf,5,'desfazer restaura o estoque RMDF');
  // Impede que uma quantidade inválida apague silenciosamente parte da relação.
  await upload([['PR RMDF.csv',cab+linhas[0].replace(';2;',';1,5;')]]);await p.waitForFunction(()=>UI.im.fila.length===1&&UI.im.fila[0].erro);assert.equal((await estado()).rmdf,5);
  assert.equal(await p.evaluate(()=>UI.im.fila[0].lido),null);
@@ -42,7 +42,7 @@ try{
  assert.equal(await p.evaluate(()=>E.importacoes.length),antesAmbiguo,'nome sem categoria exige conferência');
  assert.match(await p.locator('#conteudo').innerText(),/colunas são comuns a Usadas e RMDF/);
  await p.locator('[data-mudar="fila-tipo"]').selectOption('rmdf');await p.locator('[data-acao="tentar-importar"]').click();await p.waitForFunction(()=>!UI.im.processando&&E.rmdf.length===1);
- assert.equal((await estado()).rmdf,2);assert.equal((await estado()).usadas,2);assert.equal((await estado()).devolucoes,0);
+ assert.equal((await estado()).rmdf,2);assert.equal((await estado()).usadas,2);assert.equal((await estado()).devolucoes,1);assert.equal(await p.evaluate(()=>E.devolucoes[0].tipo),'rmdf');
  assert.deepEqual(erros,[]);
- console.log('RMDF: três arquivos, confirmação, isolamento por tipo/técnico/UF, referência cruzada, filtro, recarga, saída sem baixa, desfazer e quantidade inválida passaram.');
+ console.log('RMDF: três arquivos, confirmação, isolamento por tipo/técnico/UF, dias e prazo, filtro, recarga, devolução por saída, desfazer e quantidade inválida passaram.');
 }finally{await b.close();}

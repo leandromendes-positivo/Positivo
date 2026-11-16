@@ -27,7 +27,7 @@ function cartaoCobranca(t, aba, D) {
   const totalTipo=somar(pecasCobranca(t,tipo),i=>i.qtd),prazo=tipo==='novas'?t.prazoNovas:t.prazo;
   const sev = prevVencidas ? 'crit' : aba==='cobrar' ? 'grave' : aba==='vencendo' ? 'alerta' : 'ok';
   const rotuloQtd = { cobrar: "para cobrar", vencidas: "com previsão vencida", vencendo: "vencem em breve", aguardando: "com previsão", previsoes: "previstas p/ hoje", sem_previsao: "sem previsão", todos: "pendentes" }[aba];
-  const infos = [pill('neutro', tipo==='todas'?`Prazos: usadas ${t.prazo} d · novas ${t.prazoNovas} d`:`Prazo: ${prazo} dias`, 'relogio')];
+  const infos = [pill('neutro', tipo==='todas'?`Prazos: usadas/RMDF ${t.prazo} d · novas ${t.prazoNovas} d`:`Prazo: ${prazo} dias`, 'relogio')];
   if (prevVencidas) infos.push(pill("crit", `${plural(prevVencidas, "peça", "peças")} com previsão vencida`, "quebra"));
   if (proxima) infos.push(pill("info", `Próxima previsão: ${fmtPrevisao(proxima)}`, "calendario"));
   else if (aba === "cobrar" && !prevVencidas) infos.push(pill("alerta", "Sem previsão", "calendario"));
@@ -63,7 +63,7 @@ function cartaoCobranca(t, aba, D) {
 }
 
 function tabelaPecasCobranca(itens) {
-  return `<div class="tabela-rolagem"><table class="tabela compacta"><thead><tr><th>Peça</th><th>Tipo</th><th>Quantidade</th><th>Com o técnico / prazo</th><th>Previsão por e-mail</th></tr></thead><tbody>${itens.map(i=>`<tr><td><span class="mat"><strong class="mono">${esc(i.mat)}</strong>${esc(i.desc)}</span>${i.chamado?`<small>Chamado ${esc(i.chamado)}</small>`:''}</td><td>${pill(i.tipo==='novas'?'info':'alerta',i.tipo==='novas'?'Nova':'Usada')}</td><td>${fmtNum(i.qtd)}</td><td>${marcadorTempoPeca(i)}<small class="sub-celula">Prazo ${i.prazo} dias</small></td><td>${i.previsao?`${fmtData(i.previsao)} · ${plural(i.qtdPrevista,'peça','peças')}<small class="sub-celula">${esc(descricaoConfirmacao(i))}</small><small class="sub-celula">${esc(autorPrevisao(i))}</small>`:'Sem confirmação'}</td></tr>`).join('')}</tbody></table></div>`;
+  return `<div class="tabela-rolagem"><table class="tabela compacta"><thead><tr><th>Peça</th><th>Tipo</th><th>Quantidade</th><th>Com o técnico / prazo</th><th>Previsão por e-mail</th></tr></thead><tbody>${itens.map(i=>`<tr><td><span class="mat"><strong class="mono">${esc(i.mat)}</strong>${esc(i.desc)}</span>${i.chamado?`<small>Chamado ${esc(i.chamado)}</small>`:''}</td><td>${pill(i.tipo==='novas'?'info':'alerta',rotuloTipoPeca(i.tipo))}</td><td>${fmtNum(i.qtd)}</td><td>${marcadorTempoPeca(i)}<small class="sub-celula">Prazo ${i.prazo} dias</small></td><td>${i.previsao?`${fmtData(i.previsao)} · ${plural(i.qtdPrevista,'peça','peças')}<small class="sub-celula">${esc(descricaoConfirmacao(i))}</small><small class="sub-celula">${esc(autorPrevisao(i))}</small>`:'Sem confirmação'}</td></tr>`).join('')}</tbody></table></div>`;
 }
 function tabelaItensCurta(itens, D) {
   return `<div class="tabela-rolagem"><table class="tabela compacta">
@@ -103,7 +103,7 @@ function dadosListaCobrancas(D = derivar(), s = UI.cob) {
 }
 function contextoListaCobrancas(D = derivar(), s = UI.cob) {
   const aba = ABAS_COB.find(a => a.id === s.aba) || ABAS_COB.find(a => a.id === 'cobrar');
-  const tipo = { usadas: 'Peças usadas', novas: 'Peças novas', todas: 'Peças novas e usadas' }[s.tipo || 'usadas'];
+  const tipo = { usadas: 'Peças usadas', novas: 'Peças novas', rmdf: 'Peças RMDF', retornos: 'Peças usadas e RMDF', todas: 'Peças novas, usadas e RMDF' }[s.tipo || 'usadas'];
   const campos = [['Lista', aba.rotulo], ['Tipo de peça', tipo], ['Data de referência', fmtData(D.hoje)],
     ['Região', s.regiao || 'Todas as regiões'], ['Busca por técnico', limpar(s.busca) || 'Sem busca'],
     ['Registros', s.somenteMeus ? 'Somente meus agendamentos' : 'Todos os registros permitidos'],
@@ -115,7 +115,7 @@ function contextoListaCobrancas(D = derivar(), s = UI.cob) {
 
 function renderCobrancas() {
   const D = derivar();
-  if (!E.usadas.length && !E.novas.length) return vazio("upload", "Sem peças importadas", "Importe as planilhas para ver quem precisa ser cobrado.", `<button class="btn prim" data-acao="ir" data-pagina="importar">Importar planilhas</button>`);
+  if (!E.usadas.length && !E.novas.length && !E.rmdf.length) return vazio("upload", "Sem peças importadas", "Importe as planilhas para ver quem precisa ser cobrado.", `<button class="btn prim" data-acao="ir" data-pagina="importar">Importar planilhas</button>`);
   const s = UI.cob;
   const contagem = {};
   const porAba = {};
@@ -132,7 +132,7 @@ function renderCobrancas() {
   return `
     ${s.somenteMeus ? `<div class="faixa info compacta notif-meus-registros">${icone('pessoa')}<div><strong>Seus registros</strong><span>Recorte da notificação: agendamentos e contatos registrados pela sua conta.</span></div><button type="button" class="btn pequeno" data-acao="limpar-meus-registros">Ver todos os registros permitidos</button></div>` : ''}
     ${s.foco ? `<div class="faixa info compacta notif-filtro-cobranca">${icone('sino')}<div><strong>${esc(FOCOS_COBRANCA[s.foco] || '')}</strong><span>Filtro da central de notificações. Cada cartão reúne todas as peças a cobrar desse técnico.</span></div><button type="button" class="btn pequeno" data-acao="limpar-foco-cobranca">Limpar filtro</button></div>` : ''}
-    <div class="cobranca-tipos" role="group" aria-label="Tipo de peça nas cobranças">${[['usadas','Usadas · prioridade'],['novas','Novas'],['todas','Novas e usadas']].map(([v,n])=>`<button class="btn ${(s.tipo||'usadas')===v?'prim':''}" data-acao="tipo-cob" data-tipo="${v}" aria-pressed="${(s.tipo||'usadas')===v}">${esc(n)}</button>`).join('')}</div>
+    <div class="cobranca-tipos" role="group" aria-label="Tipo de peça nas cobranças">${[['retornos','Usadas e RMDF · prioridade'],['usadas','Usadas'],['novas','Novas'],['rmdf','RMDF'],['todas','Todas as peças']].map(([v,n])=>`<button class="btn ${(s.tipo||'usadas')===v?'prim':''}" data-acao="tipo-cob" data-tipo="${v}" aria-pressed="${(s.tipo||'usadas')===v}">${esc(n)}</button>`).join('')}</div>
     <div class="abas" role="tablist">${ABAS_COB.map((a) => `<button role="tab" class="aba${a.id === s.aba ? " ativa" : ""}" aria-selected="${a.id === s.aba}" data-acao="aba-cob" data-aba="${a.id}">${esc(a.rotulo)}<span class="contador">${contagem[a.id]}</span></button>`).join("")}</div>
     <div class="barra-filtros">
       <div class="chips">${["", ...D.regioes].map((r) => `<button class="chip${s.regiao === r ? " ativo" : ""}" data-acao="regiao-cob" data-regiao="${esc(r)}">${r ? esc(r) : "Todas as regiões"}</button>`).join("")}</div>
@@ -172,7 +172,7 @@ async function exportarCobrancas() {
   const D = derivar(), s = { ...UI.cob }, contexto = contextoListaCobrancas(D, s), lista = dadosListaCobrancas(D, s);
   const linhas = [];
   for (const { tecnico: t, itens } of lista) for (const i of itens) {
-    linhas.push([t.nome, t.regiao, fmtTelefone(t.telefone), i.chamado, i.mat, i.desc, i.dataFT, i.dias, i.atraso, STATUS[i.status].rotulo, i.previsao, i.ultimaCobranca, i.nCobrancas, i.obs, i.nf, i.remessa, i.tipo==='novas'?'Nova':'Usada', i.qtd, i.confirmacao?.referenciaEmail||'', i.confirmacao?descricaoConfirmacao(i):'']);
+    linhas.push([t.nome, t.regiao, fmtTelefone(t.telefone), i.chamado, i.mat, i.desc, i.dataFT, i.dias, i.atraso, STATUS[i.status].rotulo, i.previsao, i.ultimaCobranca, i.nCobrancas, i.obs, i.nf, i.remessa, rotuloTipoPeca(i.tipo), i.qtd, i.confirmacao?.referenciaEmail||'', i.confirmacao?descricaoConfirmacao(i):'']);
   }
   const identificador = normBusca(contexto.aba.rotulo).replace(/[^a-z0-9]+/g, '-');
   await exportarExcel(`cobrancas-${identificador}-${s.tipo || 'usadas'}-${D.hoje}.xlsx`, [{

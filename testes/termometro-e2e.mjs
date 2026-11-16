@@ -45,6 +45,7 @@ try {
       const e = JSON.parse(window.__estoqueTermometro);
       for (const k of ['usadas','novas','cadastro','indice','contatos','agendamentos','acompLegado']) E[k] = e[k];
       window.__CP_AGORA = '2026-10-05T12:00:00';
+      for(const uf of ['PR','SC'])E.indice.arquivos[`rmdf:${uf}`]={em:hojeISO()+'T09:00:00',itens:0,qtd:0};
       E.usadas.forEach(i => i.dataFT = hojeISO()); E.novas.forEach(i => { i.qtd = 1; i.desde = hojeISO(); });
       Object.values(E.indice.arquivos).forEach(f => f.em = hojeISO() + 'T09:00:00');
       combinarAcompanhamento(); mudou(); irPara('painel');
@@ -93,7 +94,7 @@ try {
   });
   assert.equal(await page.evaluate(() => situacaoOperacao().nivel), 'critica');
   assert.equal(await page.evaluate(() => situacaoOperacao().vencidas), 1);
-  assert.deepEqual(await page.locator('[data-fator="vencidas"] .termometro-detalhes b').allTextContents(), ['0','1'], 'previsões vencidas distinguem usadas e novas');
+  assert.deepEqual(await page.locator('[data-fator="vencidas"] .termometro-detalhes b').allTextContents(), ['0','1','0'], 'previsões vencidas distinguem usadas, novas e RMDF');
   assert.equal(await page.locator('[data-prioridade="vencidas"]').count(), 1);
   await page.locator('[data-fator="vencidas"]').click();
   assert.deepEqual(await page.evaluate(() => [UI.cob.tipo, UI.cob.aba]), ['todas','vencidas']);
@@ -101,6 +102,8 @@ try {
 
   await page.evaluate(() => { baseSaudavel(); Object.values(E.indice.arquivos).forEach(f => f.em = '2026-10-04T09:00:00'); mudou(); });
   assert.equal(await page.evaluate(() => situacaoOperacao().nivel), 'incompleta', 'base antiga nunca aparece verde');
+  await page.evaluate(() => { baseSaudavel(); delete E.indice.arquivos['rmdf:PR']; mudou(); });
+  assert.equal(await page.evaluate(() => situacaoOperacao().nivel), 'incompleta', 'RMDF ausente também impede confirmar a base completa');
   await page.evaluate(() => { baseSaudavel(); delete E.indice.arquivos['novas:PR']; mudou(); });
   assert.equal(await page.evaluate(() => situacaoOperacao().nivel), 'incompleta', 'planilha ausente não representa saldo zero');
   await page.evaluate(() => { delete E.indice.arquivos['novas:SC']; mudou(); renderizar(true); });

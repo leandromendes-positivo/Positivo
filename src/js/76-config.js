@@ -7,13 +7,13 @@ function renderConfig() {
   const c = E.config;
   const ignorados = new Set(c.tiposIgnorados || []);
   const tipos = D.tiposEnvio.length ? D.tiposEnvio : ["BACKUP", "PP", "REP. BACKUP"];
-  const exemplo = D.cobrarTec[0] || D.tecnicos.find((t) => t.usadas.length);
-  const previa = exemplo ? montarMensagem(exemplo, exemplo.itensCobrar.length ? exemplo.itensCobrar : exemplo.usadas, c.msgCobranca) : "";
+  const exemplo = D.cobrarTec.find(t=>t.usadas.length) || D.tecnicos.find(t=>t.usadas.length);
+  const previa = exemplo ? montarMensagem(exemplo, exemplo.itensCobrar.some(i=>i.tipo==='usadas') ? exemplo.itensCobrar.filter(i=>i.tipo==='usadas') : exemplo.usadas, c.msgCobranca) : "";
 
   return `<div class="grade-config">
     ${cartao("Regras do controle", `<form class="form" data-form="regras">
       <div class="campos-2">
-        <label class="campo"><span>Prazo geral para devolver peça usada</span><div class="com-sufixo"><input type="number" min="1" max="90" name="prazo" value="${esc(c.prazo)}" required><em>dias</em></div><small>Vale para quem não tem prazo próprio no cadastro do técnico.</small></label>
+        <label class="campo"><span>Prazo geral para devolver peças usadas e RMDF</span><div class="com-sufixo"><input type="number" min="1" max="90" name="prazo" value="${esc(c.prazo)}" required><em>dias</em></div><small>Vale para quem não tem prazo próprio no cadastro do técnico.</small></label>
         <label class="campo"><span>Avisar "vence em breve" a partir de</span><div class="com-sufixo"><input type="number" min="0" max="90" name="alerta" value="${esc(c.alerta)}" required><em>dias</em></div><small>Para lembrar o técnico antes de atrasar.</small></label>
         <label class="campo"><span>Prazo geral observado de peças novas</span><div class="com-sufixo"><input type="number" min="1" max="90" name="prazoNovas" value="${esc(c.prazoNovas)}" required><em>dias</em></div><small>O primeiro relatório acompanhado conta como dia 1. Prazos próprios do técnico prevalecem.</small></label>
         <label class="campo"><span>Limite máximo de peças novas por técnico</span><div class="com-sufixo"><input type="number" min="0" max="10000" name="meta" value="${esc(c.meta)}" required><em>peças</em></div><small>Até o limite, inclusive zero, está regular. Pode ser personalizado por técnico; 0 desativa o limite.</small></label>
@@ -26,7 +26,7 @@ function renderConfig() {
     </form>`)}
 
     ${cartao("Mensagens de cobrança", `<form class="form" data-form="mensagens">
-      ${D.tecnicos.some(t => t.usadas.length) ? `<div class="config-email"><div>${icone('email')}<strong>Cobrança por Outlook</strong></div><p>Prepare um e-mail com destinatário, assunto e peças preenchidos. O envio é confirmado por você no Outlook.</p><label class="campo"><span>Técnico destinatário</span><select data-email-tecnico>${D.tecnicos.filter(t => t.usadas.length).map(t => `<option value="${esc(t.tid)}">${esc(t.nome)}</option>`).join('')}</select></label><button type="button" class="btn prim" data-acao="preparar-email">${icone('email')}Preparar e-mail</button></div>` : ''}
+      ${D.tecnicos.some(t => t.retornos.length) ? `<div class="config-email"><div>${icone('email')}<strong>Cobrança por Outlook</strong></div><p>Prepare um e-mail com destinatário, assunto e peças preenchidos. O envio é confirmado por você no Outlook.</p><label class="campo"><span>Técnico destinatário</span><select data-email-tecnico>${D.tecnicos.filter(t => t.retornos.length).map(t => `<option value="${esc(t.tid)}">${esc(t.nome)}</option>`).join('')}</select></label><button type="button" class="btn prim" data-acao="preparar-email">${icone('email')}Preparar e-mail</button></div>` : ''}
       <p class="nota">Os modelos abaixo são usados no WhatsApp. O e-mail tem assunto, resumo e relação completa de peças; você pode revisar o texto antes de abrir o Outlook.</p>
       <label class="campo"><span>Cobrança (peças atrasadas)</span><textarea name="msgCobranca" rows="8">${esc(c.msgCobranca)}</textarea></label>
       <label class="campo"><span>Lembrete (peças que vencem em breve)</span><textarea name="msgLembrete" rows="5">${esc(c.msgLembrete)}</textarea></label>
@@ -48,7 +48,7 @@ function renderConfig() {
     ${cartao("Seus dados", `<div class="texto-cartao">
       <p>${Armazem.online ? `${icone("nuvem")} Os dados ficam salvos online, junto com este painel, e aparecem em qualquer dispositivo onde você abrir o link.` : `${icone("alerta")} Esta visualização não tem acesso ao banco de dados: nada do que você importar será salvo.`}</p>
       <ul class="lista-dados">
-        <li><strong>${fmtNum(E.usadas.length)}</strong> linhas de peças usadas e <strong>${fmtNum(E.novas.length)}</strong> materiais em estoque de novas</li>
+        <li><strong>${fmtNum(E.usadas.length)}</strong> linhas de peças usadas e <strong>${fmtNum(E.novas.length)}</strong> materiais em estoque de novas e <strong>${fmtNum(E.rmdf.length)}</strong> registros de peças RMDF</li>
         <li><strong>${fmtNum(Object.keys(E.cadastro).length)}</strong> técnicos no cadastro</li>
         <li><strong>${fmtNum(E.devolucoes.length)}</strong> devoluções e <strong>${fmtNum(E.importacoes.length)}</strong> importações nos últimos meses</li>
       </ul>
@@ -82,9 +82,9 @@ function cartaoBanco() {
 
 function posRenderConfig() {
   const D = derivar();
-  const exemplo = D.cobrarTec[0] || D.tecnicos.find((t) => t.usadas.length);
+  const exemplo = D.cobrarTec.find(t=>t.usadas.length) || D.tecnicos.find(t=>t.usadas.length);
   const pre = document.querySelector(".msg-previa");
-  if (pre && exemplo) pre.textContent = montarMensagem(exemplo, exemplo.itensCobrar.length ? exemplo.itensCobrar : exemplo.usadas, E.config.msgCobranca);
+  if (pre && exemplo) pre.textContent = montarMensagem(exemplo, exemplo.itensCobrar.some(i=>i.tipo==='usadas') ? exemplo.itensCobrar.filter(i=>i.tipo==='usadas') : exemplo.usadas, E.config.msgCobranca);
 }
 
 async function salvarFormulario(form) {
@@ -108,7 +108,7 @@ async function salvarFormulario(form) {
 async function exportarTudo() {
   const D = derivar();
   const cob = [];
-  for (const [tid, a] of Object.entries(E.acomp)) for (const c of a.cobrancas || []) cob.push([nomeTecnico(tid), c.em, CANAIS[c.canal] || c.canal, c.pecas, c.previsao, c.obs, c.tipo === 'novas' ? 'Novas' : 'Usadas']);
+  for (const [tid, a] of Object.entries(E.acomp)) for (const c of a.cobrancas || []) cob.push([nomeTecnico(tid), c.em, CANAIS[c.canal] || c.canal, c.pecas, c.previsao, c.obs, c.tipo==='mistas'?'Mistas':rotuloTipoPeca(c.tipo,true)]);
   cob.sort((a, b) => comparar(b[1], a[1]));
   await exportarExcel(`controle-de-pecas-${D.hoje}.xlsx`, [
     abaExportacaoRmdf(),
@@ -124,8 +124,8 @@ async function exportarTudo() {
     },
     {
       nome: "Devolvidas",
-      colunas: [{ titulo: "Técnico", largura: 30 }, { titulo: "UF", largura: 5 }, { titulo: "Chamado", largura: 14 }, { titulo: "Material", largura: 11 }, { titulo: "Descrição", largura: 40 }, { titulo: "Data FT", largura: 12, tipo: "data" }, { titulo: "Saiu do relatório", largura: 16, tipo: "data" }, { titulo: "Dias com o técnico", largura: 10, tipo: "numero" }, { titulo: "Quantidade", largura: 10, tipo: "numero" }],
-      linhas: [...E.devolucoes].sort((a, b) => comparar(b.em, a.em)).map((d) => [nomeTecnico(d.tid), d.regiao, d.chamado, d.mat, E.catalogo[d.mat] || "", d.dataFT, d.em, d.dias, d.qtd]),
+      colunas: [{ titulo: "Técnico", largura: 30 }, { titulo: "UF", largura: 5 }, { titulo: "Chamado", largura: 14 }, { titulo: "Material", largura: 11 }, { titulo: "Descrição", largura: 40 }, { titulo: "Data FT", largura: 12, tipo: "data" }, { titulo: "Saiu do relatório", largura: 16, tipo: "data" }, { titulo: "Dias com o técnico", largura: 10, tipo: "numero" }, { titulo: "Quantidade", largura: 10, tipo: "numero" }, {titulo:"Tipo",largura:12}],
+      linhas: [...E.devolucoes].sort((a, b) => comparar(b.em, a.em)).map((d) => [nomeTecnico(d.tid), d.regiao, d.chamado, d.mat, E.catalogo[d.mat] || "", d.dataFT, d.em, d.dias, d.qtd, rotuloTipoPeca(d.tipo)]),
     },
     {
       nome: "Saídas de novas",

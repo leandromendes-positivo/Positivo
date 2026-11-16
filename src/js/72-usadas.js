@@ -35,9 +35,9 @@ function renderUsadas() {
   }
   const abas = `<div class="abas" role="tablist">
     <button role="tab" class="aba${s.aba === "pendentes" ? " ativa" : ""}" data-acao="aba-us" data-aba="pendentes">Pendentes<span class="contador">${fmtNum(D.kpi.usadas)}</span></button>
-    <button role="tab" class="aba${s.aba === "devolvidas" ? " ativa" : ""}" data-acao="aba-us" data-aba="devolvidas">Devolvidas (últimos 120 dias)<span class="contador">${fmtNum(somar(E.devolucoes, (d) => d.qtd))}</span></button>
+    <button role="tab" class="aba${s.aba === "devolvidas" ? " ativa" : ""}" data-acao="aba-us" data-aba="devolvidas">Devolvidas (últimos 120 dias)<span class="contador">${fmtNum(somar(E.devolucoes.filter(d=>(d.tipo||'usadas')==='usadas'), (d) => d.qtd))}</span></button>
   </div>`;
-  const tecnicosComPeca = D.tecnicos.filter((t) => t.usadas.length || E.devolucoes.some((d) => d.tid === t.tid));
+  const tecnicosComPeca = D.tecnicos.filter((t) => t.usadas.length || E.devolucoes.some((d) => (d.tipo||'usadas')==='usadas' && d.tid === t.tid));
   const filtros = `<div class="barra-filtros">
     ${s.aba === "pendentes" ? `<div class="chips">${FILTROS_STATUS.map((f) => {
       const n = somar(f.f ? D.itens.filter(f.f) : D.itens, (i) => i.qtd);
@@ -114,7 +114,7 @@ function tabelaUsadas(D) {
 
 function filtrarDevolvidas(s = UI.us) {
   const busca = normBusca(s.busca);
-  return E.devolucoes.filter((d) =>
+  return E.devolucoes.filter((d) => (d.tipo||'usadas')==='usadas' &&
     (!s.regiao || d.regiao === s.regiao) && (!s.tid || d.tid === s.tid) &&
     (!busca || normBusca(`${nomeTecnico(d.tid)} ${d.chamado} ${d.mat} ${E.catalogo[d.mat] || ""}`).includes(busca)));
 }
@@ -148,7 +148,7 @@ function tabelaDevolvidas(D) {
 async function exportarUsadas() {
   const D = derivar();
   if (UI.us.aba === "devolvidas") {
-    const linhas = [...E.devolucoes].sort((a, b) => comparar(b.em, a.em)).map((d) => [nomeTecnico(d.tid), d.regiao, d.chamado, d.mat, E.catalogo[d.mat] || "", d.dataFT, d.em, d.dias, d.dias <= prazoDaDevolucao(d) ? "No prazo" : "Atrasada", d.qtd]);
+    const linhas = E.devolucoes.filter(d=>(d.tipo||'usadas')==='usadas').sort((a, b) => comparar(b.em, a.em)).map((d) => [nomeTecnico(d.tid), d.regiao, d.chamado, d.mat, E.catalogo[d.mat] || "", d.dataFT, d.em, d.dias, d.dias <= prazoDaDevolucao(d) ? "No prazo" : "Atrasada", d.qtd]);
     return exportarExcel(`pecas-devolvidas-${D.hoje}.xlsx`, [{
       nome: "Devolvidas",
       colunas: [{ titulo: "Técnico", largura: 30 }, { titulo: "UF", largura: 5 }, { titulo: "Chamado", largura: 14 }, { titulo: "Material", largura: 11 }, { titulo: "Descrição", largura: 40 }, { titulo: "Data FT", largura: 12, tipo: "data" }, { titulo: "Saiu do relatório", largura: 16, tipo: "data" }, { titulo: "Dias com o técnico", largura: 10, tipo: "numero" }, { titulo: "Prazo", largura: 10 }, { titulo: "Qtd", largura: 6, tipo: "numero" }],

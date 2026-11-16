@@ -4,11 +4,11 @@ function indicadoresOperacionais(D) {
   const estoque = estoqueConhecidoPainel(D);
   const prazo = Number(D.cfg.prazo);
   return {
-    noPrazo: k.usadas ? (k.usadas - k.atrasadas) / k.usadas : null,
-    idadeMedia: k.usadas ? somar(D.itens, (i) => i.dias * i.qtd) / k.usadas : null,
-    criticas: somar(D.itens.filter((i) => i.dias > (i.prazo || prazo) * 2), (i) => i.qtd),
+    noPrazo: k.retornos ? (k.retornos - k.atrasadas) / k.retornos : null,
+    idadeMedia: k.retornos ? somar(D.retornos, (i) => i.dias * i.qtd) / k.retornos : null,
+    criticas: somar(D.retornos.filter((i) => i.dias > (i.prazo || prazo) * 2), (i) => i.qtd),
     semContatoHoje: D.cobrarTec.filter((t) => !t.ultimaCobranca || t.ultimaCobranca.em.slice(0, 10) !== D.hoje).length,
-    agendadas: somar(D.itens.filter((i) => i.previsao && i.previsao >= D.hoje), (i) => i.qtd),
+    agendadas: somar(D.retornos.filter((i) => i.previsao && i.previsao >= D.hoje), (i) => i.qtd),
     excesso: somar(estoque.acima, (t) => Math.max(0, t.novasQtd - t.meta)),
     estoque,
   };
@@ -58,8 +58,8 @@ function cabecalhoSecao(pagina, D) {
   const textos = {
     cobrancas: ["Acompanhamento de devoluções", "Registre cada contato e acompanhe as datas combinadas.", [["Na fila", fmtNum(k.cobrarTecnicos), "técnicos"], ["Sem contato hoje", fmtNum(a.semContatoHoje), "na fila atual"], ["Previsões vencidas", fmtNum(k.prevVencida), "peças"]]],
     novas: ["Acompanhamento de peças novas", "Consulte peças sob responsabilidade dos técnicos, prazos e saídas registradas.", [["Peças novas", fmtNum(k.novas), "no relatório atual"]]],
-    usadas: ["Rastreabilidade das peças", "Consulte chamados, idade, previsões e histórico de devoluções.", [["Em aberto", fmtNum(k.usadas), "peças"], ["Acima do prazo", fmtNum(k.atrasadas), "respeita prazos individuais"], ["Idade média", a.idadeMedia == null ? "—" : fmtNum1(a.idadeMedia), "dias por peça"]]],
-    rmdf: ["Conferência de RMDF", "Relação importada por técnico e UF, separada dos estoques de novas e usadas.", []],
+    usadas: ["Rastreabilidade das peças", "Consulte chamados, idade, previsões e histórico de devoluções.", [["Em aberto",fmtNum(k.usadas),"peças usadas"],["Acima do prazo",fmtNum(somar(D.itens.filter(i=>i.atrasada),i=>i.qtd)),"respeita prazos individuais"],["Idade média",k.usadas?fmtNum1(somar(D.itens,i=>i.dias*i.qtd)/k.usadas):"—","dias por peça"]]],
+    rmdf: ["Peças com defeito · RMDF", "Peças recebidas como novas e identificadas com defeito no atendimento.", [["Com o técnico",fmtNum(k.rmdf),"peças RMDF"],["Acima do prazo",fmtNum(somar(D.rmdf.filter(i=>i.atrasada),i=>i.qtd)),"peças"],["Prazo de devolução",fmtNum(D.cfg.prazo),"dias · respeita o prazo individual"]]],
     estoque: ["Controle do limite de estoque", "Estoque menor é bem-vindo. A atenção está em quem ultrapassou o limite máximo.", [["Dentro do limite", a.estoque.temRelatorio ? fmtNum(a.estoque.dentro.length) : "—", "técnicos"], ["Peças em excesso", a.estoque.temRelatorio ? fmtNum(a.excesso) : "—", "para recolher ou redistribuir"]]],
     tecnicos: ["Equipe em campo", "Cadastro, contatos e desempenho de cada técnico em um só lugar.", [["Em operação", fmtNum(tecs.length), "técnicos com dados"], ["Com pendências", fmtNum(tecs.filter((t) => t.nCobrar).length), "técnicos a cobrar"], ["Sem WhatsApp", fmtNum(tecs.filter((t) => !t.telefone).length), "cadastros a completar"]]],
     importar: ["Atualização da operação", "Envie os relatórios de novas, usadas e RMDF. O sistema identifica as mudanças.", [["Arquivos do dia", fmtNum(D.frescor.filter((f) => f.em && f.dias === 0).length), `de ${D.frescor.length} acompanhados`], ["Importações", fmtNum(E.importacoes.filter((i) => !i.desfeito).length), "no histórico"]]],

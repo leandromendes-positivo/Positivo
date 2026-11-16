@@ -11,7 +11,7 @@ let indicePrevisoes = {rev:-1};
 function indicesPrevisoes() {
   if(indicePrevisoes.rev!==E.rev){
     const saidas=new Map();
-    for(const [tipo,lista] of [['usadas',E.devolucoes],['novas',E.movimentos]])for(const s of lista){const k=[tipo,s.tid,s.regiao,tipo==='novas'?s.mat:s.k].join('|');if(!saidas.has(k))saidas.set(k,[]);saidas.get(k).push(s);}
+    for(const [origem,lista] of [['retornos',E.devolucoes],['novas',E.movimentos]])for(const s of lista){const tipo=origem==='novas'?'novas':s.tipo||'usadas';const k=[tipo,s.tid,s.regiao,tipo==='novas'?s.mat:s.k].join('|');if(!saidas.has(k))saidas.set(k,[]);saidas.get(k).push(s);}
     indicePrevisoes={rev:E.rev,agendas:new Map(E.agendamentos.map(a=>[a.peca,a])),saidas};
   }
   return indicePrevisoes;
@@ -43,7 +43,7 @@ function novasParaCobranca(t) {
   });
 }
 function pecasCobranca(t, tipo = 'usadas') {
-  return [...(tipo !== 'novas' ? t.usadas.map(i=>({...i,tipo:'usadas'})) : []), ...(tipo !== 'usadas' ? novasParaCobranca(t) : [])];
+  return [...(['usadas','retornos','todas'].includes(tipo) ? t.usadas : []), ...(['rmdf','retornos','todas'].includes(tipo) ? t.rmdf || [] : []), ...(['novas','todas'].includes(tipo) ? novasParaCobranca(t) : [])];
 }
 function selecionarAbaCobranca(itens, aba, hoje) {
   return itens.flatMap(i=>{
@@ -63,6 +63,7 @@ function itensAgendaCompleta(D=derivar()) {
 }
 function descricaoConfirmacao(i) {
   const c=i.confirmacao;
+  if(i.tipo==='rmdf')return 'RMDF · peça com defeito';
   if (!c) return i.tipo==='novas' ? 'Nova · condição não informada' : 'Usada';
   if(c.tipo==='usadas')return 'Usada';
   const novas=c.quantidade-c.qtdRmdf;
@@ -90,12 +91,12 @@ function acompanhamentoRespostas(D=derivar(), tipo='todas') {
   return linhas;
 }
 function dadosConfirmacao(i, quantidade, qtdRmdf, contatoId, referenciaEmail, observacao='') {
-  const tipo=i.tipo==='novas'?'novas':'usadas';
+  const tipo=i.tipo||'usadas';
   const contato=E.contatos.find(c=>c.id===contatoId&&c.tid===i.tid&&c.canal==='email');
   const falhar=m=>{throw Object.assign(new Error(m),{amigavel:true});};
   if(!contato)falhar('Registre primeiro a cobrança formal por e-mail para este técnico.');
   if(!referenciaEmail.trim())falhar('Informe uma referência ao e-mail de confirmação do técnico.');
   if(!Number.isInteger(quantidade)||quantidade<1||quantidade>i.qtd)falhar('A quantidade confirmada deve estar entre 1 e o saldo da peça.');
-  if(!Number.isInteger(qtdRmdf)||qtdRmdf<0||qtdRmdf>quantidade||(tipo==='usadas'&&qtdRmdf))falhar('Confira a quantidade de peças novas com RMDF.');
+  if(!Number.isInteger(qtdRmdf)||qtdRmdf<0||qtdRmdf>quantidade||(tipo!=='novas'&&qtdRmdf))falhar('Confira a quantidade de peças novas com RMDF.');
   return {tipo,mat:String(i.mat),regiao:i.regiao,quantidade,qtdRmdf,contatoId,referenciaEmail:referenciaEmail.trim().slice(0,200),observacao:observacao.trim().slice(0,300),...referenciaSaidas()};
 }

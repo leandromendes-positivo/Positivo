@@ -20,7 +20,7 @@ const ORIENTACAO_RESPOSTA_EMAIL = 'Formalize a previsão por e-mail, informando 
 const MENSAGEM_MISTA = '{saudacao}, {nome}!\n\nPrecisamos combinar a devolução das peças abaixo:\n\n{lista}';
 const MENSAGEM_NOVAS = '{saudacao}, {nome}!\n\nPrecisamos combinar a devolução das seguintes peças novas sob sua responsabilidade:\n\n{lista}\n\nPrazo de devolução: {prazo} dias. Por favor, informe a data prevista para devolução.\n\nObrigado!';
 const PADROES = {
-  prazo: 7,          // dias máximos com peça usada
+  prazo: 7,          // dias máximos com peça usada ou RMDF
   prazoNovas: 7,     // dias desde a primeira observação de estoque novo
   alerta: 5,         // a partir de quantos dias avisar "vence em breve"
   meta: 10,          // limite máximo de peças novas por técnico (campo legado)
@@ -124,7 +124,8 @@ async function carregarHistoricos() {
 }
 
 function decodificarDevolucao(l, doc) {
-  return { k: l[0], tid: l[1], mat: l[2], chamado: l[3], dataFT: l[4], qtd: l[5], em: l[6], dias: l[7], regiao: l[8], lote: l[9], doc,
+  const tipo = l[15] === 'rmdf' ? 'rmdf' : 'usadas';
+  return { k: tipo === 'rmdf' ? chavePecaRmdf(l[0]) : l[0], tipo, tid: l[1], mat: l[2], chamado: l[3], dataFT: l[4], qtd: l[5], em: l[6], dias: l[7], regiao: l[8], lote: l[9], doc,
     qtdUso: l[10] || null, prazo: l[11] || null, desde: l[12] || "", nf: l[13] || "", remessa: l[14] || "" };
 }
 
@@ -233,6 +234,11 @@ function nomeTecnico(tid) {
   if (!t) return tid;
   return limpar(t.apelido) || nomeBonito(t.nome) || tid;
 }
+function rotuloTipoPeca(tipo, plural = false) {
+  return tipo === 'rmdf' ? 'RMDF' : tipo === 'novas' ? plural ? 'Novas' : 'Nova' : plural ? 'Usadas' : 'Usada';
+}
+// RMDF legado usa a mesma chave de origem de usadas; o acompanhamento tem identidade própria.
+function chavePecaRmdf(k) { return String(k).startsWith('rmdf-') ? String(k) : `rmdf-${k}`; }
 
 /** Campos vazios herdam a regra geral; valores próprios são dias inteiros de 1 a 90. */
 function prazoValido(valor) {
@@ -299,33 +305,34 @@ function derivar() {
       telefone: c.telefone || "", email: c.email || "", obs: c.obs || "",
       metaPropria,
       meta: metaPropria != null ? metaPropria : Number(cfg.meta) || 0,
-      usadas: [], novasLinhas: [],
+      usadas: [], rmdf: [], retornos: [], novasLinhas: [],
       regioes: new Set(),
     };
     tecs.set(tid, t);
     return t;
   }
 
-  // ---- peças usadas
-  const itens = [];
-  for (const u of E.usadas) {
+  // ---- peças usadas e novas identificadas com defeito (RMDF)
+  const itens = [], rmdf = [], retornos = [];
+  for (const [tipo, origem] of [['usadas', E.usadas], ['rmdf', E.rmdf]]) for (const linha of origem) {
+    const u = tipo === 'rmdf' ? {...linha, k: chavePecaRmdf(linha.k)} : linha;
     const an = (E.acomp[u.tid] && E.acomp[u.tid].itens && E.acomp[u.tid].itens[u.k]) || {};
     const base = (u.dataFT || u.desde || hoje).slice(0, 10);
     const dias = Math.max(0, diffDias(base, hoje));
-    const agenda = previsaoDaPeca({...u,tipo:'usadas'}), previsao = agenda.previsao;
+    const agenda = previsaoDaPeca({...u,tipo}), previsao = agenda.previsao;
     const t = tec(u.tid, u.regiao);
     const status = statusUsada(dias, agenda.qtdPrevista === u.qtd ? previsao : '', t, hoje);
     t.regioes.add(u.regiao);
     const item = {
-      ...u, tipo: 'usadas', ...agenda, desc: E.catalogo[u.mat] || "", dias, previsao, obs: an.o || "",
+      ...u, tipo, ...agenda, desc: E.catalogo[u.mat] || "", dias, previsao, obs: an.o || "",
       nCobrancas: an.c || 0, ultimaCobranca: an.uc || "", agendadoPor: an.agendadoPor || null, agendadoEm: an.agendadoEm || "",
       status, cobrar: status === "atrasada" || status === "previsao_vencida",
       prazo: t.prazo, alerta: t.alerta,
       atrasada: dias > t.prazo, atraso: Math.max(0, dias - t.prazo), venceEm: t.prazo - dias,
       nome: t.nome, tipoTec: t.tipo,
     };
-    itens.push(item);
-    t.usadas.push(item);
+    (tipo === 'rmdf' ? rmdf : itens).push(item);
+    retornos.push(item); t[tipo].push(item); t.retornos.push(item);
   }
 
   // ---- peças novas
@@ -353,9 +360,12 @@ function derivar() {
 
   const lista = [];
   for (const t of tecs.values()) {
-    const u = t.usadas;
+    const u = t.retornos;
+    t.usadas.sort((a,b)=>b.dias-a.dias);t.rmdf.sort((a,b)=>b.dias-a.dias);
     u.sort((a, b) => b.dias - a.dias || comparar(a.chamado, b.chamado));
-    t.nUsadas = somar(u, (i) => i.qtd);
+    t.nUsadas = somar(t.usadas, (i) => i.qtd);
+    t.nRmdf = somar(t.rmdf, (i) => i.qtd);
+    t.nRetornos = t.nUsadas + t.nRmdf;
     t.itensCobrar = selecionarAbaCobranca(u,'cobrar',hoje);
     t.itensVencendo = selecionarAbaCobranca(u,'vencendo',hoje);
     t.itensAguardando = selecionarAbaCobranca(u,'aguardando',hoje);
@@ -401,17 +411,17 @@ function derivar() {
     .sort((a, b) => (b.nPrevVencida > 0) - (a.nPrevVencida > 0) || b.maxDias - a.maxDias || b.nCobrar - a.nCobrar);
   const corte7 = somaDias(hoje, -6);
   const dev7 = E.devolucoes.filter((d) => d.em && d.em.slice(0, 10) >= corte7);
-  const total = somar(itens, (i) => i.qtd);
+  const total = somar(retornos, (i) => i.qtd);
   const kpi = {
-    usadas: total,
+    usadas: somar(itens, i => i.qtd), rmdf: somar(rmdf, i => i.qtd), retornos: total,
     usadasTecnicos: lista.filter((t) => t.nUsadas > 0).length,
-    atrasadas: somar(itens.filter((i) => i.atrasada), (i) => i.qtd),
+    atrasadas: somar(retornos.filter((i) => i.atrasada), (i) => i.qtd),
     cobrarTecnicos: cobrarTec.length,
     cobrarPecas: somar(lista,t=>t.nCobrar),
     prevVencida: somar(lista,t=>t.nPrevVencida),
-    vencendo: somar(itens.filter((i) => i.status === "vencendo"), (i) => i.qtd),
+    vencendo: somar(retornos.filter((i) => i.status === "vencendo"), (i) => i.qtd),
     aguardando: somar(lista,t=>t.nAguardando),
-    maisAntiga: itens.reduce((m, i) => Math.max(m, i.dias), 0),
+    maisAntiga: retornos.reduce((m, i) => Math.max(m, i.dias), 0),
     previsoesHoje: lista.flatMap(t=>selecionarAbaCobranca(pecasCobranca(t,'todas'),'previsoes',hoje)),
     devolvidas7: somar(dev7, (d) => d.qtd),
     devolvidas7NoPrazo: somar(dev7.filter((d) => d.dias <= prazoDaDevolucao(d)), (d) => d.qtd),
@@ -423,6 +433,7 @@ function derivar() {
     excessoNovas: somar(estoqueTec, (t) => t.excessoNovas),
   };
   kpi.mediaNovas = estoqueTec.length ? kpi.novas / estoqueTec.length : 0;
+  kpi.estoque = somar(E.novas, i => i.qtd) + total;
 
   // ---- faixas de idade (gráfico)
   const alerta = Math.min(Number(cfg.alerta) || 5, prazo);
@@ -436,14 +447,14 @@ function derivar() {
   faixas.push({ rotulo: `+${ini - 1}`, min: ini, max: Infinity, status: "crit" });
   const prazosPessoais = temPrazosPersonalizados();
   for (const f of faixas) {
-    f.valor = somar(itens.filter((i) => i.dias >= f.min && i.dias <= f.max), (i) => i.qtd);
+    f.valor = somar(retornos.filter((i) => i.dias >= f.min && i.dias <= f.max), (i) => i.qtd);
     if (prazosPessoais) f.status = 'info'; // uma faixa de idade pode conter prazos diferentes
   }
 
   // ---- por região
-  const regioes = regioesOperacionais([...itens.map((i) => i.regiao), ...E.novas.map((n) => n.regiao), ...regioesEstoque]);
+  const regioes = regioesOperacionais([...retornos.map((i) => i.regiao), ...E.novas.map((n) => n.regiao), ...regioesEstoque]);
   const porRegiao = regioes.map((r) => {
-    const its = itens.filter((i) => i.regiao === r);
+    const its = retornos.filter((i) => i.regiao === r);
     const q = (f) => somar(its.filter(f), (i) => i.qtd);
     const tr = estoqueTec.filter((t) => t.regiao === r);
     return {
@@ -453,6 +464,8 @@ function derivar() {
       cobrar: q((i) => i.cobrar),
       aguardando: q((i) => i.status === "aguardando"),
       total: q(() => true),
+      usadas: q(i => i.tipo === 'usadas'), rmdf: q(i => i.tipo === 'rmdf'),
+      porTipo: Object.fromEntries(['usadas','rmdf'].map(tipo => {const xs=its.filter(i=>i.tipo===tipo);return [tipo,{total:somar(xs,i=>i.qtd),no_prazo:somar(xs.filter(i=>i.status==='no_prazo'),i=>i.qtd),vencendo:somar(xs.filter(i=>i.status==='vencendo'),i=>i.qtd),cobrar:somar(xs.filter(i=>i.cobrar),i=>i.qtd),aguardando:somar(xs.filter(i=>i.status==='aguardando'),i=>i.qtd)}];})),
       ideal: tr.filter((t) => t.statusNovas === "ideal").length,
       acima: tr.filter((t) => t.statusNovas === "acima").length,
       excessoNovas: somar(tr, (t) => t.excessoNovas),
@@ -464,7 +477,6 @@ function derivar() {
   const frescor = [];
   for (const r of regioesOperacionais([...regioes, ...Object.keys(E.indice.arquivos || {}).map((k) => k.split(":")[1])])) {
     for (const tipo of ["novas", "usadas", "rmdf"]) {
-      if (tipo === "rmdf" && !E.indice.arquivos?.[`rmdf:${r}`]) continue;
       const ent = (E.indice.arquivos || {})[`${tipo}:${r}`];
       frescor.push({ regiao: r, tipo, em: ent ? ent.em : null, dias: ent ? diffDias(ent.em.slice(0, 10), hoje) : null, arquivo: ent ? ent.arquivo : "" });
     }
@@ -472,7 +484,7 @@ function derivar() {
   frescor.sort((a, b) => comparar(a.regiao, b.regiao) || comparar(a.tipo, b.tipo));
 
   cacheDerivado = {
-    rev: E.rev, hoje, cfg: { ...cfg, prazo, alerta }, itens, tecnicos: lista, mapa: new Map(lista.map((t) => [t.tid, t])),
+    rev: E.rev, hoje, cfg: { ...cfg, prazo, alerta }, itens, rmdf, retornos, tecnicos: lista, mapa: new Map(lista.map((t) => [t.tid, t])),
     cobrarTec, kpi, faixas, porRegiao, regioes, frescor,
     tiposEnvio: [...tiposEnvio.entries()].sort((a, b) => b[1] - a[1]).map(([t]) => t),
   };
@@ -485,14 +497,14 @@ function montarMensagem(t, itens, modelo, tipo = 'usadas') {
   const max = 15;
   const ordenados = [...itens].sort((a, b) => b.dias - a.dias);
   let lista = ordenados.slice(0, max).map((i) =>
-    `• ${i.desc || "Material"}${tipo==='mistas'?` (${i.tipo==='novas'?'nova':'usada'})`:''}\n  Código: ${i.mat} | Quantidade: ${fmtNum(i.qtd)}\n  ${i.chamado ? `Chamado: ${i.chamado} | ` : ''}${plural(i.dias, 'dia', 'dias')} com o técnico`
+    `• ${i.desc || "Material"}${tipo==='mistas'?` (${rotuloTipoPeca(i.tipo)})`:''}\n  Código: ${i.mat} | Quantidade: ${fmtNum(i.qtd)}\n  ${i.chamado ? `Chamado: ${i.chamado} | ` : ''}${plural(i.dias, 'dia', 'dias')} com o técnico`
   ).join("\n\n");
   if (ordenados.length > max) lista += `\n\n+ ${plural(somar(ordenados.slice(max), i => i.qtd), 'peça', 'peças')} em ${plural(ordenados.length - max, 'registro adicional', 'registros adicionais')}.`;
   const valores = {
     saudacao: saudacao(), nome: primeiroNome(t.nome), nome_completo: t.nome,
     qtd: somar(itens, (i) => i.qtd), lista, prazo: prazoDoTecnico(t.tid, tipo), regiao: t.regiao,
   };
-  return String(modelo || "").replace(/\{(\w+)\}/g, (m, k) => (k in valores ? valores[k] : m)) + (tipo !== 'usadas' ? `\n\n*Peças novas com defeito · RMDF*\n${ORIENTACAO_RMDF}` : '') + `\n\n*Confirmação por e-mail*\n${ORIENTACAO_RESPOSTA_EMAIL}`;
+  return String(modelo || "").replace(/\{(\w+)\}/g, (m, k) => (k in valores ? valores[k] : m)) + (itens.some(i=>i.tipo==='novas') || tipo==='novas' ? `\n\n*Peças novas com defeito · RMDF*\n${ORIENTACAO_RMDF}` : '') + `\n\n*Confirmação por e-mail*\n${ORIENTACAO_RESPOSTA_EMAIL}`;
 }
 
 // ============================================================ resumo diário
@@ -512,7 +524,7 @@ function montarResumo() {
     let pend = 0, atr = 0;
     for (const t of D.tecnicos) {
       let pecas = 0, maxDias = 0, vencidas = 0;
-      for (const i of t.usadas) {
+      for (const i of t.retornos) {
         const d = Math.max(0, diffDias((i.dataFT || i.desde).slice(0, 10), dia));
         pend += i.qtd;
         if (d > t.prazo) atr += i.qtd;
@@ -553,7 +565,7 @@ function montarResumo() {
       regra: 'limite_maximo', excesso: k.excessoNovas,
       acima: k.acima, ideal: k.ideal, totalNovas: k.novas,
     },
-    vencendoAmanha: somar(D.itens.filter((i) => i.dias === i.prazo), (i) => i.qtd),
+    vencendoAmanha: somar(D.retornos.filter((i) => i.dias === i.prazo), (i) => i.qtd),
     previsoesHoje: k.previsoesHoje.length,
     atualizacao: D.frescor.map((f) => ({ arquivo: `${f.regiao} ${f.tipo}`, em: f.em || "" })),
   };
@@ -572,12 +584,13 @@ const agendarResumo = debounce(async () => {
 async function gravarHistoricoDoDia() {
   const D = derivar();
   const t = {};
-  for (const x of D.tecnicos) if (x.temDados) t[x.tid] = [x.nUsadas, x.nAtrasadas, x.maxDias, x.novasQtd];
+  for (const x of D.tecnicos) if (x.temDados) t[x.tid] = [x.nUsadas, x.nAtrasadas, x.maxDias, x.novasQtd, x.nRmdf];
   const doc = {
     data: D.hoje, em: agoraISO(), t, regioes: D.regioes,
     tot: {
       usadas: D.kpi.usadas, atrasadas: D.kpi.atrasadas, cobrarTec: D.kpi.cobrarTecnicos, cobrarPecas: D.kpi.cobrarPecas,
       novas: D.kpi.novas, ideal: D.kpi.ideal, acima: D.kpi.acima, excessoNovas: D.kpi.excessoNovas,
+      rmdf: D.kpi.rmdf, retornos: D.kpi.retornos,
     },
   };
   await Armazem.gravar(`historico/${D.hoje}`, doc);
@@ -603,9 +616,9 @@ async function definirObs(item, texto) {
 }
 
 async function registrarCobranca(tid, { canal, previsao, obs, itens, tipo = 'usadas' }) {
-  if (!['novas','usadas','mistas'].includes(tipo)) throw new Error('Tipo de cobrança inválido.');
+  if (!['novas','usadas','rmdf','mistas'].includes(tipo)) throw new Error('Tipo de cobrança inválido.');
   if (previsao) throw Object.assign(new Error('Registre a resposta por e-mail em Confirmar previsão, selecionando as peças.'), {amigavel:true});
-  const detalhes=itens.map(i=>({k:i.k || chaveNovaCobranca(i),tipo:i.tipo==='novas'||tipo==='novas'?'novas':'usadas',mat:String(i.mat),qtd:i.qtd}));
+  const detalhes=itens.map(i=>({k:i.k || chaveNovaCobranca(i),tipo:['novas','usadas','rmdf'].includes(i.tipo)?i.tipo:tipo==='novas'?'novas':tipo==='rmdf'?'rmdf':'usadas',mat:String(i.mat),qtd:i.qtd}));
   const contato = { tid, tipo, ordem:Date.now(), canal: canal || 'whatsapp', previsao: '', obs: String(obs || '').slice(0,300), pecas: somar(itens,i=>i.qtd), itens: detalhes.map(i=>i.k), detalhes, referencia: referenciaSaidas() };
   if (contato.itens.length > 500) throw new Error('Registre até 500 materiais por cobrança.');
   await gravarAgendamentos([], '', contato);

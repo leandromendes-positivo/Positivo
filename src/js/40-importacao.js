@@ -25,14 +25,9 @@ function dividirEmPartes(linhas) {
 
 /** Calcula a nova foto de uma planilha e o que mudou em relação à anterior. */
 function compararFoto(lido, hoje, agoraS, lote, foto = E) {
-  if (lido.tipo === 'rmdf') {
-    const r = compararFoto({...lido,tipo:'usadas'},hoje,agoraS,lote,{usadas:foto.rmdf||[]});
-    // RMDF é uma relação independente: desaparecer dela não comprova devolução.
-    return {...r,devolvidas:[],movimentos:[]};
-  }
   const R = lido.regiao;
-  if (lido.tipo === "usadas") {
-    const anteriores = new Map(foto.usadas.filter((u) => u.regiao === R).map((u) => [u.k, u]));
+  if (lido.tipo === "usadas" || lido.tipo === 'rmdf') {
+    const anteriores = new Map((foto[lido.tipo] || []).filter((u) => u.regiao === R).map((u) => [u.k, u]));
     const ocorrencias = new Map();
     const novas = [];
     let entradas = 0, mantidos = 0;
@@ -56,6 +51,7 @@ function compararFoto(lido, hoje, agoraS, lote, foto = E) {
       u.k, u.tid, u.mat, u.chamado, u.dataFT || "", u.qtd, agoraS,
       Math.max(0, diffDias((u.dataFT || u.desde).slice(0, 10), hoje)), R, lote,
       u.qtdUso, prazoDoTecnico(u.tid), u.desde, u.nf || "", u.remessa || "",
+      ...(lido.tipo === 'rmdf' ? ['rmdf'] : []),
     ]);
     return {
       linhas: novas, devolvidas, movimentos: [],
@@ -115,6 +111,23 @@ function compararFoto(lido, hoje, agoraS, lote, foto = E) {
       qtdAntes: somar([...anteriores.values()], (n) => n.qtd),
     },
   };
+}
+
+/** Na mesma atualização, a entrada em RMDF reclassifica a saída de novas, sem devolução fictícia. */
+function reconciliarRmdfNoLote(fotos, fotoBase) {
+  for(const [chave,r] of fotos){
+    if(!chave.startsWith('rmdf:'))continue;
+    const uf=chave.split(':')[1], novas=fotos.get(`novas:${uf}`);if(!novas)continue;
+    const antes=new Map((fotoBase.rmdf||[]).filter(i=>i.regiao===uf).map(i=>[i.k,i.qtd])), entradas=new Map();
+    // Entrada e devolução do mesmo material podem acontecer juntas em referências diferentes.
+    for(const i of r.linhas){const k=JSON.stringify([i.tid,i.mat]);entradas.set(k,(entradas.get(k)||0)+Math.max(0,i.qtd-(antes.get(i.k)||0)));}
+    novas.movimentos=novas.movimentos.flatMap(m=>{
+      const k=JSON.stringify([m.tid,m.mat]),q=Math.min(m.qtd,entradas.get(k)||0);if(!q)return [m];
+      entradas.set(k,entradas.get(k)-q);
+      const reclassificada={...m,k:`${m.k}-rmdf`,qtd:q,destino:'rmdf',origemClassificacao:'importacao'};
+      return q===m.qtd?[reclassificada]:[reclassificada,{...m,qtd:m.qtd-q}];
+    });
+  }
 }
 
 /** Saldo oficial e arquivo de saídas entram juntos no Firebase. */
@@ -213,10 +226,10 @@ async function importarLote(lidos, aoProgresso = () => {}) {
   for (const [chave, l] of grupos) {
     const r = compararFoto(l, hoje, agoraS, lote, fotoBase);
     fotos.set(chave, r);
-    devolvidas.push(...r.devolvidas);
-    movimentos.push(...r.movimentos);
     resultados.push({ nome: l.nome, regiao: l.regiao, tipo: l.tipo, linhas: l.linhasLidas, avisos: l.avisos, ...r.resumo });
   }
+  reconciliarRmdfNoLote(fotos, fotoBase);
+  for(const r of fotos.values()){devolvidas.push(...r.devolvidas);movimentos.push(...r.movimentos);}
 
   // ---------------------------------------------------------- gravação
   if (Object.keys(novosTecs).length) {

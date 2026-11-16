@@ -28,10 +28,10 @@ try {
  await p.waitForFunction(()=>relatorioPronto());
  const dados=await p.evaluate(()=>dadosPdfTecnico('ANA','PR'));
  assert.equal(dados.nome,'Ana Carolina Exemplo','o documento mantém o nome completo mesmo quando há apelido no painel');
- assert.equal(dados.total,12);assert.deepEqual(dados.grupos.map(g=>g.quantidade),[5,7,10],'quantidades físicas incluem tipos ignorados no limite; RMDF não é somado ao estoque');
+ assert.equal(dados.total,22);assert.deepEqual(dados.grupos.map(g=>g.quantidade),[5,7,10],'quantidades físicas incluem tipos ignorados no limite; RMDF integra o estoque como peça com defeito');
  assert.deepEqual(dados.grupos[0].linhas.map(i=>i.dias),[7,2]);assert.deepEqual(dados.grupos[1].linhas.map(i=>i.dias),[15,4,null]);
  assert.equal(dados.grupos[2].linhas.find(i=>i.mat==='R300').dias,null);assert.equal(dados.semData,2);
- assert.equal(dados.grupos[2].linhas[0].conferencia,'Mesma referência também em usadas');
+ assert.equal(dados.grupos[2].linhas[0].prazo,7);assert.equal(dados.grupos[2].linhas[0].atrasada,true);
  assert.equal(await p.evaluate(()=>opcoesPdfTecnico().filter(t=>t.tid==='ANA').length),2,'cada UF possui seu próprio PDF');
  assert.equal(await p.evaluate(()=>dadosPdfTecnico('RMDF','RS').grupos[2].quantidade),5,'técnico apenas na relação RMDF também é exportável');
  assert.equal(await p.evaluate(()=>dadosPdfTecnico('SEM','SC').total),null,'sem importação não significa saldo zero');
@@ -67,7 +67,7 @@ try {
  const evento=p.waitForEvent('download');await botao().click();await p.waitForFunction(()=>!!window.__liberarPdf);
  await p.evaluate(()=>{E.novas.find(i=>i.mat==='N100').qtd=80;mudou();window.__liberarPdf();});
  const congelado=await evento;await congelado.saveAs(`${pasta}/congelado.pdf`);await p.waitForFunction(()=>!UIpdfTecnico.gerando);
- assert.equal(await p.evaluate(()=>window.__capturaPdf.total),12,'atualização durante a geração não mistura saldos');
+ assert.equal(await p.evaluate(()=>window.__capturaPdf.total),22,'atualização durante a geração não mistura saldos');
  await p.evaluate(()=>{E.novas.find(i=>i.mat==='N100').qtd=2;gerarPdfTecnico=window.__pdfOriginal;mudou();});
  let downloads=0;p.on('download',()=>downloads++);
  const bloqueio=await p.evaluate(async()=>{
@@ -94,5 +94,5 @@ try {
   assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false,`${tema}/${width}: sem transbordamento`);
   if(width!==320)await p.locator('.rel-individual').screenshot({path:`${pasta}/${tema}-${width}.png`});
  }
- assert.deepEqual(erros,[]);console.log('PDF individual: três tipos, dias/bases, UF, RMDF separado, ausência de dados, filtros, falha/retry, snapshot, sessão, A4, paginação e responsividade passaram.');
+ assert.deepEqual(erros,[]);console.log('PDF individual: três tipos, dias/bases, UF, RMDF no estoque, ausência de dados, filtros, falha/retry, snapshot, sessão, A4, paginação e responsividade passaram.');
 }finally{await browser.close();}

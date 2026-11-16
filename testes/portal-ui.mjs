@@ -13,7 +13,8 @@ try{
   montarMoldura();irPara('meu-painel');
  });
  assert.deepEqual(await p.locator('[data-nav]').evaluateAll(es=>es.map(e=>e.dataset.nav)),['meu-painel','conta']);
- assert.equal(await p.locator('[data-peca="r-1"]').count(),0,'RMDF importado é somente consulta');assert.match(await p.locator('#conteudo').innerText(),/RMDF-1/);
+ assert.equal(await p.locator('[data-peca="r-1"]').count(),1,'RMDF permite informar devolução');
+ await p.locator('[data-peca="r-1"]').click();assert.equal(await p.locator('.modal [name="quantidadeRmdf"]').count(),0);assert.match(await p.locator('.modal').innerText(),/RMDF/);await p.locator('.modal [data-fechar]').first().click();assert.match(await p.locator('#conteudo').innerText(),/RMDF-1/);
  assert.match(await p.locator('#conteudo').innerText(),/Ana Silva/);assert.match(await p.locator('#conteudo').innerText(),/USADA-1/);
  for(const pagina of ['usuarios','ferias','importar','painel','estoque','respostas-tecnicos']){
   await p.evaluate(pagina=>irPara(pagina),pagina);assert.equal(await p.evaluate(()=>UI.pagina),'meu-painel');

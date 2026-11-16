@@ -20,11 +20,11 @@ try{
  const original=await p.evaluate(()=>{const t=derivar().tecnicos.find(t=>t.nome.startsWith('Ana'));return {tid:t.tid,total:t.nUsadas+t.novasTodas,usada:t.usadas.find(i=>i.qtd===2),nova:novasParaCobranca(t).find(i=>i.qtd===9)};});
  const tid=original.tid;
  await p.evaluate(tid=>{UI.cob.aba='todos';UI.cob.busca=nomeTecnico(tid);irPara('cobrancas');},tid);
- assert.equal(await p.locator('[data-acao="tipo-cob"][data-tipo="usadas"]').getAttribute('aria-pressed'),'true');
+ assert.equal(await p.locator('[data-acao="tipo-cob"][data-tipo="retornos"]').getAttribute('aria-pressed'),'true');
  await p.locator('[data-acao="tipo-cob"][data-tipo="novas"]').click();assert.equal(await p.evaluate(()=>filtrarCobrancas(derivar()).every(t=>itensDaAba(t,UI.cob.aba,hojeISO(),UI.cob.tipo).every(i=>i.tipo==='novas'))),true);
  await p.locator('[data-acao="tipo-cob"][data-tipo="todas"]').click();
  await p.locator(`[data-acao="cobrar-filtrado"][data-tid="${tid}"]`).click();
- assert.match(await p.locator('#cob-texto').inputValue(),/confirmação deve ser enviada por e-mail/);assert.match(await p.locator('#cob-email-corpo').inputValue(),/novas e usadas/);assert.match(await p.locator('#cob-email-corpo').inputValue(),/RMDF/);
+ assert.match(await p.locator('#cob-texto').inputValue(),/confirmação deve ser enviada por e-mail/);assert.match(await p.locator('#cob-email-corpo').inputValue(),/novas, usadas e RMDF/);assert.match(await p.locator('#cob-email-corpo').inputValue(),/RMDF/);
  await p.locator('[data-registrar]').click();await p.waitForFunction(()=>!document.querySelector('#cob-form'));
  await p.locator('[data-acao="aba-cob"][data-aba="respostas"]').click();await p.locator('[data-acao="resposta-filtro"][data-v="formalizar"]').click();
  assert.match(await p.locator('.respostas-cobranca').innerText(),/Ana/);

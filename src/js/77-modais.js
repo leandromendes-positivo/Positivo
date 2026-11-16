@@ -27,18 +27,18 @@ function ligarAtalhos(el) {
 function modalCobrar(tid, aba = "cobrar", itensEscolhidos = null, canalInicial = 'whatsapp') {
   const D = derivar(), t = D.mapa.get(tid);
   if (!t) return;
-  const tipos = new Set((itensEscolhidos || []).map(i=>i.tipo || 'usadas'));
-  const tipo = tipos.size>1 ? 'mistas' : tipos.size ? [...tipos][0] : aba === 'novas' ? 'novas' : 'usadas';
-  let itens = itensEscolhidos || (tipo === 'novas' ? novasParaCobranca(t) : itensDaAba(t, aba, D.hoje));
-  if (!itens.length && tipo === 'usadas') itens = t.itensCobrar.length ? t.itensCobrar : t.usadas;
+  let itens = itensEscolhidos || (aba === 'novas' ? novasParaCobranca(t) : aba === 'rmdf' ? t.rmdf : itensDaAba(t, aba, D.hoje, 'retornos'));
+  if (!itens.length && !itensEscolhidos) itens = t.itensCobrar.length ? t.itensCobrar : t.retornos;
   if (!itens.length) { toast('Não há peças para esta cobrança.'); return; }
+  const tipos = new Set(itens.map(i=>i.tipo || 'usadas'));
+  const tipo = tipos.size>1 ? 'mistas' : [...tipos][0];
   const lembrete = aba === "vencendo", qtd = somar(itens, i => i.qtd);
   const email = montarEmailCobranca(t, itens, lembrete, tipo);
   itens=itens.map(i=>({...i,tipo:i.tipo || (tipo==='novas'?'novas':'usadas')}));
   let telefone = t.telefone, emailCadastrado = email.destinatario;
   const m = abrirModal({
     titulo: `${lembrete ? "Lembrar" : "Cobrar"} ${t.nome}`,
-    subtitulo: `${plural(qtd, "peça", "peças")} ${qtd === 1 ? (tipo === "novas" ? "nova" : "usada") : tipo} · mais antiga com ${Math.max(...itens.map(i => i.dias))} dias`,
+    subtitulo: `${plural(qtd, "peça", "peças")} · ${tipo==='mistas'?'tipos selecionados':rotuloTipoPeca(tipo,true)} · mais antiga com ${Math.max(...itens.map(i => i.dias))} dias`,
     largura: 'larga', aoFechar: () => aoMudar.delete(atualizarContato),
     corpo: `<div class="cobrar-resumo"><div><span>Peças nesta cobrança</span><strong>${fmtNum(qtd)}</strong></div><div><span>Prazo do técnico</span><strong>${tipo==='mistas'?`${t.prazo} / ${t.prazoNovas}`:prazoDoTecnico(tid, tipo)} <small>dias</small></strong></div><div class="cobrar-contato"><span>Contato do técnico</span><small data-contato-resumo></small>${podeAdministrar() ? `<button class="link" type="button" data-acao="editar-tecnico" data-tid="${esc(tid)}">Editar contato</button>` : ''}</div></div>
     <div class="cobrar-grade">
@@ -84,7 +84,7 @@ function modalCobrar(tid, aba = "cobrar", itensEscolhidos = null, canalInicial =
     rodape: `<button class="btn" data-fechar>Fechar</button><button class="btn prim" data-registrar>${icone('ok')}Registrar contato</button><button class="btn" data-registrar-confirmar>Registrar e confirmar resposta por e-mail</button>`,
   });
   const el = m.el, ta = el.querySelector('#cob-texto'), link = el.querySelector('#cob-link');
-  ta.value = montarMensagem(t, itens, tipo !== 'usadas' ? (tipo==='mistas'?MENSAGEM_MISTA:MENSAGEM_NOVAS) : lembrete ? E.config.msgLembrete : E.config.msgCobranca, tipo);
+  ta.value = montarMensagem(t, itens, tipo === 'rmdf' ? '{saudacao}, {nome}!\n\nPrecisamos combinar a devolução das peças RMDF (com defeito) abaixo:\n\n{lista}\n\nPrazo de devolução: {prazo} dias. Por favor, confirme a previsão por e-mail.' : tipo !== 'usadas' ? (tipo==='mistas'?MENSAGEM_MISTA:MENSAGEM_NOVAS) : lembrete ? E.config.msgLembrete : E.config.msgCobranca, tipo);
   const fEmail = el.querySelector('#cob-painel-email'), para = el.querySelector('#cob-email-para'), assunto = el.querySelector('#cob-email-assunto'), corpo = el.querySelector('#cob-email-corpo'), editor = el.querySelector('#cob-email-editor'), linkEmail = el.querySelector('#cob-email-link');
   para.value = email.destinatario; assunto.value = email.assunto; corpo.value = email.corpo;
   try { const preferido = localStorage.getItem('cp-outlook-editor-v2'); if (Object.hasOwn(EDITORES_EMAIL, preferido)) editor.value = preferido; } catch (_) { /* preferência só nesta janela */ }
@@ -255,13 +255,13 @@ function modalTecnico(tid, focarPrazos = false) {
       <fieldset class="prazos-personalizados"><legend>${icone('relogio')}Prazos de devolução deste técnico</legend>
         <p>Defina prazos em dias para as peças em aberto e futuras. Deixe em branco para acompanhar a regra geral.</p>
         <div class="campos-2">
-          <label class="campo"><span>Peças usadas · dias</span><input type="number" name="prazoUsadas" min="1" max="90" step="1" placeholder="Regra geral: ${prazoGeral()} dias" ${focarPrazos ? 'autofocus' : ''}><small>Contados da Data FT; sem essa data, da primeira importação.</small></label>
+          <label class="campo"><span>Peças usadas e RMDF · dias</span><input type="number" name="prazoUsadas" min="1" max="90" step="1" placeholder="Regra geral: ${prazoGeral()} dias" ${focarPrazos ? 'autofocus' : ''}><small>Contados da Data FT; sem essa data, da primeira importação.</small></label>
           <label class="campo"><span>Peças novas · dias</span><input type="number" name="prazoNovas" min="1" max="90" step="1" placeholder="Regra geral: ${prazoGeral('novas')} dias"><small>Contados da primeira observação do material no estoque.</small></label>
         </div>
         <div class="prazos-personalizados-rodape"><span>Previsões combinadas continuam registradas. Devoluções com prazo salvo mantêm seu histórico.</span><button class="btn pequeno" type="button" data-prazos-gerais>Usar prazos gerais</button></div>
       </fieldset>
       <label class="campo"><span>Observações</span><textarea name="obs" rows="3" maxlength="500"></textarea></label>
-      ${t ? `<p class="nota">${plural(t.nUsadas, "peça usada pendente", "peças usadas pendentes")} · ${plural(t.novasTodas || 0, "peça nova", "peças novas")} no último relatório.</p>` : ""}
+      ${t ? `<p class="nota">${plural(t.nUsadas, "peça usada pendente", "peças usadas pendentes")} · ${plural(t.novasTodas || 0, "peça nova", "peças novas")} · ${plural(t.nRmdf || 0, "peça RMDF", "peças RMDF")} no último relatório.</p>` : ""}
     </form>`,
     rodape: `<button class="btn" data-fechar>Cancelar</button><button class="btn prim" data-salvar>Salvar</button>`,
   });

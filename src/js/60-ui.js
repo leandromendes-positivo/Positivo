@@ -105,7 +105,6 @@ function pill(classe, texto, ic) {
   return `<span class="pill ${classe}">${ic ? icone(ic) : ""}${esc(texto)}</span>`;
 }
 function marcadorTempoPeca(peca, tipo = peca.tipo || 'usadas') {
-  if (tipo === 'rmdf') return '—';
   const referencia = (peca.em || hojeISO()).slice(0, 10), nova = tipo === 'novas';
   const base = nova ? (peca.contagemDesde || (peca.em ? peca.desde : inicioContagemNova(peca.desde, referencia))) : (peca.dataFT || peca.desde);
   const dias = Number.isFinite(peca.dias) ? peca.dias : nova ? diasComPecaNova(peca.desde, referencia) : Math.max(0, diffDias(base, referencia));

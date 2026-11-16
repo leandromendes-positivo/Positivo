@@ -3,7 +3,7 @@ const MAPA_BRASIL = /*__MAPA_BRASIL__*/;
 
 function filaDoPainel(D, tipo = UIpainel.fila) {
   return D.tecnicos.map((t) => {
-    const itens = tipo === "vencidas" ? selecionarAbaCobranca(t.usadas, 'vencidas', D.hoje)
+    const itens = tipo === "vencidas" ? selecionarAbaCobranca(t.retornos, 'vencidas', D.hoje)
       : tipo === "hoje" ? t.previsoesHoje : t.itensCobrar;
     return { t, itens, qtd: somar(itens, (i) => i.qtd), dias: Math.max(0, ...itens.map((i) => i.dias)) };
   }).filter((r) => r.itens.length)
@@ -26,13 +26,13 @@ function filaHoje(D) {
 }
 
 function dadosMapa(D) {
-  const tipo = UIpainel.mapaModo === "novas" ? "novas" : "usadas";
-  return D.frescor.filter((f) => f.tipo === tipo && f.em && !regiaoDesativada(f.regiao)).map((f) => D.porRegiao.find((r) => r.regiao === f.regiao) || { regiao: f.regiao, no_prazo: 0, vencendo: 0, cobrar: 0, aguardando: 0, total: 0, ideal: 0, acima: 0, excessoNovas: 0, novas: 0 });
+  const tipo = UIpainel.mapaModo;
+  return D.frescor.filter((f) => f.tipo === tipo && f.em && !regiaoDesativada(f.regiao)).map((f) => ((r)=>r&&tipo!=="novas"?{...r,...(r.porTipo?.[tipo]||{})}:r)(D.porRegiao.find((r) => r.regiao === f.regiao)) || { regiao: f.regiao, no_prazo: 0, vencendo: 0, cobrar: 0, aguardando: 0, total: 0, ideal: 0, acima: 0, excessoNovas: 0, novas: 0 });
 }
 
 function riscoEstado(D, r, novas = UIpainel.mapaModo === "novas") {
   const total = novas ? r.ideal + r.acima : r.total;
-  const afetadas = novas ? r.acima : somar(D.itens.filter((i) => i.regiao === r.regiao && i.atrasada), (i) => i.qtd);
+  const afetadas = novas ? r.acima : somar(D.retornos.filter((i) => i.tipo===UIpainel.mapaModo && i.regiao === r.regiao && i.atrasada), (i) => i.qtd);
   const percentual = total ? afetadas / total * 100 : 0;
   const nivel = percentual <= 10 ? "baixo" : percentual <= 25 ? "moderado" : percentual <= 50 ? "alto" : "critico";
   return { total, afetadas, percentual, nivel };
@@ -51,7 +51,7 @@ function mapaOperacao(D) {
     const dica = `<strong>${esc(nome)}</strong><span>${texto}</span>`;
     return `<g data-uf="${uf.uf}" data-dica="${esc(dica)}" class="mapa-estado ${risco ? `risco-${risco.nivel}` : "sem-dados"} ${selecionado ? "selecionado" : ""}" ${risco ? `role="button" tabindex="0" data-acao="painel-regiao" data-regiao="${uf.uf}" aria-pressed="${selecionado}"` : 'role="img"'} aria-label="${esc(nome + ', ' + texto)}"><title>${esc(nome + ': ' + texto)}</title><path d="${uf.d}"/>${risco ? `<text x="${uf.centro[0]}" y="${uf.centro[1]}">${uf.uf}</text>` : ""}${selecionado ? `<circle class="mapa-sinal" cx="${uf.centro[0]}" cy="${uf.centro[1]}" r="13"/>` : ""}</g>`;
   }).join("");
-  const seletor = `<div class="filtros-segmentados">${[["usadas", "Usadas"], ["novas", "Novas"]].map(([id, nome]) => `<button type="button" data-acao="painel-mapa-modo" data-modo="${id}" aria-pressed="${UIpainel.mapaModo === id}" class="${UIpainel.mapaModo === id ? "ativo" : ""}">${nome}</button>`).join("")}</div>`;
+  const seletor = `<div class="filtros-segmentados">${[["usadas", "Usadas"], ["novas", "Novas"], ["rmdf", "RMDF"]].map(([id, nome]) => `<button type="button" data-acao="painel-mapa-modo" data-modo="${id}" aria-pressed="${UIpainel.mapaModo === id}" class="${UIpainel.mapaModo === id ? "ativo" : ""}">${nome}</button>`).join("")}</div>`;
   const frescor = r && D.frescor.find((f) => f.regiao === r.regiao && f.tipo === UIpainel.mapaModo);
   const risco = r && riscos.get(r.regiao);
   const detalhe = r ? `<span class="mapa-uf">${r.regiao}</span><h3>${esc(UFS[r.regiao] || r.regiao)}</h3><div class="mapa-numero">${fmtNum(metrica(r))}<span>${novas ? `${palavra(metrica(r), "técnico", "técnicos")} acima do limite` : `${palavra(metrica(r), "peça", "peças")} para cobrar`}</span></div>
@@ -65,10 +65,10 @@ function mapaOperacao(D) {
 }
 
 function saudePrazos(D) {
-  const k = D.kpi, dentro = k.usadas - k.atrasadas;
-  const percentual = k.usadas ? dentro / k.usadas * 100 : 0;
-  return cartao("Cumprimento do prazo", `<div class="saude-conteudo"><div class="anel-prazos ${k.usadas ? "" : "sem-dados"}" role="img" aria-label="${k.usadas ? `${fmtPct(dentro / k.usadas)} das peças pendentes estão dentro do prazo de cada técnico` : "Sem peças usadas pendentes"}">
-    <svg viewBox="0 0 140 140" aria-hidden="true"><circle class="anel-fundo" cx="70" cy="70" r="57"/><circle class="anel-valor" cx="70" cy="70" r="57" pathLength="100" stroke-dasharray="${percentual} 100"/></svg><div><strong>${k.usadas ? `${Math.round(percentual)}%` : "—"}</strong><span>dentro do prazo</span></div></div>
+  const k = D.kpi, dentro = k.retornos - k.atrasadas;
+  const percentual = k.retornos ? dentro / k.retornos * 100 : 0;
+  return cartao("Cumprimento do prazo", `<div class="saude-conteudo"><div class="anel-prazos ${k.retornos ? "" : "sem-dados"}" role="img" aria-label="${k.retornos ? `${fmtPct(dentro / k.retornos)} das peças pendentes estão dentro do prazo de cada técnico` : "Sem peças usadas ou RMDF pendentes"}">
+    <svg viewBox="0 0 140 140" aria-hidden="true"><circle class="anel-fundo" cx="70" cy="70" r="57"/><circle class="anel-valor" cx="70" cy="70" r="57" pathLength="100" stroke-dasharray="${percentual} 100"/></svg><div><strong>${k.retornos ? `${Math.round(percentual)}%` : "—"}</strong><span>dentro do prazo</span></div></div>
     <dl class="saude-legenda"><div><dt><i></i>Dentro do prazo individual</dt><dd>${fmtNum(dentro)}</dd></div><div class="atraso"><dt><i></i>Acima do prazo individual</dt><dd>${fmtNum(k.atrasadas)}</dd></div></dl></div><div class="saude-rodape">${icone("retorno")}<span><strong>${k.temHistoricoDev ? fmtNum(k.devolvidas7) : "—"}</strong> devolvidas nos últimos 7 dias</span></div>`, { sub: "Considera a idade real das peças ainda pendentes, mesmo com previsão.", classe: "cartao-saude" });
 }
 
@@ -130,7 +130,7 @@ function atualizarFiltroPainel(chave, valor, seletor) {
 }
 
 function abrirCobrancasPainel(aba = "cobrar") {
-  Object.assign(UI.cob, { tipo: aba==='previsoes'?'todas':'usadas', aba, somenteMeus: false, foco: "", regiao: "", busca: "", ordem: "dias" });
+  Object.assign(UI.cob, { tipo: aba==='previsoes'?'todas':'retornos', aba, somenteMeus: false, foco: "", regiao: "", busca: "", ordem: "dias" });
   irPara("cobrancas");
 }
 

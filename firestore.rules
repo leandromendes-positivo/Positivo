@@ -30,7 +30,7 @@ service cloud.firestore {
       let contato = get(/databases/$(database)/documents/contatos/$(c.contatoId)).data;
       return c.keys().hasAll(['tipo','mat','regiao','quantidade','qtdRmdf','contatoId','referenciaEmail','observacao','dataReferencia','lotesReferencia'])
         && c.keys().hasOnly(['tipo','mat','regiao','quantidade','qtdRmdf','contatoId','referenciaEmail','observacao','dataReferencia','lotesReferencia'])
-        && c.tipo in ['novas','usadas'] && c.mat is string && c.mat.size() > 0 && c.mat.size() <= 100
+        && c.tipo in ['novas','usadas','rmdf'] && c.mat is string && c.mat.size() > 0 && c.mat.size() <= 100
         && regiaoOperacional(c.regiao) && c.regiao.size() <= 20
         && c.quantidade is int && c.quantidade > 0 && c.quantidade <= 1000000
         && c.qtdRmdf is int && c.qtdRmdf >= 0 && c.qtdRmdf <= c.quantidade && (c.tipo == 'novas' || c.qtdRmdf == 0)
@@ -111,7 +111,7 @@ service cloud.firestore {
       return d.keys().hasAll(['tecnicoId','peca','geracao','mat','tipo','quantidadeDevolver','quantidadeRmdf','rmdf','previsao','protocolo','observacao','cancelado','uid','email','versao','evento','em'])
         && d.keys().hasOnly(['tecnicoId','peca','geracao','mat','tipo','quantidadeDevolver','quantidadeRmdf','rmdf','previsao','protocolo','observacao','cancelado','uid','email','versao','evento','em'])
         && meuEstoque(id) && d.tecnicoId == id && d.peca == peca && geracaoAtual(d.geracao)
-        && d.mat == p.mat && d.tipo == p.tipo && d.tipo in ['novas','usadas'] && autor(d) && d.em == request.time
+        && d.mat == p.mat && d.tipo == p.tipo && d.tipo in ['novas','usadas','rmdf'] && autor(d) && d.em == request.time
         && d.evento is string && d.evento.matches('^[a-zA-Z0-9-]{20,80}$') && d.versao is int
         && d.quantidadeDevolver is int && d.quantidadeDevolver >= 0
         && d.quantidadeRmdf is int && d.quantidadeRmdf >= 0
@@ -293,7 +293,7 @@ service cloud.firestore {
         && (!('ordem' in request.resource.data) || request.resource.data.ordem is int)
         && (!('detalhes' in request.resource.data) || (request.resource.data.detalhes is list && request.resource.data.detalhes.size() <= 500))
         && (!('referencia' in request.resource.data) || (request.resource.data.referencia is map && request.resource.data.referencia.keys().hasOnly(['dataReferencia','lotesReferencia']) && dataValida(request.resource.data.referencia.dataReferencia) && request.resource.data.referencia.lotesReferencia is list && request.resource.data.referencia.lotesReferencia.size() <= 500))
-        && (!('tipo' in request.resource.data) || request.resource.data.tipo in ['novas','usadas','mistas'])
+        && (!('tipo' in request.resource.data) || request.resource.data.tipo in ['novas','usadas','rmdf','mistas'])
         && autor(request.resource.data) && request.resource.data.em == request.time
         && request.resource.data.tid is string && request.resource.data.tid.size() <= 200
         && request.resource.data.canal in ['whatsapp','ligacao','email','pessoalmente','outro']

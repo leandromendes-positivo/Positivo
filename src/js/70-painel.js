@@ -33,7 +33,7 @@ function avisoAtualizacao(D) {
   const juntar = (l) => (l.length > 1 ? `${l.slice(0, -1).join(", ")} e ${l[l.length - 1]}` : l[0]);
   const partes = [...grupos.entries()].map(([quando, fs]) => {
     const porRegiao = agrupar(fs, (f) => f.regiao);
-    const nomes = [...porRegiao.entries()].map(([r, x]) => (x.length === 2 ? r : `${r} ${x[0].tipo}`));
+    const nomes = [...porRegiao.entries()].map(([r, x]) => (x.length === 3 ? r : `${r} ${x.map(f=>rotuloTipoPeca(f.tipo,true)).join("/")}`));
     return `${juntar(nomes)}: ${quando}`;
   });
   return `<div class="faixa alerta compacta">${icone("relogio")}<div><strong>Planilhas de hoje ainda não importadas</strong><span>Última importação — ${esc(partes.join(" · "))}</span></div>
@@ -43,7 +43,7 @@ function avisoAtualizacao(D) {
 function devolvidasRecentes(D) {
   const recentes = [...E.devolucoes].sort((a, b) => comparar(b.em, a.em)).slice(0, 8);
   if (!recentes.length) {
-    return vazio("retorno", "Ainda sem devoluções registradas", "A partir da próxima importação, as peças que saírem do relatório de usadas aparecem aqui como devolvidas.");
+    return vazio("retorno", "Ainda sem devoluções registradas", "A partir da próxima importação, as peças que saírem dos relatórios de usadas e RMDF aparecem aqui como devolvidas.");
   }
   return `<ul class="lista-simples">${recentes.map((d) => `<li>
     <span class="ls-principal"><strong>${esc(nomeTecnico(d.tid))}</strong><span>${esc(E.catalogo[d.mat] || d.mat)}</span></span>
@@ -56,10 +56,10 @@ function boasVindas() {
     <div class="bv-texto">
       <span class="sobretitulo">Primeiro passo</span>
       <h2>Importe as planilhas do dia</h2>
-      <p>Arraste aqui os relatórios de peças <strong>Novas</strong> e <strong>Usadas</strong> de cada região (por exemplo <span class="mono">PR Usadas.csv</span>). Pode soltar todos de uma vez.</p>
+      <p>Arraste aqui os relatórios de peças <strong>Novas</strong>, <strong>Usadas</strong> e <strong>RMDF</strong> de cada região (por exemplo <span class="mono">PR Usadas.csv</span>). Pode soltar todos de uma vez.</p>
       <ol class="passos">
         <li><strong>Todo dia</strong>, exporte os relatórios do sistema e arraste para esta página.</li>
-        <li>O painel calcula há quantos dias cada técnico está com cada peça usada e mostra <strong>quem cobrar</strong>.</li>
+        <li>O painel calcula há quantos dias cada técnico está com cada peça usada ou RMDF e mostra <strong>quem cobrar</strong>.</li>
         <li>Registre a cobrança e a <strong>previsão de devolução</strong> que o técnico informar. Quando a peça sair do relatório, ela conta como devolvida.</li>
       </ol>
     </div>
@@ -77,7 +77,7 @@ const UIpainel = { tabelas: new Set(), fila: "cobrar", dia: "", agendaVencidas: 
 
 function renderPainel() {
   const D = derivar();
-  if (!E.usadas.length && !E.novas.length && !E.devolucoes.length && !E.movimentos.length && !D.frescor.some(f => f.em)) return leituraOperacional(D) + termometroOperacao(D) + boasVindas();
+  if (!E.usadas.length && !E.novas.length && !E.rmdf.length && !E.devolucoes.length && !E.movimentos.length && !D.frescor.some(f => f.em)) return leituraOperacional(D) + termometroOperacao(D) + boasVindas();
   const k = D.kpi, cfg = D.cfg;
   const ant = historicoAnterior(), at = ant && ant.tot;
   const previstas = somar(k.previsoesHoje, (i) => i.qtd);
@@ -85,7 +85,7 @@ function renderPainel() {
   const operacao = indicadoresOperacionais(D);
   const agenda = agendaDoPainel(D);
   const indicadores = [
-    kpiOperacional({ tipo: "usadas", rotulo: "Peças usadas pendentes", valor: fmtNum(k.usadas), unidade: "peças em aberto", sub: at ? delta(k.usadas, at.usadas, true, ant.data) : temPrazosPersonalizados() ? 'Prazos personalizados por técnico' : `Prazo de devolução: ${cfg.prazo} dias`, legenda: "Peças por prazo", partes: [{ nome: "No prazo", valor: k.usadas - k.atrasadas, cor: "good" }, { nome: "Em atraso", valor: k.atrasadas, cor: "crit" }], rodape: "Consultar pendências", acao: 'data-acao="painel-usadas" data-status="todas"', icone: "retorno" }),
+    kpiOperacional({ tipo: "usadas", rotulo: "Usadas e RMDF pendentes", valor: fmtNum(k.retornos), unidade: `${fmtNum(k.usadas)} usadas · ${fmtNum(k.rmdf)} RMDF`, sub: at ? delta(k.retornos, at.retornos ?? at.usadas, true, ant.data) : temPrazosPersonalizados() ? 'Prazos personalizados por técnico' : `Prazo de devolução: ${cfg.prazo} dias`, legenda: "Peças por prazo", partes: [{ nome: "No prazo", valor: k.retornos - k.atrasadas, cor: "good" }, { nome: "Em atraso", valor: k.atrasadas, cor: "crit" }], rodape: "Consultar pendências", acao: 'data-acao="painel-cobrancas" data-aba="todos"', icone: "retorno" }),
     kpiOperacional({ tipo: "cobrancas", rotulo: "Técnicos para cobrar", valor: fmtNum(k.cobrarTecnicos), unidade: "técnicos na fila", sub: `${plural(k.cobrarPecas, "peça exige", "peças exigem")} acompanhamento`, legenda: "Contatos da fila de hoje", partes: [{ nome: "Sem contato", valor: operacao.semContatoHoje, cor: "crit" }, { nome: "Contatados", valor: k.cobrarTecnicos - operacao.semContatoHoje, cor: "good" }], rodape: "Abrir cobranças", acao: 'data-acao="painel-cobrancas" data-aba="cobrar"', icone: "sino" }),
     kpiOperacional({ tipo: "devolucoes", rotulo: "Devoluções previstas hoje", valor: fmtNum(previstas), unidade: "peças previstas", sub: `${plural(new Set(k.previsoesHoje.map((i) => i.tid)).size, "técnico com compromisso", "técnicos com compromisso")}`, legenda: "Peças na agenda de 7 dias", partes: [{ nome: "Hoje", valor: previstas, cor: "warn" }, { nome: "Próximos dias", valor: somar(agenda.slice(1), (d) => d.qtd), cor: "series-1" }], rodape: "Conferir previsões", acao: 'data-acao="painel-cobrancas" data-aba="previsoes"', icone: "calendario" }),
     kpiOperacional({ tipo: "estoque", rotulo: "Peças novas com técnicos", valor: estoque.temRelatorio ? fmtNum(estoque.total) : "—", unidade: "peças em estoque", sub: estoque.temRelatorio ? `${plural(estoque.tecnicos.length, "técnico acompanhado", "técnicos acompanhados")}` : "Importe a planilha de peças novas", legenda: estoque.temRelatorio ? "Técnicos por limite de estoque" : "Sem relatório de estoque", partes: [{ nome: "Dentro", valor: estoque.temRelatorio ? estoque.dentro.length : null, cor: "good" }, { nome: "Em excesso", valor: estoque.temRelatorio ? estoque.acima.length : null, cor: "serious" }, { nome: "Sem limite", valor: estoque.temRelatorio ? estoque.semLimite.length : null, cor: "muted" }], rodape: "Analisar estoque", acao: 'data-acao="painel-estoque"', icone: "caixa" }),
@@ -94,7 +94,7 @@ function renderPainel() {
   const tab = (id, corpo, tabela) => UIpainel.tabelas.has(id) ? tabela : corpo;
   const periodo = `<div class="filtros-segmentados">${[7, 30].map((dias) => `<button type="button" class="${UIpainel.periodo === dias ? "ativo" : ""}" data-acao="painel-periodo" data-periodo="${dias}" aria-pressed="${UIpainel.periodo === dias}">${dias} dias</button>`).join("")}</div>`;
   const hist = historicoDoPainel();
-  const evolucao = hist.length > 1 ? `<div class="grafico" data-grafico="evolucao"></div>` : `<div class="historico-inicial">${icone("grafico")}<strong>${hist.length ? "Histórico iniciado" : "Ainda sem importações neste período"}</strong><p>A evolução será exibida após a importação de relatórios em dias diferentes.</p>${hist.length ? `<span>${fmtData(hist[0].data)} · ${plural(hist[0].tot.usadas, "peça pendente", "peças pendentes")}</span>` : ""}</div>`;
+  const evolucao = hist.length > 1 ? `<div class="grafico" data-grafico="evolucao"></div>` : `<div class="historico-inicial">${icone("grafico")}<strong>${hist.length ? "Histórico iniciado" : "Ainda sem importações neste período"}</strong><p>A evolução será exibida após a importação de relatórios em dias diferentes.</p>${hist.length ? `<span>${fmtData(hist[0].data)} · ${plural((hist[0].tot.retornos ?? hist[0].tot.usadas), "peça pendente", "peças pendentes")}</span>` : ""}</div>`;
   return `<div class="painel-operacao">
     ${leituraOperacional(D)}
     <div class="kpis kpis-4 indicadores-operacao">${indicadores.join("")}</div>
@@ -116,7 +116,7 @@ function tabelaEvolucao() {
   const h = historicoDoPainel();
   if (!h.length) return `<p class="nota">Sem histórico ainda.</p>`;
   return `<div class="tabela-rolagem"><table class="tabela compacta"><thead><tr><th>Dia</th><th class="num">Pendentes</th><th class="num">Atrasadas</th><th class="num">Técnicos a cobrar</th></tr></thead><tbody>
-    ${[...h].reverse().map((x) => `<tr><td>${fmtData(x.data)}</td><td class="num">${fmtNum(x.tot.usadas)}</td><td class="num">${fmtNum(x.tot.atrasadas)}</td><td class="num">${fmtNum(x.tot.cobrarTec)}</td></tr>`).join("")}</tbody></table></div>`;
+    ${[...h].reverse().map((x) => `<tr><td>${fmtData(x.data)}</td><td class="num">${fmtNum((x.tot.retornos ?? x.tot.usadas))}</td><td class="num">${fmtNum(x.tot.atrasadas)}</td><td class="num">${fmtNum(x.tot.cobrarTec)}</td></tr>`).join("")}</tbody></table></div>`;
 }
 function desenharPainel() {
   ligarMapaPainel();
@@ -124,15 +124,15 @@ function desenharPainel() {
   const D = derivar();
   const el = (id) => document.querySelector(`.grafico[data-grafico="${id}"]`);
   if (el("idade")) graficoColunas(el("idade"), {
-    faixas: D.faixas, titulo: "Idade das peças usadas",
-    aoClicar: (f) => { Object.assign(UI.us, { regiao: "", tid: "", busca: "", status: "todas", faixa: { min: f.min, max: f.max, rotulo: f.rotulo }, pagina: 1, aba: "pendentes" }); irPara("usadas"); },
+    faixas: D.faixas, titulo: "Idade das peças usadas e RMDF",
+    aoClicar: (f) => { UIconsulta.filtros={...FILTROS_CONSULTA,tipo:"retornos",origem:"atual",diasMin:String(f.min),diasMax:Number.isFinite(f.max)?String(f.max):""};UIconsulta.pagina=1;irPara("consulta"); },
   });
   if (el("evolucao")) {
     const h = historicoDoPainel();
     graficoLinhas(el("evolucao"), {
       datas: h.map((x) => x.data),
       series: [
-        { nome: "Pendentes", cor: "var(--series-1)", valores: h.map((x) => x.tot.usadas) },
+        { nome: "Pendentes", cor: "var(--series-1)", valores: h.map((x) => (x.tot.retornos ?? x.tot.usadas)) },
         { nome: "Atrasadas", cor: "var(--crit)", tracejado: true, valores: h.map((x) => x.tot.atrasadas) },
       ],
       vazio: "O gráfico ganha forma a cada dia importado.",

@@ -213,7 +213,7 @@ const Notificacoes = (() => {
     else if (a.destino === 'estoque') { Object.assign(UI.es, {regiao:'',status:'acima',busca:''}); irPara('estoque'); }
     else if(a.destino.startsWith('respostas_')){Object.assign(UI.cob,{aba:'respostas',tipo:'todas',resposta:a.destino.slice(10),foco:'',regiao:'',busca:''});irPara('cobrancas');}
     else {
-      Object.assign(UI.cob, {tipo:a.destino==='vencidas'?'todas':'usadas',aba:a.destino === 'vencidas' ? 'vencidas' : 'cobrar', foco:FOCOS_COBRANCA[a.destino] ? a.destino : '', regiao:'', busca:'', ordem:'dias'});
+      Object.assign(UI.cob, {tipo:a.destino==='vencidas'?'todas':'retornos',aba:a.destino === 'vencidas' ? 'vencidas' : 'cobrar', foco:FOCOS_COBRANCA[a.destino] ? a.destino : '', regiao:'', busca:'', ordem:'dias'});
       UI.cob.abertos.clear(); irPara('cobrancas');
     }
     const titulo = document.getElementById('titulo'); titulo.setAttribute('tabindex','-1'); titulo.focus({preventScroll:true});

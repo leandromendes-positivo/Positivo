@@ -1,8 +1,8 @@
 /* Faixas operacionais explícitas. Nenhuma pontuação ou tendência simulada. */
 function situacaoOperacao(D = derivar()) {
   const agenda = itensAgendaCompleta(D), respostas = acompanhamentoRespostas(D, 'todas');
-  const atrasadas = D.kpi.atrasadas, taxa = D.kpi.usadas ? atrasadas / D.kpi.usadas : 0;
-  const criticas = somar(D.itens.filter(i => i.dias > 2 * i.prazo), i => i.qtd);
+  const atrasadas = D.kpi.atrasadas, taxa = D.kpi.retornos ? atrasadas / D.kpi.retornos : 0;
+  const criticas = somar(D.retornos.filter(i => i.dias > 2 * i.prazo), i => i.qtd);
   const compromissosVencidos = agenda.filter(i => i.previsao < D.hoje);
   const vencidas = somar(compromissosVencidos, i => i.qtd);
   const aguardando = respostas.filter(i => i.estadoResposta === 'aguardando' && i.diasResposta >= 1);
@@ -15,21 +15,22 @@ function situacaoOperacao(D = derivar()) {
   // O maior risco prevalece: confirmar uma previsão não apaga o atraso da peça.
   if (criticas || vencidas || taxa >= .25) {
     nivel = 'critica';
-    motivo = criticas ? `${plural(criticas, 'peça usada ultrapassou', 'peças usadas ultrapassaram')} o dobro do prazo de devolução.`
+    motivo = criticas ? `${plural(criticas, 'peça ultrapassou', 'peças ultrapassaram')} o dobro do prazo de devolução.`
       : vencidas ? `${plural(vencidas, 'peça permanece', 'peças permanecem')} no inventário após a previsão combinada.`
-      : `${fmtNum1(taxa * 100)}% das peças usadas estão acima do prazo.`;
+      : `${fmtNum1(taxa * 100)}% das peças usadas e RMDF estão acima do prazo.`;
   } else if (atrasadas || semRetorno || excesso) {
     nivel = 'atencao';
-    motivo = atrasadas ? `${plural(atrasadas, 'peça usada está', 'peças usadas estão')} em atraso. Priorize a cobrança e confirme a devolução por e-mail.`
+    motivo = atrasadas ? `${plural(atrasadas, 'peça está', 'peças estão')} em atraso. Priorize a cobrança e confirme a devolução por e-mail.`
       : semRetorno ? `${plural(semRetorno, 'técnico precisa', 'técnicos precisam')} de acompanhamento por e-mail: falta formalizar a cobrança ou registrar a resposta.`
       : `${plural(excesso, 'técnico ultrapassou', 'técnicos ultrapassaram')} o limite de peças novas. Avalie o recolhimento do excedente.`;
   } else if (!importadas || desatualizadas) {
     nivel = 'incompleta';
-    motivo = 'Atualize as planilhas de novas e usadas para avaliar se a operação está controlada.';
+    motivo = 'Atualize as planilhas de novas, usadas e RMDF para avaliar se a operação está controlada.';
   }
   return { nivel, motivo, taxa, atrasadas, criticas, vencidas, semRetorno, excesso, importadas, desatualizadas,
     aguardando: new Set(aguardando.map(i => i.tid)).size, formalizar: new Set(formalizar.map(i => i.tid)).size,
-    usadasTotal: D.kpi.usadas, agendadas: somar(agenda, i => i.qtd),
+    usadasTotal: D.kpi.retornos, agendadas: somar(agenda, i => i.qtd),
+    vencidasRmdf: somar(compromissosVencidos.filter(i=>i.tipo==='rmdf'),i=>i.qtd),
     vencidasUsadas: somar(compromissosVencidos.filter(i => i.tipo === 'usadas'), i => i.qtd),
     vencidasNovas: somar(compromissosVencidos.filter(i => i.tipo === 'novas'), i => i.qtd),
     maiorEspera: aguardando.reduce((maior, i) => Math.max(maior, i.diasResposta), 0),
@@ -73,14 +74,14 @@ function termometroOperacao(D) {
   const atual = tipo => D.frescor.length && D.frescor.filter(f => !tipo || f.tipo === tipo).every(f => f.em && f.dias === 0);
   const prazoNormal = Math.max(0, s.usadasTotal - s.atrasadas), atrasoNormal = Math.max(0, s.atrasadas - s.criticas);
   const pontos = [
-    {id:'usadas',nome:'Usadas em atraso',valor:s.atrasadas,unidade:'peças',icone:'retorno',conhecido:temTipo('usadas'),atual:atual('usadas'),critico:s.criticas > 0 || s.taxa >= .25,
-      leitura:s.usadasTotal ? `${fmtNum1(s.taxa * 100)}% das ${fmtNum(s.usadasTotal)} usadas em aberto` : 'Sem peças usadas em aberto',
+    {id:'usadas',nome:'Usadas e RMDF em atraso',valor:s.atrasadas,unidade:'peças',icone:'retorno',conhecido:temTipo('usadas')||temTipo('rmdf'),atual:atual('usadas')&&(!temTipo('rmdf')||atual('rmdf')),critico:s.criticas > 0 || s.taxa >= .25,
+      leitura:s.usadasTotal ? `${fmtNum1(s.taxa * 100)}% das ${fmtNum(s.usadasTotal)} usadas/RMDF em aberto` : 'Sem peças usadas ou RMDF em aberto',
       grafico:barraTermometro([[prazoNormal,'good'],[atrasoNormal,'warn'],[s.criticas,'crit']],s.usadasTotal,`${prazoNormal} no prazo, ${atrasoNormal} em atraso até o dobro do prazo e ${s.criticas} acima do dobro do prazo`),
       detalhes:detalhesTermometro([['No prazo',prazoNormal,'good'],['Atraso comum',atrasoNormal,'warn'],['Críticas',s.criticas,'crit']]),nota:'Críticas: acima do dobro do prazo.'},
     {id:'vencidas',nome:'Previsões vencidas',valor:s.vencidas,unidade:'peças',icone:'calendario',conhecido:s.importadas > 0,atual:atual(),critico:s.vencidas > 0,
       leitura:s.agendadas ? `${fmtNum(s.vencidas)} de ${fmtNum(s.agendadas)} peças agendadas` : 'Nenhuma devolução agendada',
       grafico:barraTermometro([[s.vencidas,'crit']],s.agendadas,`${s.vencidas} de ${s.agendadas} peças agendadas estão com previsão vencida`),
-      detalhes:detalhesTermometro([['Usadas',s.vencidasUsadas],['Novas',s.vencidasNovas]]),nota:s.vencidas ? 'A data passou; o saldo segue em aberto.' : s.agendadas ? 'Compromissos dentro das datas combinadas.' : 'Registre as previsões confirmadas por e-mail.'},
+      detalhes:detalhesTermometro([['Usadas',s.vencidasUsadas],['Novas',s.vencidasNovas],['RMDF',s.vencidasRmdf]]),nota:s.vencidas ? 'A data passou; o saldo segue em aberto.' : s.agendadas ? 'Compromissos dentro das datas combinadas.' : 'Registre as previsões confirmadas por e-mail.'},
     {id:'respostas',nome:'Pendências por e-mail',valor:s.semRetorno,unidade:'técnicos',icone:'email',conhecido:s.importadas > 0,atual:atual(),
       leitura:'Responsáveis contados sem duplicação',
       grafico:`<span class="termometro-espera">${icone('relogio')}${s.maiorEspera ? `Maior espera: ${plural(s.maiorEspera,'dia','dias')}` : s.formalizar ? 'Falta enviar a cobrança formal' : 'Nenhuma resposta em atraso'}</span>`,
@@ -90,7 +91,7 @@ function termometroOperacao(D) {
       grafico:barraTermometro([[s.excesso,'warn']],s.tecnicosComLimite,`${s.excesso} de ${s.tecnicosComLimite} técnicos estão acima do limite`),
       detalhes:detalhesTermometro([['Peças excedentes',s.excessoPecas],['Dentro do limite',s.dentroLimite]]),nota:'Respeita o limite individual de cada técnico.'},
   ];
-  const prioridade = s.atrasadas ? {titulo:'Priorize as peças usadas em atraso',fator:'usadas',botao:'Conferir peças'}
+  const prioridade = s.atrasadas ? {titulo:'Priorize as peças usadas e RMDF em atraso',fator:'usadas',botao:'Conferir peças'}
     : s.vencidas ? {titulo:'Retome as devoluções com prazo vencido',fator:'vencidas',botao:'Rever previsões'}
     : s.semRetorno ? {titulo:'Conclua a formalização por e-mail',fator:'respostas',botao:'Acompanhar respostas'}
     : s.excesso ? {titulo:'Recolha ou redistribua o estoque excedente',fator:'excesso',botao:'Analisar estoque'}
@@ -117,7 +118,7 @@ function termometroOperacao(D) {
     }).join('')}</div></div>
     <div class="termometro-prioridade"><span class="termometro-prioridade-icone">${icone(afetadas ? 'alerta' : s.nivel === 'incompleta' ? 'arquivo' : 'ok')}</span><div><span class="termometro-prioridade-rotulo">${afetadas ? 'PRÓXIMA AÇÃO' : 'ACOMPANHAMENTO'}</span><h3>${prioridade.titulo}</h3><p>${esc(s.motivo)}</p></div>${prioridade.fator ? `<button class="btn" data-acao="termometro-abrir" data-prioridade="${prioridade.fator}">${prioridade.botao}${icone('seta')}</button>` : s.nivel === 'incompleta' && podeAdministrar() ? `<button class="btn" data-acao="ir" data-pagina="importar">${icone('upload')}Importar planilhas</button>` : ''}</div>
     <footer class="termometro-rodape"><div class="termometro-base"><span>${icone(s.desatualizadas || !s.importadas ? 'relogio' : 'ok')}${!s.importadas ? 'Sem planilhas importadas' : s.desatualizadas ? 'Base parcial ou desatualizada' : 'Base atualizada hoje'}</span><div>${['usadas','novas',...(D.frescor.some(f=>f.tipo==='rmdf')?['rmdf']:[])].map(tipo=>{const fs=D.frescor.filter(f=>f.tipo===tipo),qtd=fs.filter(f=>f.em&&f.dias===0).length;return `<span class="termometro-frescor ${fs.length&&qtd===fs.length?'completa':''}"><i></i>${tipo==='rmdf'?'RMDF':tipo==='usadas'?'Usadas':'Novas'}<b>${qtd}/${fs.length}</b> hoje</span>`;}).join('')}</div></div>
-      <details class="termometro-criterios"><summary>${icone('info')}Como a situação é definida${icone('baixo')}</summary><div class="termometro-regras"><div><strong><i class="faixa-controlada"></i>Controlada</strong><p>Planilhas de hoje completas e nenhum desvio nas quatro frentes acompanhadas.</p></div><div><strong><i class="faixa-atencao"></i>Atenção</strong><p>Alguma usada em atraso, pendência por e-mail ou técnico acima do limite de novas.</p></div><div><strong><i class="faixa-critica"></i>Crítica</strong><p>25% ou mais das usadas atrasadas, alguma usada acima do dobro do prazo ou alguma previsão vencida.</p></div></div><p>Os prazos e limites personalizados são respeitados. Uma previsão futura não apaga o atraso real da peça. E-mails sem resposta registrada entram no dia seguinte; avisos por WhatsApp sem cobrança formal entram imediatamente. Menos de 10 peças novas está dentro do limite padrão. O limite se aplica a todos os técnicos acompanhados.</p><p>Prevalece a faixa mais grave. As barras mostram quantidades da última base disponível; o medidor representa uma categoria, não uma nota percentual. Planilhas ausentes ou antigas impedem confirmar que a operação está controlada.</p></details>
+      <details class="termometro-criterios"><summary>${icone('info')}Como a situação é definida${icone('baixo')}</summary><div class="termometro-regras"><div><strong><i class="faixa-controlada"></i>Controlada</strong><p>Planilhas de hoje completas e nenhum desvio nas quatro frentes acompanhadas.</p></div><div><strong><i class="faixa-atencao"></i>Atenção</strong><p>Alguma usada ou RMDF em atraso, pendência por e-mail ou técnico acima do limite de novas.</p></div><div><strong><i class="faixa-critica"></i>Crítica</strong><p>25% ou mais das usadas e RMDF atrasadas, alguma peça acima do dobro do prazo ou alguma previsão vencida.</p></div></div><p>Os prazos e limites personalizados são respeitados. Uma previsão futura não apaga o atraso real da peça. E-mails sem resposta registrada entram no dia seguinte; avisos por WhatsApp sem cobrança formal entram imediatamente. Menos de 10 peças novas está dentro do limite padrão. O limite se aplica a todos os técnicos acompanhados.</p><p>Prevalece a faixa mais grave. As barras mostram quantidades da última base disponível; o medidor representa uma categoria, não uma nota percentual. Planilhas ausentes ou antigas impedem confirmar que a operação está controlada.</p></details>
     </footer>
   </section>`;
 }
@@ -127,7 +128,7 @@ function abrirFatorTermometro(fator) {
     Object.assign(UI.es, { regiao: '', status: 'acima', busca: '' }); irPara('estoque');
   } else if (fator === 'usadas') {
     // Atraso real inclui peças com previsão; consulta avançada usa o prazo individual.
-    UIconsulta.filtros = { ...FILTROS_CONSULTA, tipo: 'usadas', origem: 'atual', situacao: 'atrasada' };
+    UIconsulta.filtros = { ...FILTROS_CONSULTA, tipo: 'retornos', origem: 'atual', situacao: 'atrasada' };
     UIconsulta.visao = 'pecas'; UIconsulta.pagina = 1; irPara('consulta');
   } else {
     Object.assign(UI.cob, { tipo: 'todas', aba: fator === 'vencidas' ? 'vencidas' : 'respostas', resposta: 'pendentes', somenteMeus: false, foco: '', regiao: '', busca: '' }); irPara('cobrancas');

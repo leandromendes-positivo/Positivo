@@ -26,7 +26,7 @@ function documentoOperacional(caminho,d){
     const chaves=(d.chaves||[]).filter(c=>!regiaoDesativada(c.split(':')[1]));
     const parcial=arquivos.length!==(d.arquivos||[]).length||chaves.length!==(d.chaves||[]).length;
     if(parcial&&!arquivos.length&&!chaves.length)return null;
-    return {...d,arquivos,chaves,avisos:(d.avisos||[]).filter(a=>!/(?:\bTO\b|Tocantins)/i.test(a)),escopoParcial:d.escopoParcial||parcial,...(parcial?{devolvidas:arquivos.filter(a=>a.tipo==='usadas').reduce((s,a)=>s+(a.saidasQtd||0),0)}:{})};
+    return {...d,arquivos,chaves,avisos:(d.avisos||[]).filter(a=>!/(?:\bTO\b|Tocantins)/i.test(a)),escopoParcial:d.escopoParcial||parcial,...(parcial?{devolvidas:arquivos.filter(a=>a.tipo==='usadas'||a.tipo==='rmdf').reduce((s,a)=>s+(a.saidasQtd||0),0)}:{})};
   }
   // Totais antigos não possuem separação por UF: não apresenta um agregado misto como se fosse apenas da operação atual.
   if(colecao==='historico'&&d.escopoParcial&&d.tot?.usadas==null)return null;

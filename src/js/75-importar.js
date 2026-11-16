@@ -95,7 +95,7 @@ function renderImportar() {
   partes.push(`<div class="grade-2">${cartao("Última atualização de cada planilha", tabelaFrescor(D), { sub: "Importe todo dia para os prazos ficarem certos" })}${cartao("Como nomear os arquivos", `<div class="dicas-nome">
       <p>O sistema reconhece a região e o tipo pelo nome do arquivo e confere pelas colunas:</p>
       <ul><li><span class="mono">PR Novas.csv</span> · <span class="mono">PR Usadas.csv</span> · <span class="mono">PR RMDF.csv</span></li><li><span class="mono">RS Novas.csv</span> · <span class="mono">RS Usadas.csv</span> · <span class="mono">RS RMDF.csv</span></li><li><span class="mono">SC Novas.csv</span> · <span class="mono">SC Usadas.csv</span> · <span class="mono">SC RMDF.csv</span></li></ul>
-      <p>Cada planilha substitui somente a foto anterior do mesmo tipo e UF. RMDF fica em uma relação separada, sem somar ao estoque de novas/usadas e sem baixar peças automaticamente. Peça usada que sumiu do relatório conta como <strong>devolvida</strong> naquele dia.</p><p><strong>Dias com peças novas:</strong> a contagem começou em ${fmtData(INICIO_CONTAGEM_NOVAS)}. A primeira aparição acompanhada é o dia 1; o mesmo material nos relatórios seguintes do técnico mantém a data inicial. Reenviar no mesmo dia não soma dias. Se o material sair e depois voltar, começa uma nova contagem.</p></div>`)}</div>`);
+      <p>Cada planilha substitui somente a foto anterior do mesmo tipo e UF. RMDF identifica peças novas que apresentaram defeito no atendimento e integra o estoque do técnico. Peças usadas ou RMDF que saem da planilha contam como <strong>devolvida</strong> naquele dia.</p><p><strong>Dias com peças novas:</strong> a contagem começou em ${fmtData(INICIO_CONTAGEM_NOVAS)}. A primeira aparição acompanhada é o dia 1; o mesmo material nos relatórios seguintes do técnico mantém a data inicial. Reenviar no mesmo dia não soma dias. Se o material sair e depois voltar, começa uma nova contagem.</p></div>`)}</div>`);
   partes.push(cartao("Histórico de importações", tabelaImportacoes(), { sub: "Desfazer volta as planilhas daquela importação para a versão anterior" }));
   return partes.join("");
 }
@@ -103,7 +103,7 @@ function renderImportar() {
 function cartaoFila() {
   const s = UI.im;
   const pendentes = s.fila.filter((i) => !i.lido);
-  return cartao(pendentes.length ? "Confira antes de importar" : "Prontas para importar", `${s.fila.some(i=>i.tipo==='rmdf')?'<p class="nota">RMDF foi reconhecido como uma relação separada. Confira os tipos e as UFs antes de confirmar; suas peças não serão somadas às novas ou usadas.</p>':''}<div class="tabela-rolagem"><table class="tabela compacta">
+  return cartao(pendentes.length ? "Confira antes de importar" : "Prontas para importar", `${s.fila.some(i=>i.tipo==='rmdf')?'<p class="nota">RMDF foi reconhecido como peças com defeito. Confira os tipos e as UFs antes de confirmar.</p>':''}<div class="tabela-rolagem"><table class="tabela compacta">
     <thead><tr><th>Arquivo</th><th>Região</th><th>Tipo</th><th class="num">Linhas</th><th>Situação</th></tr></thead>
     <tbody>${s.fila.map((it, n) => `<tr>
       <td class="mono">${esc(it.nome)}</td>
@@ -120,7 +120,7 @@ function cartaoResultado(r) {
   const linhas = r.resultados.map((x) => {
     const usadas = x.tipo === "usadas";
     const rmdf = x.tipo === "rmdf";
-    const mud = rmdf ? `${pill('info',fmtNum(x.qtd)+' peças na relação RMDF')}${x.saidas?pill('neutro',fmtNum(x.saidasQtd||x.saidas)+' fora da relação; sem baixa automática'):''}` : usadas
+    const mud = usadas || rmdf
       ? `${x.entradas ? pill("alerta", `+${fmtNum(x.entradas)} novas pendências`, "mais") : ""}${x.saidas ? pill("ok", `${fmtNum(x.saidasQtd || x.saidas)} devolvidas`, "retorno") : ""}${!x.entradas && !x.saidas ? pill("neutro", "Sem mudanças", "ok") : ""}`
       : `${x.entradas ? pill("info", `+${fmtNum(x.entradas)} itens novos`, "mais") : ""}${x.saidas ? pill("neutro", `${fmtNum(x.saidas)} itens saíram`, "retorno") : ""}${x.alterados ? pill("neutro", `${fmtNum(x.alterados)} com quantidade alterada`, "lapis") : ""}${!x.entradas && !x.saidas && !x.alterados ? pill("neutro", "Sem mudanças", "ok") : ""}`;
     return `<tr>

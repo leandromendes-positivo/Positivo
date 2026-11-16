@@ -6,7 +6,7 @@ const UI = {
   pagina: "painel",
   tid: null,
   posRender: null,
-  cob: { tipo: "usadas", resposta: "aguardando", somenteMeus: false, aba: "cobrar", foco: "", regiao: "", busca: "", ordem: "dias", abertos: new Set() },
+  cob: { tipo: "retornos", resposta: "aguardando", somenteMeus: false, aba: "cobrar", foco: "", regiao: "", busca: "", ordem: "dias", abertos: new Set() },
   us: { aba: "pendentes", status: "todas", regiao: "", tid: "", busca: "", faixa: null, ordem: { campo: "dias", dir: "desc" }, pagina: 1, paginaDev: 1, sel: new Set() },
   es: { regiao: "", status: "", busca: "", ordem: { campo: "novasQtd", dir: "desc" }, abertos: new Set() },
   tc: { regiao: "", busca: "", mostrarSemDados: false, ordem: { campo: "nome", dir: "asc" } },
@@ -23,7 +23,7 @@ const PAGINAS = {
   usadas: { titulo: "Peças usadas", icone: "retorno", render: renderUsadas },
   consulta: { titulo: "Consulta de peças", nav: "Consulta avançada", icone: "busca", render: renderConsulta },
   inventario: { titulo: "Histórico de inventário", icone: "caixa", render: renderInventario },
-  rmdf: { titulo: 'Relação RMDF', icone: 'retorno', render: renderRmdf },
+  rmdf: { titulo: 'Peças RMDF', icone: 'retorno', render: renderRmdf },
   estoque: { titulo: "Estoque de novas", icone: "caixa", render: renderEstoque },
   tecnicos: { titulo: "Técnicos", icone: "pessoas", render: renderTecnicos },
   ferias: { titulo: "Férias da equipe", icone: "calendario", render: renderFerias, depois: prepararTelaFerias },
@@ -250,6 +250,7 @@ const ACOES = {
   "painel-mapa-modo": (el) => atualizarFiltroPainel("mapaModo", el.dataset.modo, `[data-acao="painel-mapa-modo"][data-modo="${el.dataset.modo}"]`),
   "painel-periodo": (el) => atualizarFiltroPainel("periodo", Number(el.dataset.periodo), `[data-acao="painel-periodo"][data-periodo="${el.dataset.periodo}"]`),
   "painel-regiao-abrir": () => {
+    if(UIpainel.mapaModo==="rmdf"){UIrmdf.regiao=UIpainel.regiao;UIrmdf.aba="pendentes";UIrmdf.status="cobrar";UIrmdf.pagina=1;irPara("rmdf");return;}
     if (UIpainel.mapaModo === "novas") {
       Object.assign(UI.es, { regiao: UIpainel.regiao, status: "", busca: "" });
       irPara("estoque");
@@ -294,7 +295,7 @@ const ACOES = {
     const t = D.mapa.get(el.dataset.tid);
     if (!t) return;
     let itens = itensDaAba(t, el.dataset.aba || "cobrar", D.hoje);
-    if (!itens.length) itens = t.usadas;
+    if (!itens.length) itens = t.retornos;
     modalPrevisao(itens, `Previsão de ${t.nome}`);
   },
   "tipo-cob": el => { UI.cob.tipo=el.dataset.tipo;UI.cob.foco='';UI.cob.abertos.clear();renderizar(true); },
@@ -345,6 +346,9 @@ const ACOES = {
   "status-es": (el) => { UI.es.status = UI.es.status === el.dataset.status && el.dataset.status ? "" : el.dataset.status; if (UI.pagina !== "estoque") irPara("estoque"); else renderizar(true); },
   "abrir-es": (el) => { const s = UI.es.abertos; s.has(el.dataset.tid) ? s.delete(el.dataset.tid) : s.add(el.dataset.tid); renderizar(true); },
   "rmdf-pagina": el=>{UIrmdf.pagina=Math.max(1,UIrmdf.pagina+Number(el.dataset.delta));renderizar(true);},
+  'rmdf-aba': el=>{UIrmdf.aba=el.dataset.aba;UIrmdf.pagina=1;renderizar(true);},
+  'rmdf-previsao': el=>{const i=derivar().rmdf.find(i=>i.k===el.dataset.k);if(i)modalPrevisao([i],'Previsão de devolução · RMDF');},
+  'rmdf-cobrar': el=>{const i=derivar().rmdf.find(i=>i.k===el.dataset.k);if(i)modalCobrar(i.tid,'cobrar',[i]);},
   "exportar-rmdf": ()=>exportarRmdf(),
   "exportar-estoque": () => exportarEstoque(),
   "exportar-tecnicos": () => exportarTecnicos(),
@@ -383,12 +387,12 @@ const MUDANCAS = {
   "ranking-regiao": (el) => { UIranking.regiao = el.value; renderizar(true); },
   "consulta-ordem": (el) => { estadoConsulta().ordem = el.value; estadoConsulta().pagina = 1; renderizar(true); },
   "previsao-item": async el => {
-    const i=derivar().itens.find(i=>i.k===el.dataset.k);if(!i)return;
+    const i=derivar().retornos.find(i=>i.k===el.dataset.k);if(!i)return;
     const data=el.value;el.value=i.previsao || '';modalConfirmacao(i.tid,[i.k],data);
   },
   "obs-item": async (el) => {
     const D = derivar();
-    const item = D.itens.find((i) => i.k === el.dataset.k && i.tid === el.dataset.tid);
+    const item = D.retornos.find((i) => i.k === el.dataset.k && i.tid === el.dataset.tid);
     if (!item || (item.obs || "") === el.value.trim()) return;
     try { await definirObs(item, el.value.trim()); toast("Observação salva."); } catch (e) { toast(erroAmigavel(e).message, "erro"); }
   },
@@ -403,6 +407,7 @@ const MUDANCAS = {
   "regiao-es": (el) => { UI.es.regiao = el.value; renderizar(true); },
   "inventario-filtro": el => { UIinventario[el.dataset.campo]=el.value;UIinventario.pagina=1;renderizar(true); },
   "rmdf-regiao": el=>{UIrmdf.regiao=el.value;UIrmdf.pagina=1;renderizar(true);},
+  'rmdf-status': el=>{UIrmdf.status=el.value;UIrmdf.pagina=1;renderizar(true);},
   'pdf-tecnico-uf': el=>{UIpdfTecnico.uf=el.value;UIpdfTecnico.pagina=1;renderizar(true);},
   "regiao-tc": (el) => { UI.tc.regiao = el.value; renderizar(true); },
   "sem-dados-tc": (el) => { UI.tc.mostrarSemDados = el.checked; renderizar(true); },

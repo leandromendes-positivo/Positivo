@@ -18,14 +18,15 @@ function linhasInventario() {
   const linhas=[];
   const adicionar=i=>linhas.push({...i,nome:nomeTecnico(i.tid),desc:E.catalogo[i.mat]||'',localidade:E.cadastro[i.tid]?.localidade||''});
   for(const i of E.usadas) adicionar({...i,tipo:'usadas',estado:'em_estoque',desde:i.desde,saida:'',origem:'atual',situacao:'Com o técnico'});
+  for(const i of E.rmdf) adicionar({...i,k:chavePecaRmdf(i.k),tipo:'rmdf',estado:'em_estoque',saida:'',origem:'atual',situacao:'Com o técnico · RMDF'});
   for(const n of E.novas) adicionar({...n,tipo:'novas',estado:'em_estoque',saida:'',origem:'atual',situacao:'Com o técnico'});
-  for(const d of UIinventario.devolucoes) adicionar({...d,tipo:'usadas',estado:'devolvida',saida:d.em,desde:d.desde,origem:'historico',situacao:'Devolvida · saída da planilha'});
+  for(const d of UIinventario.devolucoes) adicionar({...d,tipo:d.tipo||'usadas',estado:'devolvida',saida:d.em,desde:d.desde,origem:'historico',situacao:'Devolvida · saída da planilha'});
   for(const m of UIinventario.movimentos) adicionar({...m,tipo:'novas',estado:m.destino==='pendente'?'presumida':m.destino==='devolucao'?'devolvida':m.destino,saida:m.em,origem:'historico',situacao:m.destino==='pendente'?'Devolução presumida':situacaoSaidaNova(m)});
   return linhas;
 }
 function filtrarInventario(linhas=linhasInventario(), f=UIinventario) {
   const termos=normBusca(f.busca).split(/\s+/).filter(Boolean);
-  return linhas.filter(i=>(!f.tid||i.tid===f.tid)&&(!f.tipo||i.tipo===f.tipo)&&(!f.estado||(f.estado==='devolvidas'?['devolvida','presumida'].includes(i.estado):f.estado==='rmdf'?i.condicaoDevolucao==='rmdf'&&i.destino==='devolucao':i.estado===f.estado))&&termos.every(t=>normBusca(`${i.mat} ${i.desc} ${i.nome} ${i.chamado||''} ${i.nf||''}`).includes(t)))
+  return linhas.filter(i=>(!f.tid||i.tid===f.tid)&&(!f.tipo||i.tipo===f.tipo)&&(!f.estado||(f.estado==='devolvidas'?['devolvida','presumida'].includes(i.estado):f.estado==='rmdf'?i.tipo==='rmdf'||i.destino==='rmdf'||i.condicaoDevolucao==='rmdf'&&i.destino==='devolucao':i.estado===f.estado))&&termos.every(t=>normBusca(`${i.mat} ${i.desc} ${i.nome} ${i.chamado||''} ${i.nf||''}`).includes(t)))
     .sort((a,b)=>comparar(b.saida||'9999',a.saida||'9999')||comparar(a.nome,b.nome)||comparar(a.mat,b.mat));
 }
 async function exportarInventario() {

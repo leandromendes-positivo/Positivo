@@ -57,8 +57,8 @@ try {
   await estado.evaluate((el) => el.blur());
 
   const metricas = await page.evaluate(() => {
-    const D = { hoje: '2026-10-05', cfg: { prazo: 7 }, kpi: { usadas: 5, atrasadas: 2 },
-      itens: [{ regiao: 'PR', qtd: 3, dias: 4 }, { regiao: 'PR', qtd: 2, dias: 20, atrasada: true }],
+    const D = { hoje: '2026-10-05', cfg: { prazo: 7 }, kpi: { usadas: 5, retornos:5, atrasadas: 2 },
+      retornos: [{ tipo:'usadas', regiao: 'PR', qtd: 3, dias: 4 }, { tipo:'usadas', regiao: 'PR', qtd: 2, dias: 20, atrasada: true }],
       cobrarTec: [{ ultimaCobranca: null }, { ultimaCobranca: { em: '2026-10-05T08:00:00' } }],
       frescor: [{ tipo: 'novas', regiao: 'PR', em: '2026-10-05T09:00:00' }],
       tecnicos: [
@@ -71,7 +71,7 @@ try {
   });
   assert.deepEqual(metricas, [.6, 10.4, 2, 1, 1, 10, 40]);
   assert.deepEqual(await page.evaluate(() => [0, 10, 25, 50, 75].map((n) => riscoEstado({}, { acima: n, ideal: 100 - n }, true).nivel)), ['baixo', 'baixo', 'moderado', 'alto', 'critico']);
-  assert.equal(await page.evaluate(() => riscoEstado({ itens: [] }, { regiao: 'PR', total: 0 }, false).percentual), 0);
+  assert.equal(await page.evaluate(() => riscoEstado({ retornos: [] }, { regiao: 'PR', total: 0 }, false).percentual), 0);
   // Uma planilha vazia já importada é dado conhecido; não equivale a ausência de relatório.
   assert.equal(await page.evaluate(() => dadosMapa({ porRegiao: [], frescor: [{ regiao: 'AC', tipo: 'usadas', em: '2026-10-05' }] })[0].total), 0);
 
@@ -130,11 +130,10 @@ try {
   assert.equal(await card.evaluate((el) => el.style.getPropertyValue('--inclina-x')), '');
 
   // Os atalhos dos indicadores limpam os filtros de consultas anteriores.
-  await page.evaluate(() => { UI.us.regiao = 'ZZ'; UI.us.busca = 'antigo'; UI.us.sel.add('invisivel'); });
+  await page.evaluate(() => { UI.cob.regiao='ZZ';UI.cob.busca='antigo';UI.cob.tipo='novas'; });
   await card.click();
-  assert.deepEqual(await page.evaluate(() => [UI.us.regiao, UI.us.busca, UI.us.status, UI.us.sel.size]), ['', '', 'todas', 0]);
-  assert.equal(await page.locator('[data-acao="aba-us"][data-aba="pendentes"] .contador').innerText(), '10', 'soma peças, inclusive chamados com mais de uma unidade');
-  assert.equal(await page.locator('[data-acao="status-us"][data-status="todas"] span').innerText(), '10');
+  assert.deepEqual(await page.evaluate(() => [UI.pagina,UI.cob.regiao,UI.cob.busca,UI.cob.tipo,UI.cob.aba]), ['cobrancas','','','retornos','todos']);
+  assert.equal(await page.evaluate(()=>dadosListaCobrancas().reduce((s,r)=>s+r.qtd,0)),10,'o atalho inclui usadas e RMDF e soma quantidades');
   await page.locator('[data-nav="painel"]').click();
   await page.evaluate(() => { UI.es.regiao = 'ZZ'; UI.es.status = 'acima'; });
   await page.locator('.kpi-estoque').click();

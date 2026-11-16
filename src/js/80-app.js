@@ -73,7 +73,7 @@ function irPara(pagina, { tid = null } = {}) {
 function limparFiltrosForaDaOperacao() {
   const filtros = [UI.cob, UI.us, UI.es, UI.tc, UIpainel, UIranking, UIrmdf,
     UIconsulta.filtros, UIconsultaNovas.filtros, UIrelatorios.filtros, UIrelatorios.rascunho,
-    UIferias, UIcolaboradores];
+    UIferias, UIcolaboradores, UIpdfTecnico];
   for (const filtro of filtros) if (filtro) {
     for (const campo of ['regiao', 'uf']) if (regiaoDesativada(filtro[campo])) filtro[campo] = '';
   }
@@ -201,6 +201,8 @@ const ACOES = {
   'portal-historico': () => modalEventosTecnico(),
   'respostas-atualizar': () => { RespostasTecnicos.chave='';carregarRespostasTecnicos(); },
   "relatorios-exportar": el => exportarRelatorio(el.dataset.formato),
+  'pdf-tecnico-baixar': el=>exportarPdfTecnico(el.dataset.tid,el.dataset.uf),
+  'pdf-tecnico-pagina': el=>{UIpdfTecnico.pagina=Math.max(1,UIpdfTecnico.pagina+Number(el.dataset.delta));renderizar(true);},
   "relatorios-pecas": () => modalPecasRelatorio(),
   "relatorios-atualizar": () => { relatorioHistorico.chave = ''; renderizar(true); },
   "relatorios-limpar": () => { UIrelatorios.filtros = filtrosIniciaisRelatorio(); UIrelatorios.rascunho = null; UIrelatorios.pagina = 1; renderizar(true); },
@@ -401,6 +403,7 @@ const MUDANCAS = {
   "regiao-es": (el) => { UI.es.regiao = el.value; renderizar(true); },
   "inventario-filtro": el => { UIinventario[el.dataset.campo]=el.value;UIinventario.pagina=1;renderizar(true); },
   "rmdf-regiao": el=>{UIrmdf.regiao=el.value;UIrmdf.pagina=1;renderizar(true);},
+  'pdf-tecnico-uf': el=>{UIpdfTecnico.uf=el.value;UIpdfTecnico.pagina=1;renderizar(true);},
   "regiao-tc": (el) => { UI.tc.regiao = el.value; renderizar(true); },
   "sem-dados-tc": (el) => { UI.tc.mostrarSemDados = el.checked; renderizar(true); },
   "fila-regiao": (el) => { const it = UI.im.fila[+el.dataset.n]; if (it) { it.regiao = el.value; renderizar(true); } },
@@ -413,6 +416,7 @@ const DIGITACAO = {
   "busca-es": (v) => { UI.es.busca = v; },
   "inventario-busca": v => { UIinventario.busca=v;UIinventario.pagina=1; },
   "rmdf-busca": v=>{UIrmdf.busca=v;UIrmdf.pagina=1;},
+  'pdf-tecnico-busca': v=>{UIpdfTecnico.busca=v;UIpdfTecnico.pagina=1;},
   "busca-tc": (v) => { UI.tc.busca = v; },
 };
 const aplicarBusca = debounce((campo) => {

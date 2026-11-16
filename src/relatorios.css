@@ -1,5 +1,17 @@
 /* Relatórios: tipografia editorial, cores funcionais e tabelas auditáveis. */
 .relatorios{min-width:0;display:grid;gap:22px}
+.rel-individual{padding:20px;border:1px solid var(--line);border-radius:12px;background:var(--surface);min-width:0}
+.rel-individual>header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}.rel-individual>header>.ic{width:26px;height:26px;color:var(--muted);flex-shrink:0}
+.rel-individual h3{font-size:20px;letter-spacing:-.4px;margin:6px 0}.rel-individual header p{font-size:12px;color:var(--muted);line-height:1.6;margin:0;max-width:760px}
+.rel-individual-filtros{display:grid;grid-template-columns:minmax(0,1fr) minmax(130px,.3fr);gap:12px;margin:18px 0}.rel-individual-filtros .campo{margin:0;min-width:0}.rel-individual-filtros :is(input,select){width:100%;min-width:0}
+.rel-tecnicos-grade{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.rel-tecnico-card{padding:16px;border:1px solid var(--line);border-radius:8px;min-width:0;display:flex;flex-direction:column;background:var(--surface-2)}
+.rel-tecnico-card header{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}.rel-tecnico-card h4{font-size:14px;line-height:1.5;margin:0;overflow-wrap:anywhere}.rel-tecnico-card .uf{flex-shrink:0}
+.rel-tecnico-card dl{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:18px 0}.rel-tecnico-card dl>div+div{border-left:1px solid var(--line);padding-left:10px}.rel-tecnico-card dt{font-size:10px;color:var(--muted)}.rel-tecnico-card dd{font-size:23px;font-weight:650;margin:5px 0 0;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.rel-tecnico-card>.btn{width:100%;margin-top:auto;white-space:normal;min-height:40px;font-size:12px}.rel-tecnico-card>p{font-size:12px;line-height:1.6}
+.rel-individual-rodape{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-top:16px}.rel-individual-rodape p{font-size:11px;line-height:1.6;color:var(--muted);flex:1;min-width:180px;margin:0}.rel-individual-rodape>div{display:flex;align-items:center;gap:10px;font-size:12px;white-space:nowrap}
+@media(max-width:1100px){.rel-tecnicos-grade{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.rel-individual{padding:15px}.rel-tecnicos-grade{grid-template-columns:1fr}.rel-individual-filtros{grid-template-columns:1fr}.rel-individual h3{font-size:18px}.rel-individual-rodape p{flex-basis:100%}}
 .rel-intro{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:8px 0 3px}
 .rel-intro h2{font-size:clamp(24px,2.5vw,34px);letter-spacing:-1.1px;margin:7px 0 8px;line-height:1.15}
 .rel-intro p{margin:0;color:var(--muted);font-size:14px;line-height:1.6}

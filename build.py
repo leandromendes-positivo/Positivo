@@ -66,6 +66,8 @@ def main() -> int:
     css = css.replace("/*__FERIAS_CALENDARIO__*/", "data:image/webp;base64," + calendario)
     tema = (SRC / "tema.js").read_text(encoding="utf-8")
     js = "\n".join(p.read_text(encoding="utf-8") for p in sorted((SRC / "js").glob("*.js")))
+    logo_relatorio = base64.b64encode((SRC / "assets" / "positivo-claro.png").read_bytes()).decode("ascii")
+    js = js.replace("/*__LOGO_RELATORIO__*/", "data:image/png;base64," + logo_relatorio)
     js = js.replace("/*__VERSAO_ACESSO__*/", hashlib.sha256(js.encode("utf-8")).hexdigest()[:12])
     imagem_login = base64.b64encode((SRC / "assets" / "login-operacao.png").read_bytes()).decode("ascii")
     js = js.replace("/*__LOGIN_IMAGEM__*/", "data:image/png;base64," + imagem_login)
@@ -102,6 +104,11 @@ def main() -> int:
         if destino.exists():
             shutil.rmtree(destino)
         shutil.copytree(SRC / "vendor", destino)
+        fontes_pdf = {estilo: base64.b64encode((SRC / "vendor" / nome).read_bytes()).decode("ascii")
+                      for estilo, nome in (("normal", "DejaVuSans.ttf"), ("bold", "DejaVuSans-Bold.ttf"))}
+        (destino / "fontes-pdf-tecnico-2.37.js").write_text(
+            "/* DejaVu fonts 2.37. License: dejavu-fonts-LICENSE.txt. */\nwindow.CP_FONTES_PDF_TECNICO = "
+            + json.dumps(fontes_pdf, separators=(",", ":")) + ";\n", encoding="utf-8")
     cabecalho, corpo = pagina.split("<!--__CORPO__-->", 1)
     cabecalho_site = cabecalho
     # Arquivos reais e URLs relativas funcionam no Pages e em domínio próprio.

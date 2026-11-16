@@ -14,6 +14,7 @@ try {
   await import('./importacao-rmdf-e2e.mjs');
   await import('./pecas-novas-e2e.mjs');
   await import('./tempo-pecas-e2e.mjs');
+  await import('./pdf-tecnico-e2e.mjs');
   await import('./retirada-to-e2e.mjs');
   await import('./retirar-to-emulador.mjs');
 } catch(e) {

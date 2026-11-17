@@ -70,6 +70,7 @@ try{
  // Técnico conserva a própria sessão, mas o link de férias não amplia sua permissão.
  await env.withSecurityRulesDisabled(async c=>{
   const db=c.firestore();await db.doc('usuarios/tecnico@teste.com').set({email:'tecnico@teste.com',perfil:'tecnico',ativo:true,tecnicoId:'PR--TEC'});
+  await db.doc('cadastro/tecnicos').set({t:{TEC:{nome:'Técnico de teste',regiao:'PR'}}});
   await db.doc('vinculos_tecnicos/PR--TEC').set({email:'tecnico@teste.com',tid:'TEC',regiao:'PR'});
   await db.doc('dados/indice').set({versao:0,arquivos:{}});
   await db.doc('portal/controle').set({geracao:'geracao-vazia-segura-1234567890',versao:0});

@@ -45,7 +45,7 @@ function renderTecnicos() {
         <th></th>
       </tr></thead>
       <tbody>${lista.map((t) => `<tr>
-        <td><span class="celula-tec">${avatar(t.nome, t.tipo)}<span><button class="link-forte" data-acao="tecnico" data-tid="${esc(t.tid)}">${esc(t.nome)}</button>${t.cad.apelido ? `<small class="sub-celula">${esc(t.nomeOriginal)}</small>` : ""}</span></span></td>
+        <td><span class="celula-tec">${avatar(t.nome, t.tipo)}<span><button class="link-forte" data-acao="tecnico" data-tid="${esc(t.tid)}">${esc(t.nome)}</button>${t.cad.apelido ? `<small class="sub-celula">${esc(t.nomeOriginal)}</small>` : ""}${podeAdministrar()?`<span class="sub-celula"><button class="btn pequeno ${t.cad.excluido?'':'perigo fantasma'}" data-acao="${t.cad.excluido?'reativar-tecnico':'excluir-tecnico'}" data-tid="${esc(t.tid)}">${icone(t.cad.excluido?'desfazer':'fechar')}${t.cad.excluido?'Reativar':'Excluir da relação'}</button></span>`:''}</span></span></td>
         <td>${regiaoTag(t.regiao)}<small class="sub-celula">${LOCALIDADES[t.localidade] || LOCALIDADES[""]}</small></td>
         <td>${t.telefone ? `<span class="mono nowrap">${esc(fmtTelefone(t.telefone))}</span>` : `<button class="link" data-acao="editar-tecnico" data-tid="${esc(t.tid)}">Cadastrar</button>`}</td>
         <td class="num">${fmtNum(t.nUsadas)}</td><td class="num">${fmtNum(t.nRmdf)}</td>
@@ -55,7 +55,7 @@ function renderTecnicos() {
         <td class="num">${t.meta || "Sem limite"}</td>
         <td><button class="botao-prazos" data-acao="editar-prazos" data-tid="${esc(t.tid)}" aria-label="Personalizar prazos de ${esc(t.nome)}"><span>Usadas <strong>${t.prazo} dias</strong>${prazoValido(t.cad.prazoUsadas) !== null ? '<small>próprio</small>' : ''}</span><span>Novas <strong>${t.prazoNovas} dias</strong>${prazoValido(t.cad.prazoNovas) !== null ? '<small>próprio</small>' : ''}</span></button></td>
         <td class="num">${t.mediaDiasDev != null ? `${fmtNum1(t.mediaDiasDev)} d` : "—"}</td>
-        <td><div class="linha-botoes"><button class="btn-icone" data-acao="editar-tecnico" data-tid="${esc(t.tid)}" aria-label="Editar ${esc(t.nome)}" title="Editar cadastro">${icone("lapis")}</button>${podeAdministrar()?`<button class="btn pequeno ${t.cad.excluido?'':'perigo fantasma'}" data-acao="${t.cad.excluido?'reativar-tecnico':'excluir-tecnico'}" data-tid="${esc(t.tid)}">${icone(t.cad.excluido?'desfazer':'fechar')}${t.cad.excluido?'Reativar':'Excluir da relação'}</button>`:''}</div></td>
+        <td><button class="btn-icone" data-acao="editar-tecnico" data-tid="${esc(t.tid)}" aria-label="Editar ${esc(t.nome)}" title="Editar cadastro">${icone("lapis")}</button></td>
       </tr>`).join("")}</tbody></table></div>` : vazio("pessoas", "Ninguém nesta lista", "Mude os filtros acima.")}`;
 }
 

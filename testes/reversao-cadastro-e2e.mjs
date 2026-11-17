@@ -57,7 +57,9 @@ try{
   }
   E.usuarios=await Armazem.consultar('usuarios');UI.tc.mostrarSemDados=true;mudou();irPara('tecnicos');
  });
- await p.locator('[data-acao="excluir-tecnico"][data-tid="SEM-PECAS"]').click();
+ const exclusao=p.locator('[data-acao="excluir-tecnico"][data-tid="SEM-PECAS"]');
+ assert.equal(await exclusao.evaluate(el=>{const r=el.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth;}),true,'excluir aparece ao lado do nome, sem rolar a tabela');
+ await exclusao.click();
  await p.locator('.modal [data-ok]').click();await p.waitForFunction(()=>E.cadastro['SEM-PECAS'].excluido);
  assert.equal(await p.locator('[data-acao="tecnico"][data-tid="SEM-PECAS"]').count(),0);
  const excluido=await p.evaluate(async()=>({

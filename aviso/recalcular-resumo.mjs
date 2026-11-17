@@ -11,7 +11,7 @@ function decodificar(v) {
   }
   return v;
 }
-export async function recalcularResumo(db, dia, {duranteManutencao=false}={}) {
+export async function recalcularResumo(db, dia, {duranteManutencao=false,incluirHistorico=false}={}) {
   if(!duranteManutencao&&(await db.doc('manutencao/limpeza-pecas').get()).exists)throw new Error('Serviço em manutenção.');
   let contexto;
   const armazem = {
@@ -28,5 +28,6 @@ export async function recalcularResumo(db, dia, {duranteManutencao=false}={}) {
   const arquivos=['00-util.js','19-escopo-operacao.js','26-identidade.js','27-portal.js','30-modelo.js','33-confirmacoes.js'];
   const codigo=(await Promise.all(arquivos.map(n=>readFile(new URL(`../src/js/${n}`,import.meta.url),'utf8')))).join('\n');
   vm.runInContext(codigo,contexto);
-  return await vm.runInContext('(async()=>{await carregarTudo();if(E.status!=="pronto")throw new Error("Não foi possível calcular o resumo atualizado.");return montarResumo();})()',contexto);
+  const consulta=incluirHistorico?'{resumo:montarResumo(),historico:montarHistoricoDoDia()}':'montarResumo()';
+  return await vm.runInContext(`(async()=>{await carregarTudo();if(E.status!=="pronto")throw new Error("Não foi possível calcular o resumo atualizado.");return ${consulta};})()`,contexto);
 }

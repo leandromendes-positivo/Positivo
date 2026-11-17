@@ -153,9 +153,7 @@ function tabelaFrescor(D) {
 }
 
 function podeDesfazer(imp) {
-  if (imp.desfeito || imp.escopoParcial) return false;
-  const chaves = imp.chaves || [];
-  return chaves.length > 0 && chaves.every((c) => E.indice.arquivos && E.indice.arquivos[c] && E.indice.arquivos[c].lote === imp.id);
+  try{validarReversaoImportacao(imp,E.indice);return true;}catch{return false;}
 }
 
 function tabelaImportacoes() {

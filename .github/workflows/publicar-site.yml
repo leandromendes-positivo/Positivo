@@ -96,6 +96,7 @@ jobs:
       - name: Testar separação dos estoques
         run: |
           node testes/portal-projecao.mjs
+          node testes/reversao-importacao.mjs
           node testes/lembretes-ferias.mjs
           node testes/cloudflare-ferias.mjs
           node testes/contas.mjs
@@ -116,8 +117,30 @@ jobs:
             exit 1
           fi
           cat /tmp/testes-acesso.log
-  publicar:
+  recuperar-importacao:
     needs: testar-acessos
+    if: github.event_name == 'push' && startsWith(github.event.head_commit.message, 'Restaurar importacao equivocada 2026-11-17')
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+      - name: Instalar ferramenta de recuperação
+        working-directory: seguranca
+        run: npm ci --omit=dev --no-audit --no-fund
+      - name: Restaurar somente o lote autorizado e verificar o resultado
+        working-directory: seguranca
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          RECUPERACAO_DIA: '2026-11-17'
+          RECUPERACAO_VERSAO: '7'
+          RECUPERACAO_IMPORTACAO_ID: 'L20261117092854wf18'
+          RECUPERACAO_IMPORTACAO_AUTORIZACAO: 'L20261117092854wf18'
+        run: node recuperar-importacao.mjs --aplicar
+  publicar:
+    needs: [testar-acessos, recuperar-importacao]
+    if: always() && needs.testar-acessos.result == 'success' && (needs.recuperar-importacao.result == 'success' || needs.recuperar-importacao.result == 'skipped')
     runs-on: ubuntu-24.04
     environment:
       name: github-pages

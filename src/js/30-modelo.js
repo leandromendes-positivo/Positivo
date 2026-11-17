@@ -581,8 +581,7 @@ const agendarResumo = debounce(async () => {
 }, 2500);
 
 /** Totais do dia para o gráfico de evolução (um documento por dia). */
-async function gravarHistoricoDoDia() {
-  const D = derivar();
+function montarHistoricoDoDia(D = derivar()) {
   const t = {};
   for (const x of D.tecnicos) if (x.temDados) t[x.tid] = [x.nUsadas, x.nAtrasadas, x.maxDias, x.novasQtd, x.nRmdf];
   const doc = {
@@ -593,6 +592,10 @@ async function gravarHistoricoDoDia() {
       rmdf: D.kpi.rmdf, retornos: D.kpi.retornos,
     },
   };
+  return doc;
+}
+async function gravarHistoricoDoDia() {
+  const D = derivar(), doc = montarHistoricoDoDia(D);
   await Armazem.gravar(`historico/${D.hoje}`, doc);
   E.historico = [...E.historico.filter((h) => h.data !== D.hoje), { id: D.hoje, ...doc }].sort((a, b) => comparar(a.data, b.data));
 }

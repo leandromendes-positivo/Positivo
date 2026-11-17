@@ -280,7 +280,8 @@ async function importarLote(lidos, aoProgresso = () => {}) {
   const cadastroPortal=structuredClone(E.cadastro);
   for(const [tid,c] of Object.entries(novosTecs))cadastroPortal[tid]={...cadastroPortal[tid],...c};
   const portal=await prepararSaldosTecnicos(fotoPortal.usadas,fotoPortal.novas,cadastroPortal,{...E.catalogo,...novosMats},versao,fotoPortal.rmdf);
-  const arquivo = await confirmarImportacaoNoBanco({ indice: { arquivos: entradasIndice, anterior: anteriores, versao, atualizadoEm: agoraS, origemSessao: Acesso.sessao }, registro, lote, devolvidas, movimentos, hoje, portal });
+  const reversivel=Object.fromEntries([...fotos.keys()].map(c=>[c,true]));
+  const arquivo = await confirmarImportacaoNoBanco({ indice: { arquivos: entradasIndice, anterior: anteriores, reversivel, versao, atualizadoEm: agoraS, origemSessao: Acesso.sessao }, registro, lote, devolvidas, movimentos, hoje, portal });
   E.existe.indice = true;
 
   // a partir daqui a nova foto é a oficial: atualiza a memória
@@ -288,6 +289,7 @@ async function importarLote(lidos, aoProgresso = () => {}) {
     ...E.indice, versao, atualizadoEm: agoraS,
     arquivos: { ...(E.indice.arquivos || {}), ...entradasIndice },
     anterior: { ...(E.indice.anterior || {}), ...anteriores },
+    reversivel: {...E.indice.reversivel,...reversivel},
   };
   E.catalogo = { ...E.catalogo, ...novosMats };
   const cadastro = { ...E.cadastro };
@@ -313,24 +315,18 @@ async function importarLote(lidos, aoProgresso = () => {}) {
 /** Volta a foto anterior das planilhas de uma importação (só a mais recente). */
 async function desfazerImportacao(imp) {
   exigirAdministrador();
-  if(imp.escopoParcial)throw new Error('Esta importação antiga inclui uma UF fora da operação e não pode ser desfeita pelo painel atual.');
-  if((imp.chaves||[]).some(c=>regiaoDesativada(c.split(':')[1])))throw new Error('Esta importação contém uma UF fora da operação.');
-  const chaves = imp.chaves || [], versaoAnterior = E.indice.versao || 0;
+  const chaves = validarReversaoImportacao(imp,E.indice), versaoAnterior = E.indice.versao || 0;
+  const arquivos = {}, anterior = {}, reversivel = {};
   for (const chave of chaves) {
-    if (E.indice.arquivos?.[chave]?.lote !== imp.id) throw new Error('Só dá para desfazer a importação mais recente de cada planilha.');
-  }
-  const arquivos = {}, anterior = {}, apagar = [];
-  for (const chave of chaves) {
-    const [tipo,regiao] = chave.split(':'), atual = E.indice.arquivos[chave];
     arquivos[chave] = E.indice.anterior?.[chave] || null; anterior[chave] = null;
-    for (let i=0;i<(atual.partes||0);i++) apagar.push(caminhoParte(tipo,regiao,atual.gen,i));
+    reversivel[chave]=false;
   }
   let devs = await Armazem.consultar('devolucoes',{onde:[['lote','==',imp.id]],preservarHistorico:true});
   if (!devs.length && imp.devolvidas) devs = (await Armazem.consultar('devolucoes',{preservarHistorico:true})).filter(d=>(d.itens||[]).some(l=>l[9]===imp.id));
   const movs = await Armazem.consultar('movimentos',{onde:[['lote','==',imp.id]],preservarHistorico:true});
   const alteracoes = devs.map(d=>[`devolucoes/${d.id}`,{...d,itens:(d.itens||[]).filter(l=>l[9]!==imp.id)}]);
-  const indice = {arquivos,anterior,versao:versaoAnterior+1,atualizadoEm:agoraISO(),origemSessao:Acesso.sessao};
-  const registro = {desfeito:true,desfeitoEm:agoraISO(),desfeitoPor:identidadeAtual()};
+  const indice = {arquivos,anterior,reversivel,versao:versaoAnterior+1,atualizadoEm:agoraISO(),origemSessao:Acesso.sessao};
+  const registro = {desfeito:true,desfeitoEm:agoraISO(),desfeitoPor:identidadeAtual(),backupReversao:{arquivos:Object.fromEntries(chaves.map(c=>[c,E.indice.arquivos[c]]))}};
   if(Acesso.modo==='firebase') {
     const fotoPortal={usadas:[],novas:[],rmdf:[]};
     for(const [chave,ent] of Object.entries({...E.indice.arquivos,...arquivos})) {
@@ -355,8 +351,7 @@ async function desfazerImportacao(imp) {
     await Armazem.mesclar(`importacoes/${imp.id}`,registro,true);
     await Armazem.mesclar('dados/indice',indice,true);
   }
-  E.indice={...E.indice,...indice,arquivos:{...E.indice.arquivos,...arquivos},anterior:{...E.indice.anterior,...anterior}};
-  for(const c of apagar) {try {await Armazem.apagar(c);}catch(e){console.warn('limpeza',e);}}
+  E.indice={...E.indice,...indice,arquivos:{...E.indice.arquivos,...arquivos},anterior:{...E.indice.anterior,...anterior},reversivel:{...E.indice.reversivel,...reversivel}};
   await Promise.all([carregarFotos(),carregarHistoricos()]); mudou();
   await gravarHistoricoDoDia();
   try {await Armazem.gravar('resumo/atual',montarResumo());}catch(e){console.warn('resumo',e);}

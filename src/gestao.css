@@ -404,6 +404,14 @@ body:has(.principal > .rolagem-horizontal:not([hidden])) #toasts { bottom: calc(
 .tabela tbody tr.selecionada > td:first-child { box-shadow: inset 3px 0 var(--accent); }
 .tabela .link-forte { font-weight: 500; }
 .celula-tec .avatar { border-radius: 4px; background: var(--surface-3); color: var(--ink-2); font: 500 10px var(--f-mono); }
+.tecnico-relacao-controle { display: block; margin-top: 7px; }
+.btn.tecnico-relacao-acao { --relacao-cor: var(--crit-ink); --relacao-fundo: var(--crit-soft); min-height: 34px; padding: 7px 11px; gap: 7px; border-radius: 6px; border: 1px solid color-mix(in srgb, var(--relacao-cor) 28%, var(--line)); color: var(--relacao-cor); background: var(--surface); font-size: 12px; font-weight: 500; box-shadow: none; transform: none; }
+.btn.tecnico-relacao-reativar { --relacao-cor: var(--accent); --relacao-fundo: var(--accent-soft); }
+.btn.tecnico-relacao-acao:hover:not(:disabled) { color: var(--relacao-cor); background: var(--relacao-fundo); border-color: var(--relacao-cor); box-shadow: none; transform: none; }
+.btn.tecnico-relacao-acao:focus { outline: none; box-shadow: none; }
+.btn.tecnico-relacao-acao:focus-visible { outline: 2px solid var(--relacao-cor); outline-offset: 2px; }
+.btn.tecnico-relacao-acao:active:not(:disabled) { background: var(--relacao-fundo); box-shadow: none; transform: none; }
+@media (max-width: 600px), (pointer: coarse) { .btn.tecnico-relacao-acao { min-height: 40px; } }
 #conteudo:not([data-pagina="painel"]) .kpi { border-radius: 6px; box-shadow: none; padding: 16px; }
 #conteudo:not([data-pagina="painel"]) .kpi-rotulo { font-size: 11px; font-weight: 500; }
 #conteudo:not([data-pagina="painel"]) .kpi-valor { font: 500 28px var(--f-mono); }

@@ -276,6 +276,7 @@ const ICONES = {
   busca: '<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>',
   baixar: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/>',
   fechar: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+  lixeira: '<path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/>',
   ok: '<path d="M20 6 9 17l-5-5"/>',
   alerta: '<path d="m21.7 18-8-14a2 2 0 0 0-3.4 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.7-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
   relogio: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',

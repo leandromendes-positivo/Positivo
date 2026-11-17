@@ -3,19 +3,19 @@ const UIpdfTecnico = { busca: '', uf: '', pagina: 1, gerando: '' };
 const LOGO_PDF_TECNICO = '/*__LOGO_RELATORIO__*/';
 const TIPOS_PDF_TECNICO = [['novas','Peças novas'],['usadas','Peças usadas'],['rmdf','RMDF · peças com defeito']];
 
-function opcoesPdfTecnico(D = derivar()) {
+function opcoesPdfTecnico(D = derivar(), situacao = situacaoTecnicosRelatorio()) {
   const mapa = new Map();
   const incluir = (tid, uf) => {
-    if (!tid || !Object.hasOwn(UFS, uf) || regiaoDesativada(uf)) return;
+    if (!tid || !Object.hasOwn(UFS, uf) || regiaoDesativada(uf) || !tecnicoNoRelatorio(tid,situacao)) return;
     const chave = JSON.stringify([tid, uf]);
-    if (!mapa.has(chave)) mapa.set(chave, { chave, tid, uf, nome: nomeBonito(E.cadastro[tid]?.nome)||nomeTecnico(tid), apelido:E.cadastro[tid]?.apelido||'' });
+    if (!mapa.has(chave)) mapa.set(chave, { chave, tid, uf, excluido:tecnicoExcluido(tid), nome: nomeBonito(E.cadastro[tid]?.nome)||nomeTecnico(tid), apelido:E.cadastro[tid]?.apelido||'' });
   };
-  for (const [tid, c] of Object.entries(E.cadastro)) if(!c.excluido)incluir(tid, c.regiao);
+  for (const [tid, c] of Object.entries(E.cadastro)) incluir(tid, c.regiao);
   for (const i of [...D.itens, ...E.novas, ...E.rmdf]) incluir(i.tid, i.regiao);
   return [...mapa.values()].sort((a,b)=>comparar(a.nome,b.nome)||comparar(a.uf,b.uf));
 }
 function dadosPdfTecnico(tid, uf, D = derivar()) {
-  const tecnico = opcoesPdfTecnico(D).find(t=>t.tid===tid&&t.uf===uf);
+  const tecnico = opcoesPdfTecnico(D,'todos').find(t=>t.tid===tid&&t.uf===uf);
   if (!tecnico) throw new Error('O técnico ou a UF não está disponível na operação atual.');
   const pertence = i=>i.tid===tid&&i.regiao===uf;
   const fontes = { novas: D.tecnicos.flatMap(t=>t.novasLinhas).filter(pertence), usadas: D.itens.filter(pertence), rmdf: D.rmdf.filter(pertence) };
@@ -46,7 +46,7 @@ function renderPdfsTecnicos(D) {
     <div class="rel-tecnicos-grade">${lista.slice((s.pagina-1)*9,s.pagina*9).map(t=>{
       let r;try { r=dadosPdfTecnico(t.tid,t.uf,D); }
       catch(e){return `<article class="rel-tecnico-card"><header><h4>${esc(t.nome)}</h4>${regiaoTag(t.uf)}</header><p class="txt-crit">${esc(e.message)}</p><button class="btn" disabled>Confira as quantidades</button></article>`;}
-      return `<article class="rel-tecnico-card"><header><h4>${esc(t.nome)}</h4>${regiaoTag(t.uf)}</header><dl>${r.grupos.map(g=>`<div><dt>${g.tipo==='rmdf'?'RMDF':g.tipo==='novas'?'Novas':'Usadas'}</dt><dd>${g.conhecido?fmtNum(g.quantidade):'—'}</dd></div>`).join('')}</dl><button class="btn" data-acao="pdf-tecnico-baixar" data-tid="${esc(t.tid)}" data-uf="${t.uf}" ${s.gerando?'disabled':''}>${icone('baixar')}${s.gerando===t.chave?'Preparando PDF…':'Baixar PDF individual'}</button></article>`;
+      return `<article class="rel-tecnico-card"><header><h4>${esc(t.nome)}</h4>${regiaoTag(t.uf)}</header>${t.excluido?'<span class="rel-tecnico-excluido">Excluído da relação</span>':''}<dl>${r.grupos.map(g=>`<div><dt>${g.tipo==='rmdf'?'RMDF':g.tipo==='novas'?'Novas':'Usadas'}</dt><dd>${g.conhecido?fmtNum(g.quantidade):'—'}</dd></div>`).join('')}</dl><button class="btn" data-acao="pdf-tecnico-baixar" data-tid="${esc(t.tid)}" data-uf="${t.uf}" ${s.gerando?'disabled':''}>${icone('baixar')}${s.gerando===t.chave?'Preparando PDF…':'Baixar PDF individual'}</button></article>`;
     }).join('')||'<p class="nota">Nenhum técnico encontrado. Revise a busca ou a UF.</p>'}</div>
     <div class="rel-individual-rodape"><p>${plural(lista.length,'relatório disponível','relatórios disponíveis')}</p><div><button class="btn pequeno" data-acao="pdf-tecnico-pagina" data-delta="-1" ${s.pagina<=1?'disabled':''}>Anterior</button><span>${s.pagina} / ${paginas}</span><button class="btn pequeno" data-acao="pdf-tecnico-pagina" data-delta="1" ${s.pagina>=paginas?'disabled':''}>Próxima</button></div></div></section>`;
 }
@@ -94,7 +94,7 @@ async function gerarPdfTecnico(r) {
   cabecalho(true);
   fonte(17,true);const nome=doc.splitTextToSize(limpo(r.nome),182);doc.text(nome,14,42);
   let y=42+(nome.length-1)*7+7;
-  texto(`${UFS[r.uf]||r.uf} · Emitido em ${fmtDataHora(r.emitido)} (Brasília)`,14,y,8,false,cor.suave);y+=7;
+  texto(`${UFS[r.uf]||r.uf}${r.excluido?' · Excluído da relação':''} · Emitido em ${fmtDataHora(r.emitido)} (Brasília)`,14,y,8,false,cor.suave);y+=7;
   const cards=[['TOTAL EM ESTOQUE',r.total],...r.grupos.map(g=>[g.tipo==='novas'?'PEÇAS NOVAS':g.tipo==='usadas'?'PEÇAS USADAS':'PEÇAS RMDF',g.conhecido?g.quantidade:null])];
   cards.forEach(([titulo,quantidade],n)=>{
     const x=14+n*46.5;doc.setFillColor(n?cor.fundo:cor.tinta);doc.roundedRect(x,y,42.5,24,2.5,2.5,'F');

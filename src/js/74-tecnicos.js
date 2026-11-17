@@ -2,10 +2,16 @@
    Página: Técnicos (cadastro) e ficha individual do técnico.
    ========================================================================== */
 
+function botaoRelacaoTecnico(t, compacto = true) {
+  if(!podeAdministrar())return '';
+  const excluido=tecnicoExcluido(t.tid),rotulo=excluido?(compacto?'Reativar':'Reativar técnico'):(compacto?'Excluir':'Excluir da relação');
+  return `<button type="button" class="btn tecnico-relacao-acao ${excluido?'tecnico-relacao-reativar':''}" data-acao="${excluido?'reativar-tecnico':'excluir-tecnico'}" data-tid="${esc(t.tid)}" aria-label="${excluido?'Reativar':'Excluir'} ${esc(t.nome)} ${excluido?'na':'da'} relação" title="${excluido?'Reativar técnico':'Excluir da relação'}">${icone(excluido?'desfazer':'lixeira')}<span>${rotulo}</span></button>`;
+}
+
 function filtrarTecnicos(D, s = UI.tc) {
   const busca = normBusca(s.busca);
   const excluidos=s.situacao==='excluidos';
-  return D.tecnicos.filter(t => (!!t.cad?.excluido===excluidos)&&(excluidos||t.temDados || s.mostrarSemDados)
+  return D.tecnicos.filter(t => (!!t.cad?.excluido===excluidos)&&(excluidos||t.temDados || s.mostrarSemDados || !!busca)
     && (!s.regiao || t.regiao === s.regiao)
     && (!busca || normBusca(`${t.nome} ${t.nomeOriginal} ${t.telefone} ${t.email}`).includes(busca)));
 }
@@ -45,7 +51,7 @@ function renderTecnicos() {
         <th></th>
       </tr></thead>
       <tbody>${lista.map((t) => `<tr>
-        <td><span class="celula-tec">${avatar(t.nome, t.tipo)}<span><button class="link-forte" data-acao="tecnico" data-tid="${esc(t.tid)}">${esc(t.nome)}</button>${t.cad.apelido ? `<small class="sub-celula">${esc(t.nomeOriginal)}</small>` : ""}${podeAdministrar()?`<span class="sub-celula"><button class="btn pequeno ${t.cad.excluido?'':'perigo fantasma'}" data-acao="${t.cad.excluido?'reativar-tecnico':'excluir-tecnico'}" data-tid="${esc(t.tid)}">${icone(t.cad.excluido?'desfazer':'fechar')}${t.cad.excluido?'Reativar':'Excluir da relação'}</button></span>`:''}</span></span></td>
+        <td><span class="celula-tec">${avatar(t.nome, t.tipo)}<span><button class="link-forte" data-acao="tecnico" data-tid="${esc(t.tid)}">${esc(t.nome)}</button>${t.cad.apelido ? `<small class="sub-celula">${esc(t.nomeOriginal)}</small>` : ""}${podeAdministrar()?`<span class="tecnico-relacao-controle">${botaoRelacaoTecnico(t)}</span>`:''}</span></span></td>
         <td>${regiaoTag(t.regiao)}<small class="sub-celula">${LOCALIDADES[t.localidade] || LOCALIDADES[""]}</small></td>
         <td>${t.telefone ? `<span class="mono nowrap">${esc(fmtTelefone(t.telefone))}</span>` : `<button class="link" data-acao="editar-tecnico" data-tid="${esc(t.tid)}">Cadastrar</button>`}</td>
         <td class="num">${fmtNum(t.nUsadas)}</td><td class="num">${fmtNum(t.nRmdf)}</td>
@@ -109,7 +115,7 @@ function renderFicha(tid) {
         ${t.obs ? `<p class="ficha-obs"></p>` : ""}
       </div>
       <div class="ficha-acoes"><button class="btn" data-acao="inventario-tecnico" data-tid="${esc(t.tid)}">${icone("caixa")}Histórico de peças</button><button class="btn" data-acao="historico-agenda" data-tid="${esc(t.tid)}">${icone("calendario")}Histórico de agendamentos</button>
-        ${podeAdministrar()?`<button class="btn ${t.cad.excluido?'':'perigo fantasma'}" data-acao="${t.cad.excluido?'reativar-tecnico':'excluir-tecnico'}" data-tid="${esc(t.tid)}">${t.cad.excluido?'Reativar técnico':'Excluir da relação'}</button>`:''}
+        ${botaoRelacaoTecnico(t,false)}
         ${t.novasLinhas.length ? `<button class="btn" data-acao="cobrar" data-aba="novas" data-tid="${esc(t.tid)}">${icone("mensagem")}Cobrar novas</button>` : ""}
         ${t.rmdf.length ? `<button class="btn" data-acao="cobrar" data-aba="rmdf" data-tid="${esc(t.tid)}">${icone("mensagem")}Cobrar RMDF</button>` : ""}
         ${t.retornos.length ? `<button class="btn prim" data-acao="cobrar" data-tid="${esc(t.tid)}" data-aba="${t.itensCobrar.length ? "cobrar" : "todos"}">${icone("mensagem")}Cobrar</button>` : ""}

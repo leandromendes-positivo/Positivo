@@ -82,7 +82,8 @@ try{
  await p.locator('[data-acao="excluir-tecnico"][data-tid="ANA"]').click();
  assert.match(await p.locator('.modal').innerText(),/continuam no estoque/);await p.locator('.modal [data-ok]').click();
  await p.waitForFunction(()=>E.cadastro.ANA.excluido);
- assert.equal(await p.evaluate(()=>derivar().mapa.get('ANA').novasQtd),6);assert.equal(await p.evaluate(()=>opcoesPdfTecnico().some(t=>t.tid==='ANA')),true,'peças pendentes continuam nos relatórios');
+ assert.equal(await p.evaluate(()=>derivar().mapa.get('ANA').novasQtd),6);assert.equal(await p.evaluate(()=>opcoesPdfTecnico().some(t=>t.tid==='ANA')),false,'excluídos saem dos relatórios de ativos');
+ assert.equal(await p.evaluate(()=>opcoesPdfTecnico(derivar(),'excluidos').some(t=>t.tid==='ANA')),true,'peças pendentes podem ser conferidas nos relatórios de excluídos');
  await p.evaluate(async()=>{window.__CP_AGORA='2026-11-17T10:01:00-03:00';await importarLote([__arquivoReversao('novas',[__linhaReversao('ANA','001',6)])]);});
  assert.equal(await p.evaluate(()=>E.cadastro.ANA.excluido),true,'uma nova planilha não reativa um técnico excluído');
  const acesso=await p.evaluate(async()=>{

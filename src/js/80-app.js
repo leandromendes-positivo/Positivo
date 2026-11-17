@@ -413,6 +413,7 @@ const MUDANCAS = {
   "rmdf-regiao": el=>{UIrmdf.regiao=el.value;UIrmdf.pagina=1;renderizar(true);},
   'rmdf-status': el=>{UIrmdf.status=el.value;UIrmdf.pagina=1;renderizar(true);},
   'pdf-tecnico-uf': el=>{UIpdfTecnico.uf=el.value;UIpdfTecnico.pagina=1;renderizar(true);},
+  'relatorios-situacao': el=>alterarSituacaoRelatorios(el.value),
   "regiao-tc": (el) => { UI.tc.regiao = el.value; renderizar(true); },
   "sem-dados-tc": (el) => { UI.tc.mostrarSemDados = el.checked; renderizar(true); },
   "fila-regiao": (el) => { const it = UI.im.fila[+el.dataset.n]; if (it) { it.regiao = el.value; renderizar(true); } },

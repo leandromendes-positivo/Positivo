@@ -114,6 +114,20 @@ try{
  await nao(ana.doc(`saldos_tecnicos/${id}/geracoes/${gen2}/pecas/n-1`).get());
  await nao(enviar(ana,declaracao({versao:5,geracao:gen2})));
  await env.withSecurityRulesDisabled(async c=>c.firestore().doc('dados/indice').set({versao:2}));
+ // Exclusão do cadastro revoga o portal mesmo se uma conta vinculada permanecer ativa.
+ await sim(admin.doc('cadastro/tecnicos').update({'t.ANA.excluido':true,'t.DESLIGADO':{nome:'Desligado',regiao:'PR',excluido:true}}));
+ await nao(ana.doc('portal/controle').get());await nao(ana.doc(`saldos_tecnicos/${id}/geracoes/${gen2}/pecas/n-1`).get());
+ await nao(enviar(ana,declaracao({versao:5,geracao:gen2})));
+ await nao(ana.doc('cadastro/tecnicos').update({'t.ANA.excluido':false}));
+ await sim(operador.doc('portal/controle').get());
+ await nao(admin.doc('usuarios/ana@empresa.com').update({ativo:true,atualizadoPor:por,atualizadoEm:stamp()}));
+ const excluido=admin.batch();excluido.set(admin.doc('usuarios/desligado@empresa.com'),usuario('desligado@empresa.com','tecnico','PR--DESLIGADO'));excluido.set(admin.doc('vinculos_tecnicos/PR--DESLIGADO'),{email:'desligado@empresa.com',tid:'DESLIGADO',regiao:'PR'});await nao(excluido.commit());
+ // A exclusão pode desativar todas as contas técnicas sem afetar os usuários da operação.
+ const desativar=admin.batch();for(const email of ['ana@empresa.com','bruno@empresa.com','ana.rs@empresa.com'])desativar.update(admin.doc(`usuarios/${email}`),{ativo:false,atualizadoPor:por,atualizadoEm:stamp()});await sim(desativar.commit());
+ await sim(admin.doc('cadastro/tecnicos').update({'t.ANA.excluido':false}));
+ await nao(ana.doc('portal/controle').get()); // Cadastro reativado não libera automaticamente o login.
+ await sim(admin.doc('usuarios/ana@empresa.com').update({ativo:true,atualizadoPor:por,atualizadoEm:stamp()}));
+ await sim(ana.doc(`saldos_tecnicos/${id}/geracoes/${gen2}/pecas/n-1`).get());
  await sim(admin.doc('usuarios/ana@empresa.com').update({ativo:false,atualizadoPor:por,atualizadoEm:stamp()}));
  await nao(ana.doc(`saldos_tecnicos/${id}/geracoes/${gen2}/pecas/n-1`).get());
  await nao(ana.doc('portal/controle').get());await nao(enviar(ana,declaracao({versao:5,geracao:gen2})));

@@ -13,5 +13,10 @@ assert.equal((await ctx.lerRelatorio(arquivo('PR Novas.csv',Buffer.from(cab.repl
 assert.equal((await ctx.lerRelatorio(arquivo('sem-nome.csv',Buffer.from(cab+linha)),{tipo:'rmdf',regiao:'SC'})).tipo,'rmdf');
 for(const quantidade of ['','0','-1','1,5','texto'])await assert.rejects(()=>ctx.lerRelatorio(arquivo('PR RMDF.csv',Buffer.from(cab+linha.replace(';2;',';'+quantidade+';')))),/linha 2/);
 const vazio=await ctx.lerRelatorio(arquivo('PR RMDF.csv',Buffer.from(cab)));assert.equal(vazio.itens.length,0);
+for(const tipo of ['Novas','Usadas','RMDF']){
+ const cabecalho=tipo==='Novas'?cab.replace('Data FT','TIPO'):cab;
+ for(const nome of ['','SEM NOME','Não informado','N/A','undefined','---'])await assert.rejects(()=>ctx.lerRelatorio(arquivo(`PR ${tipo}.csv`,Buffer.from(cabecalho+linha.replace('PESSOA TESTE',nome)))),/linha 2.*sem nome de técnico válido/);
+ assert.equal((await ctx.lerRelatorio(arquivo(`PR ${tipo}.csv`,Buffer.from(cabecalho+linha.replace('PESSOA TESTE','110399001'))))).itens[0].tecNome,'110399001','identificadores numéricos continuam válidos');
+}
 if(process.env.ARQUIVO_RMDF_TESTE){const real=await ctx.lerRelatorio(arquivo('PR RMDF.csv',fs.readFileSync(process.env.ARQUIVO_RMDF_TESTE)));console.log('Exemplo anexado validado localmente:',JSON.stringify({tipo:real.tipo,uf:real.regiao,linhas:real.itens.length,quantidade:real.itens.reduce((s,p)=>s+p.qtd,0),ignoradas:real.linhasIgnoradas}));}
 console.log('Leitura RMDF: prioridade sobre cabeçalho de usadas, Latin-1, referências preservadas, seleção manual, arquivo vazio e quantidades inválidas passaram.');

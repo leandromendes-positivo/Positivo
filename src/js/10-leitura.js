@@ -187,6 +187,7 @@ async function lerRelatorio(arquivo, opcoes = {}) {
     const mat = codigoMaterial(val(linha, "mat"));
     const brutoQtd=val(linha,"qtd");
     const qtd = tipo==='rmdf' ? (brutoQtd ? Number(brutoQtd.replace(/\.(?=\d{3}(?:\D|$))/g,'').replace(',','.')) : NaN) : parseQtd(brutoQtd,1);
+    if(mat&&qtd>0&&(!tecNome||/^(sem nome|nao informado|n\/a|null|undefined|-+)$/.test(normBusca(tecNome))))throw new ErroLeitura(`A linha ${r+1} tem uma peça sem nome de técnico válido. Corrija a planilha antes de importar. Nenhum saldo foi atualizado.`);
     if(tipo==='rmdf'&&(!tecNome||!mat||!Number.isSafeInteger(qtd)||qtd<=0))throw new ErroLeitura(`Revise técnico, material e quantidade inteira positiva na linha ${r+1} do RMDF. Nenhum saldo foi atualizado.`);
     if (!tecNome || !mat || qtd <= 0) { ignoradas++; continue; }
     const item = {

@@ -6,7 +6,7 @@ async function receberArquivos(lista) {
   exigirAdministrador();
   const arquivos = [...lista].filter((f) => f && f.name);
   if (!arquivos.length) return;
-  if (UI.im.processando) { toast("Aguarde a importação em andamento terminar.", "info"); return; }
+  if (UI.im.processando||UI.im.revertendo) { toast("Aguarde a operação de importação terminar.", "info"); return; }
   UI.im.resultado = null;
   UI.im.erro = null;
   irPara("importar");
@@ -32,6 +32,7 @@ async function receberArquivos(lista) {
 
 async function executarImportacao() {
   const s = UI.im;
+  if(s.processando||s.revertendo)return;
   for (const it of s.fila) {
     if (it.lido && it.lido.regiao === it.regiao && it.lido.tipo === it.tipo) continue;
     if (!it.regiao || !it.tipo) { it.lido=null; continue; }
@@ -80,10 +81,12 @@ function renderImportar() {
   const D = derivar();
   const s = UI.im;
   const partes = [];
+  if(s.resultado&&E.importacoes.find(i=>i.id===s.resultado.lote)?.desfeito)s.resultado=null;
   if (!Armazem.online) {
     const [titulo, texto] = textoSemBanco();
     partes.push(`<div class="faixa alerta compacta">${icone("alerta")}<div><strong>${esc(titulo)}</strong><span>${esc(texto)}</span></div></div>`);
   }
+  partes.push(cartaoReversaoImportacao());
   if (s.processando) {
     partes.push(`<div class="cartao processando"><div class="girando" aria-hidden="true"></div><div><strong>Importando…</strong><p data-progresso>${esc(s.progresso)}</p></div></div>`);
   } else {
@@ -103,7 +106,8 @@ function renderImportar() {
 function cartaoFila() {
   const s = UI.im;
   const pendentes = s.fila.filter((i) => !i.lido);
-  return cartao(pendentes.length ? "Confira antes de importar" : "Prontas para importar", `${s.fila.some(i=>i.tipo==='rmdf')?'<p class="nota">RMDF foi reconhecido como peças com defeito. Confira os tipos e as UFs antes de confirmar.</p>':''}<div class="tabela-rolagem"><table class="tabela compacta">
+  const novos=[...new Map(s.fila.flatMap(i=>i.lido?.itens||[]).filter(i=>!E.cadastro[idSeguro(i.tecChave)]).map(i=>[i.tecChave,i.tecNome])).values()];
+  return cartao(pendentes.length ? "Confira antes de importar" : "Prontas para importar", `${novos.length?`<div class="faixa info compacta"><div><strong>${plural(novos.length,'novo cadastro de técnico','novos cadastros de técnicos')}</strong><span>Confira os responsáveis antes de confirmar: ${novos.slice(0,12).map(esc).join(' · ')}${novos.length>12?` · e mais ${novos.length-12}`:''}.</span></div></div>`:''}${s.fila.some(i=>i.tipo==='rmdf')?'<p class="nota">RMDF foi reconhecido como peças com defeito. Confira os tipos e as UFs antes de confirmar.</p>':''}<div class="tabela-rolagem"><table class="tabela compacta">
     <thead><tr><th>Arquivo</th><th>Região</th><th>Tipo</th><th class="num">Linhas</th><th>Situação</th></tr></thead>
     <tbody>${s.fila.map((it, n) => `<tr>
       <td class="mono">${esc(it.nome)}</td>
@@ -133,7 +137,7 @@ function cartaoResultado(r) {
   const D = derivar();
   return `<section class="cartao cartao-separado resultado">
     <header class="cartao-topo"><div><h2>${icone("ok")}Importação concluída</h2><p>${plural(r.resultados.length, "planilha", "planilhas")}${r.devolvidas ? ` · ${plural(r.devolvidas, "peça usada devolvida", "peças usadas devolvidas")} desde a importação anterior` : ""}</p></div>
-    <div class="cartao-acoes"><button class="btn" data-acao="ir" data-pagina="painel">Ver painel</button><button class="btn prim" data-acao="ir" data-pagina="cobrancas">${icone("sino")}Cobranças de hoje (${D.kpi.cobrarTecnicos})</button></div>${imagemCabecalho()}</header>
+    <div class="cartao-acoes"><button class="btn" data-acao="ir" data-pagina="painel">Ver painel</button>${podeDesfazer(E.importacoes.find(i=>i.id===r.lote))?`<button class="btn" data-acao="desfazer" data-id="${esc(r.lote)}" ${UI.im.revertendo?'disabled':''}>${icone('desfazer')}Desfazer esta importação</button>`:''}<button class="btn prim" data-acao="ir" data-pagina="cobrancas">${icone("sino")}Cobranças de hoje (${D.kpi.cobrarTecnicos})</button></div>${imagemCabecalho()}</header>
     <div class="cartao-corpo">${(r.avisos || []).map((a) => `<p class="aviso-linha">${icone("info")}${esc(a)}</p>`).join("")}
     <div class="tabela-rolagem"><table class="tabela compacta"><thead><tr><th>Arquivo</th><th>UF</th><th>Tipo</th><th class="num">Linhas</th><th class="num">Peças</th><th>O que mudou</th></tr></thead><tbody>${linhas}</tbody></table></div>
     </div></section>`;
@@ -155,6 +159,11 @@ function tabelaFrescor(D) {
 function podeDesfazer(imp) {
   try{validarReversaoImportacao(imp,E.indice);return true;}catch{return false;}
 }
+function cartaoReversaoImportacao(){
+  const imp=[...E.importacoes].sort((a,b)=>comparar(b.em,a.em))[0];if(!imp)return '';
+  const disponivel=podeDesfazer(imp);
+  return `<section class="cartao reversao-importacao"><header class="cartao-topo"><div><h2>${icone('desfazer')}Desfazer última importação</h2><p>${fmtDataHora(imp.em)} · ${plural((imp.chaves||[]).length,'planilha','planilhas')}${imp.desfeito?' · já desfeita':''}</p></div><div class="cartao-acoes"><button class="btn" data-acao="desfazer" data-id="${esc(imp.id)}" ${!disponivel||UI.im.processando||UI.im.revertendo?'disabled':''}>${icone('desfazer')}${UI.im.revertendo?'Restaurando…':'Desfazer última importação'}</button></div></header><div class="cartao-corpo"><p class="nota">${imp.desfeito?'A última importação já foi revertida.':disponivel?'Restaura os saldos e as datas anteriores e remove cadastros criados por engano que não tenham outros registros a preservar.':'A versão anterior desta importação não está disponível para reversão.'}</p></div></section>`;
+}
 
 function tabelaImportacoes() {
   const imps = E.importacoes.slice(0, 30);
@@ -166,6 +175,6 @@ function tabelaImportacoes() {
       <td>${(imp.arquivos || []).map((a) => `<span class="tag">${esc(a.regiao)} ${a.tipo === "rmdf" ? "RMDF" : a.tipo === "usadas" ? "usadas" : "novas"}</span>`).join(" ")}${imp.desfeito ? ` <small>desfeita</small>` : ""}</td>
       <td class="num">${fmtNum(somar(imp.arquivos || [], (a) => a.linhas || 0))}</td>
       <td class="num">${fmtNum(imp.devolvidas || 0)}</td>
-      <td>${podeDesfazer(imp) ? `<button class="btn pequeno fantasma" data-acao="desfazer" data-id="${esc(imp.id)}">${icone("desfazer")}Desfazer</button>` : ""}</td>
+      <td>${podeDesfazer(imp) ? `<button class="btn pequeno fantasma" data-acao="desfazer" data-id="${esc(imp.id)}" ${UI.im.revertendo?'disabled':''}>${icone("desfazer")}Desfazer</button>` : ""}</td>
     </tr>`).join("")}</tbody></table></div>`;
 }

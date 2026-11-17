@@ -82,7 +82,7 @@ function calcularRelatorio(f = UIrelatorios.filtros, H = relatorioHistorico, D =
     return mapa.get(i.tid);
   };
   // Cadastrados com saldo zero continuam visíveis; ausência de planilha não vira zero conhecido.
-  D.tecnicos.filter(t => permitido({ ...t, tipo: f.tipo })).forEach(t => {
+  D.tecnicos.filter(t => (!t.cad.excluido||t.temDados)&&permitido({ ...t, tipo: f.tipo })).forEach(t => {
     const r = tecnico(t);
     if ((!f.tipo || f.tipo === 'novas') && t.estoqueConhecido) r.limite = t.meta;
     r.semPlanilha = (!f.tipo || f.tipo === 'novas') && !t.estoqueConhecido;

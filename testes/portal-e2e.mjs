@@ -50,7 +50,18 @@ try{
  await tec.waitForFunction(()=>E.status==='pronto'&&PortalTecnico.pecas.length===0);assert.doesNotMatch(await tec.locator('#conteudo').innerText(),/SEGREDO-SC/);
  await admin.evaluate(async()=>desfazerImportacao(E.importacoes.find(i=>i.id===window.__zerarPortal.lote)));
  await tec.waitForFunction(()=>E.status==='pronto'&&PortalTecnico.pecas.length===2);await tec.getByText('Relatório anterior: confira novamente o saldo.',{exact:true}).first().waitFor();assert.match(await tec.locator('#conteudo').innerText(),/Relatório anterior/);
- await admin.evaluate(()=>salvarUsuario('ana@empresa.com','tecnico',false,'PR--ANA_PORTAL'));
+ // A reversão publicada também limpa os cadastros do lote no Firestore real do emulador.
+ await admin.evaluate(async()=>{
+  await importarLote([{tipo:'novas',regiao:'PR',nome:'PR Novas.csv',hash:crypto.randomUUID(),linhasLidas:2,avisos:[],itens:['ANA PORTAL','CADASTRO ERRADO'].map(nome=>({tecNome:nome,tecChave:nome,mat:'NOVA-PR',desc:'Descrição incorreta',qtd:5,tipoEnvio:'BACKUP'}))}]);irPara('importar');
+ });
+ await admin.getByRole('button',{name:'Desfazer última importação',exact:true}).click();await admin.locator('.modal [data-ok]').click();
+ await admin.waitForFunction(()=>!UI.im.revertendo&&!E.cadastro.CADASTRO_ERRADO);
+ assert.deepEqual(await admin.evaluate(()=>[E.catalogo['NOVA-PR'],E.novas.length,E.usadas.length]),['Peça NOVA-PR',1,2]);
+ assert.equal(await admin.getByRole('button',{name:'Desfazer última importação',exact:true}).isDisabled(),true);
+ await tec.waitForFunction(()=>E.status==='pronto'&&PortalTecnico.pecas.length===2);
+ // Excluir o cadastro usa uma transação para guardar o nome e desativar o acesso vinculado.
+ await admin.evaluate(()=>irPara('tecnicos'));await admin.locator('[data-acao="excluir-tecnico"][data-tid="ANA_PORTAL"]').click();await admin.locator('.modal [data-ok]').click();
+ await admin.waitForFunction(()=>E.cadastro.ANA_PORTAL.excluido===true);
  try {await tec.waitForFunction(()=>E.status==='erro'&&Acesso.perfil===null);} catch(e) {
   const estado=await tec.evaluate(()=>({status:E.status,perfil:Acesso.perfil,erro:E.erro,pecas:PortalTecnico.pecas.length}));
   const cadastro=await admin.evaluate(async()=>(await Acesso.fs.doc('usuarios/ana@empresa.com').get({source:'server'})).data().ativo);
@@ -58,5 +69,10 @@ try{
   throw new Error(`A sessão deve ser bloqueada após revogação. Estado fictício: ${JSON.stringify({estado,ativoNoBanco:cadastro,propriaLeitura,erros,diagnosticos:diagnosticos.slice(-8)})}`);
  }
  assert.equal(await tec.evaluate(()=>PortalTecnico.pecas.length),0);
- assert.deepEqual(erros,[]);console.log('Portal E2E: cadastro e vínculo exclusivo, login real no emulador, isolamento por UF, devolução/RMDF, histórico, importação vazia, desfazer e revogação passaram.');
+ assert.equal(await admin.evaluate(async()=>(await Armazem.ler('usuarios/ana@empresa.com')).ativo),false);
+ assert.equal(await admin.evaluate(()=>E.novas[0].qtd),5,'excluir cadastro não baixa as peças pendentes');
+ const bloqueado=await admin.evaluate(async()=>{try{await salvarUsuario('ana@empresa.com','tecnico',true,'PR--ANA_PORTAL');return '';}catch(e){return e.message;}});assert.match(bloqueado,/Reative o cadastro/);
+ await admin.evaluate(()=>alterarExclusaoTecnico('ANA_PORTAL',false));
+ assert.equal(await admin.evaluate(async()=>(await Armazem.ler('usuarios/ana@empresa.com')).ativo),false,'reativar cadastro não reabre acesso automaticamente');
+ assert.deepEqual(erros,[]);console.log('Portal E2E: cadastro e vínculo exclusivo, login real no emulador, isolamento por UF, devolução/RMDF, histórico, importação vazia, reversão dos saldos e cadastros, exclusão/reativação e revogação passaram.');
 }finally{await browser.close();await env.cleanup();}

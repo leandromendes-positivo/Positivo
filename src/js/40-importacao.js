@@ -230,6 +230,9 @@ async function importarLote(lidos, aoProgresso = () => {}) {
   }
   reconciliarRmdfNoLote(fotos, fotoBase);
   for(const r of fotos.values()){devolvidas.push(...r.devolvidas);movimentos.push(...r.movimentos);}
+  const cadastroAntes=Object.fromEntries(Object.keys(novosTecs).map(tid=>[tid,structuredClone(E.cadastro[tid]||null)]));
+  const cadastroImportado=Object.fromEntries(Object.entries(novosTecs).map(([tid,c])=>[tid,{...cadastroAntes[tid],...c}]));
+  const catalogoAntes=Object.fromEntries(Object.keys(novosMats).map(mat=>[mat,E.catalogo[mat]??null]));
 
   // ---------------------------------------------------------- gravação
   if (Object.keys(novosTecs).length) {
@@ -270,7 +273,8 @@ async function importarLote(lidos, aoProgresso = () => {}) {
 
   aoProgresso("Atualizando o índice…");
   const versao = (indiceBase.versao || 0) + 1;
-  const registro = { em: agoraS, por: E.usuario.id || '', arquivos: resultados, avisos, chaves: [...fotos.keys()], devolvidas: somar(devolvidas,d=>d[5]), desfeito: false };
+  const registro = { em: agoraS, por: E.usuario.id || '', arquivos: resultados, avisos, chaves: [...fotos.keys()], devolvidas: somar(devolvidas,d=>d[5]), desfeito: false,
+    cadastroAntes,cadastroImportado,catalogoAntes,catalogoImportado:{...novosMats} };
   aoProgresso('Preparando os saldos individuais dos técnicos…');
   const fotoPortal = {usadas:[...fotoBase.usadas],novas:[...fotoBase.novas],rmdf:[...fotoBase.rmdf]};
   for(const [chave,r] of fotos) {
@@ -325,17 +329,23 @@ async function desfazerImportacao(imp) {
   if (!devs.length && imp.devolvidas) devs = (await Armazem.consultar('devolucoes',{preservarHistorico:true})).filter(d=>(d.itens||[]).some(l=>l[9]===imp.id));
   const movs = await Armazem.consultar('movimentos',{onde:[['lote','==',imp.id]],preservarHistorico:true});
   const alteracoes = devs.map(d=>[`devolucoes/${d.id}`,{...d,itens:(d.itens||[]).filter(l=>l[9]!==imp.id)}]);
+  const fotosRestauradas={usadas:[],novas:[],rmdf:[]};
+  for(const [chave,ent]of Object.entries({...E.indice.arquivos,...arquivos}))if(ent?.gen)fotosRestauradas[chave.split(':')[0]].push(...await lerArquivoDoIndice(chave,ent));
+  const [cadSnap,catSnap,usuarios,agendas,contatos,anotacoes]=await Promise.all([
+    Armazem.ler('cadastro/tecnicos'),Armazem.ler('dados/catalogo'),...['usuarios','agendamentos','contatos','anotacoes'].map(c=>Armazem.consultar(c))
+  ]);
+  const cadastroBase=cadSnap?.t||{},catalogoBase=catSnap?.m||{};
+  const limpeza=planejarLimpezaImportacao(imp,{cadastro:cadastroBase,catalogo:catalogoBase,fotos:fotosRestauradas,usuarios,registros:[...agendas,...contatos,...anotacoes,...E.devolucoes,...E.movimentos]});
   const indice = {arquivos,anterior,reversivel,versao:versaoAnterior+1,atualizadoEm:agoraISO(),origemSessao:Acesso.sessao};
-  const registro = {desfeito:true,desfeitoEm:agoraISO(),desfeitoPor:identidadeAtual(),backupReversao:{arquivos:Object.fromEntries(chaves.map(c=>[c,E.indice.arquivos[c]]))}};
+  const registro = {desfeito:true,desfeitoEm:agoraISO(),desfeitoPor:identidadeAtual(),cadastrosRemovidos:limpeza.removidos,backupReversao:{arquivos:Object.fromEntries(chaves.map(c=>[c,E.indice.arquivos[c]])),
+    cadastroAntes:Object.fromEntries([...limpeza.removidos,...limpeza.restaurados].map(tid=>[tid,cadastroBase[tid]])),catalogoAntes:Object.fromEntries(Object.keys(imp.catalogoAntes||{}).map(mat=>[mat,catalogoBase[mat]??null]))}};
   if(Acesso.modo==='firebase') {
-    const fotoPortal={usadas:[],novas:[],rmdf:[]};
-    for(const [chave,ent] of Object.entries({...E.indice.arquivos,...arquivos})) {
-      if(ent?.gen)fotoPortal[chave.split(':')[0]].push(...await lerArquivoDoIndice(chave,ent));
-    }
-    const portal=await prepararSaldosTecnicos(fotoPortal.usadas,fotoPortal.novas,E.cadastro,E.catalogo,indice.versao,fotoPortal.rmdf);
+    const portal=await prepararSaldosTecnicos(fotosRestauradas.usadas,fotosRestauradas.novas,limpeza.cadastro,limpeza.catalogo,indice.versao,fotosRestauradas.rmdf);
     await Acesso.fs.runTransaction(async tx=>{
-      const ref = Acesso.fs.doc('dados/indice'), atual=await tx.get(ref);
+      const ref = Acesso.fs.doc('dados/indice'),cadRef=Acesso.fs.doc('cadastro/tecnicos'),catRef=Acesso.fs.doc('dados/catalogo');
+      const [atual,cadAtual,catAtual]=await Promise.all([tx.get(ref),tx.get(cadRef),tx.get(catRef)]);
       if((atual.data()?.versao||0)!==versaoAnterior) throw new Error('As planilhas foram atualizadas em outra sessão. Recarregue antes de desfazer.');
+      if(assinaturaRegistroImportacao(decodificarFS(cadAtual.data()?.t||{}))!==assinaturaRegistroImportacao(cadastroBase)||assinaturaRegistroImportacao(decodificarFS(catAtual.data()?.m||{}))!==assinaturaRegistroImportacao(catalogoBase))throw new Error('O cadastro foi editado durante a reversão. Recarregue antes de desfazer.');
       for(const [c,d] of alteracoes) {
         const {id,...doc}=d;
         if(doc.itens.length)tx.set(Acesso.fs.doc(c),codificarFS(doc));else tx.delete(Acesso.fs.doc(c));
@@ -343,17 +353,21 @@ async function desfazerImportacao(imp) {
       for(const m of movs)tx.delete(Acesso.fs.doc(`movimentos/${m.id}`));
       tx.set(Acesso.fs.doc('portal/controle'),portal);
       tx.set(Acesso.fs.doc(`importacoes/${imp.id}`),codificarFS(registro),{merge:true});
+      tx.set(cadRef,{...cadAtual.data(),t:codificarFS(limpeza.cadastro)});tx.set(catRef,{...catAtual.data(),m:limpeza.catalogo});
       tx.set(ref,codificarFS(indice),{merge:true});
     });
   } else {
     for(const [c,d] of alteracoes) {const {id,...doc}=d;if(doc.itens.length)await Armazem.gravar(c,doc);else await Armazem.apagar(c);}
     for(const m of movs)await Armazem.apagar(`movimentos/${m.id}`);
     await Armazem.mesclar(`importacoes/${imp.id}`,registro,true);
+    await Armazem.gravar('cadastro/tecnicos',{...cadSnap,t:limpeza.cadastro});await Armazem.gravar('dados/catalogo',{...catSnap,m:limpeza.catalogo});
     await Armazem.mesclar('dados/indice',indice,true);
   }
+  E.cadastro=limpeza.cadastro;E.catalogo=limpeza.catalogo;
   E.indice={...E.indice,...indice,arquivos:{...E.indice.arquivos,...arquivos},anterior:{...E.indice.anterior,...anterior},reversivel:{...E.indice.reversivel,...reversivel}};
   await Promise.all([carregarFotos(),carregarHistoricos()]); mudou();
   await gravarHistoricoDoDia();
   try {await Armazem.gravar('resumo/atual',montarResumo());}catch(e){console.warn('resumo',e);}
   mudou();
+  return {cadastrosRemovidos:limpeza.removidos.length};
 }

@@ -10,7 +10,7 @@ function opcoesPdfTecnico(D = derivar()) {
     const chave = JSON.stringify([tid, uf]);
     if (!mapa.has(chave)) mapa.set(chave, { chave, tid, uf, nome: nomeBonito(E.cadastro[tid]?.nome)||nomeTecnico(tid), apelido:E.cadastro[tid]?.apelido||'' });
   };
-  for (const [tid, c] of Object.entries(E.cadastro)) incluir(tid, c.regiao);
+  for (const [tid, c] of Object.entries(E.cadastro)) if(!c.excluido)incluir(tid, c.regiao);
   for (const i of [...D.itens, ...E.novas, ...E.rmdf]) incluir(i.tid, i.regiao);
   return [...mapa.values()].sort((a,b)=>comparar(a.nome,b.nome)||comparar(a.uf,b.uf));
 }

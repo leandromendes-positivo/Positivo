@@ -11,7 +11,7 @@ function chaveSaldoTecnico(tid, regiao) {
 }
 function opcoesVinculoTecnico() {
   const opcoes=new Map();
-  const incluir=(tid,regiao)=>{if(E.cadastro[tid] && /^[A-Z0-9_.-]{1,120}$/.test(tid) && ['PR','SC','RS'].includes(regiao)) {
+  const incluir=(tid,regiao)=>{if(E.cadastro[tid] && !tecnicoExcluido(tid) && /^[A-Z0-9_.-]{1,120}$/.test(tid) && ['PR','SC','RS'].includes(regiao)) {
     const id=chaveSaldoTecnico(tid,regiao);opcoes.set(id,{id,tid,regiao,nome:E.cadastro[tid].nome});
   }};
   for(const [tid,t] of Object.entries(E.cadastro))incluir(tid,t.regiao);

@@ -53,7 +53,12 @@ service cloud.firestore {
       return getAfter(/databases/$(database)/documents/auditoria_agendamentos/$(d.evento)).data == d;
     }
     // Perfil técnico nunca integra autorizado(): os caminhos globais continuam restritos à operação.
-    function tecnico() { return identidade() && perfil().ativo == true && perfil().perfil == 'tecnico' && perfil().tecnicoId.matches('^(PR|SC|RS)--[A-Z0-9_.-]{1,120}$'); }
+    function tecnicoCadastradoAtivo(tid) {
+      let cadastro = get(/databases/$(database)/documents/cadastro/tecnicos).data;
+      return cadastro.t.get(tid, {}).get('excluido',false) == false;
+    }
+    function cadastroTecnicoAtivo(id) { return tecnicoCadastradoAtivo(get(/databases/$(database)/documents/vinculos_tecnicos/$(id)).data.tid); }
+    function tecnico() { return identidade() && perfil().ativo == true && perfil().perfil == 'tecnico' && perfil().tecnicoId.matches('^(PR|SC|RS)--[A-Z0-9_.-]{1,120}$') && cadastroTecnicoAtivo(perfil().tecnicoId); }
     function meuEstoque(id) {
       return tecnico() && perfil().tecnicoId == id
         && get(/databases/$(database)/documents/vinculos_tecnicos/$(id)).data.email == email();
@@ -70,6 +75,7 @@ service cloud.firestore {
     function vinculoValido(d) {
       let v = getAfter(/databases/$(database)/documents/vinculos_tecnicos/$(d.tecnicoId)).data;
       return d.tecnicoId is string && v.email == d.email
+        && (!d.ativo || tecnicoCadastradoAtivo(v.tid))
         && d.tecnicoId == v.regiao + '--' + v.tid
         && v.regiao in ['PR','SC','RS'] && v.tid.matches('^[A-Z0-9_.-]{1,120}$');
     }

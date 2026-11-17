@@ -12,6 +12,7 @@ try {
   await import('./sessao-email-e2e.mjs');
   await import('./ferias-planejamento-e2e.mjs');
   await import('./importacao-rmdf-e2e.mjs');
+  await import('./reversao-cadastro-e2e.mjs');
   await import('./rmdf-estoque-e2e.mjs');
   await import('./pecas-novas-e2e.mjs');
   await import('./tempo-pecas-e2e.mjs');

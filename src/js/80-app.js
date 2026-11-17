@@ -9,9 +9,9 @@ const UI = {
   cob: { tipo: "retornos", resposta: "aguardando", somenteMeus: false, aba: "cobrar", foco: "", regiao: "", busca: "", ordem: "dias", abertos: new Set() },
   us: { aba: "pendentes", status: "todas", regiao: "", tid: "", busca: "", faixa: null, ordem: { campo: "dias", dir: "desc" }, pagina: 1, paginaDev: 1, sel: new Set() },
   es: { regiao: "", status: "", busca: "", ordem: { campo: "novasQtd", dir: "desc" }, abertos: new Set() },
-  tc: { regiao: "", busca: "", mostrarSemDados: false, ordem: { campo: "nome", dir: "asc" } },
+  tc: { regiao: "", busca: "", mostrarSemDados: false, situacao:'ativos', ordem: { campo: "nome", dir: "asc" } },
   ficha: { tid: null, aba: "usadas", pagina: 1 },
-  im: { fila: [], processando: false, progresso: "", resultado: null, erro: null },
+  im: { fila: [], processando: false, revertendo:false, progresso: "", resultado: null, erro: null },
 };
 
 const PAGINAS = {
@@ -118,7 +118,7 @@ function renderizar(forcar = false) {
   Calendarios.preparar(conteudo);
   Pesquisas.preparar(conteudo);
   if (!podeAdministrar()) {
-    document.querySelectorAll('[data-acao="editar-tecnico"], [data-acao="editar-prazos"], [data-acao="consulta-classificar"], [data-acao="desfazer-importacao"]').forEach(el=>el.disabled=true);
+    document.querySelectorAll('[data-acao="editar-tecnico"], [data-acao="editar-prazos"], [data-acao="consulta-classificar"], [data-acao="desfazer"], [data-acao="excluir-tecnico"], [data-acao="reativar-tecnico"]').forEach(el=>el.disabled=true);
   }
   if (p.depois) p.depois();
   if (UI.posRender) UI.posRender();
@@ -352,25 +352,29 @@ const ACOES = {
   "exportar-rmdf": ()=>exportarRmdf(),
   "exportar-estoque": () => exportarEstoque(),
   "exportar-tecnicos": () => exportarTecnicos(),
+  'tecnicos-situacao': el=>{UI.tc.situacao=el.dataset.situacao;renderizar(true);},
+  'excluir-tecnico': el=>modalExcluirTecnico(el.dataset.tid),
+  'reativar-tecnico': el=>modalExcluirTecnico(el.dataset.tid,true),
   "aba-ficha": (el) => { UI.ficha.aba = el.dataset.aba; UI.ficha.pagina = 1; renderizar(true); },
   "tentar-importar": () => executarImportacao(),
   "limpar-fila": () => { UI.im.fila = []; renderizar(true); },
   desfazer: async (el) => {
+    exigirAdministrador();if(UI.im.processando||UI.im.revertendo)return;
     const imp = E.importacoes.find((i) => i.id === el.dataset.id);
     if (!imp) return;
     const ok = await confirmar({
       titulo: "Desfazer esta importação?",
-      texto: `As planilhas de ${fmtDataHora(imp.em)} voltam para a versão anterior e as devoluções registradas nela são apagadas. Previsões e cobranças que você registrou continuam salvas.`,
+      texto: `As ${plural((imp.chaves||[]).length,'planilha','planilhas')} de ${fmtDataHora(imp.em)} voltam aos saldos e datas anteriores. As saídas produzidas por esse lote são removidas e os cadastros criados nele, sem outros registros válidos, também serão removidos. Previsões, cobranças e edições manuais serão preservadas.`,
       ok: "Desfazer importação", perigo: true,
     });
     if (!ok) return;
     try {
-      el.disabled = true;
-      await desfazerImportacao(imp);
+      UI.im.revertendo=true;renderizar(true);
+      const r=await desfazerImportacao(imp);
       UI.im.resultado = null;
-      toast("Importação desfeita.");
-      renderizar(true);
-    } catch (e) { toast(erroAmigavel(e).message, "erro"); el.disabled = false; }
+      toast(`Importação desfeita.${r?.cadastrosRemovidos?` ${plural(r.cadastrosRemovidos,'cadastro indevido removido','cadastros indevidos removidos')}.`:''}`);
+    } catch (e) { toast(erroAmigavel(e).message, "erro"); }
+    finally{UI.im.revertendo=false;renderizar(true);}
   },
   "restaurar-msgs": async () => {
     await salvarConfig({ msgCobranca: PADROES.msgCobranca, msgLembrete: PADROES.msgLembrete });

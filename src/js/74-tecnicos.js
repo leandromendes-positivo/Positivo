@@ -4,7 +4,8 @@
 
 function filtrarTecnicos(D, s = UI.tc) {
   const busca = normBusca(s.busca);
-  return D.tecnicos.filter(t => (t.temDados || s.mostrarSemDados)
+  const excluidos=s.situacao==='excluidos';
+  return D.tecnicos.filter(t => (!!t.cad?.excluido===excluidos)&&(excluidos||t.temDados || s.mostrarSemDados)
     && (!s.regiao || t.regiao === s.regiao)
     && (!busca || normBusca(`${t.nome} ${t.nomeOriginal} ${t.telefone} ${t.email}`).includes(busca)));
 }
@@ -18,15 +19,16 @@ function renderTecnicos() {
     nome: (t) => t.nome, usadas: (t) => t.nUsadas, rmdf: t=>t.nRmdf, atrasadas: (t) => t.nAtrasadas, maxDias: (t) => t.maxDias,
     novas: (t) => t.novasQtd, media: (t) => t.mediaDiasDev,
   });
-  const semDados = D.tecnicos.filter((t) => !t.temDados).length;
-  const semWhats = D.tecnicos.filter((t) => t.temDados && !t.telefone).length;
+  const semDados = D.tecnicos.filter((t) => !t.cad.excluido&&!t.temDados).length;
+  const semWhats = D.tecnicos.filter((t) => !t.cad.excluido&&t.temDados && !t.telefone).length;
 
   return `
+    <div class="abas" role="tablist" aria-label="Situação dos cadastros">${[['ativos','Ativos'],['excluidos','Excluídos da relação']].map(([valor,nome])=>`<button class="aba ${(s.situacao||'ativos')===valor?'ativa':''}" role="tab" aria-selected="${(s.situacao||'ativos')===valor}" data-acao="tecnicos-situacao" data-situacao="${valor}">${nome}<span class="contador">${D.tecnicos.filter(t=>(!!t.cad.excluido)===(valor==='excluidos')).length}</span></button>`).join('')}</div>
     ${semWhats ? `<div class="faixa neutra compacta">${icone("whatsapp")}<div><strong>${plural(semWhats, "técnico está", "técnicos estão")} sem WhatsApp cadastrado</strong><span>Com o número salvo, o botão Cobrar abre a conversa já com a mensagem pronta.</span></div></div>` : ""}
     <div class="barra-filtros">
       <select data-mudar="regiao-tc" aria-label="Região"><option value="">Todas as regiões</option>${D.regioes.map((r) => `<option value="${esc(r)}"${s.regiao === r ? " selected" : ""}>${esc(r)}</option>`).join("")}</select>
       <label class="busca-campo">${icone("busca")}<input type="search" placeholder="Buscar nome, telefone ou e-mail" value="${esc(s.busca)}" data-digitar="busca-tc" aria-label="Buscar"></label>
-      ${semDados ? `<label class="check-inline"><input type="checkbox" data-mudar="sem-dados-tc" ${s.mostrarSemDados ? "checked" : ""}> Mostrar ${plural(semDados, "sem peças", "sem peças")} hoje</label>` : ""}
+      ${semDados&&s.situacao!=='excluidos' ? `<label class="check-inline"><input type="checkbox" data-mudar="sem-dados-tc" ${s.mostrarSemDados ? "checked" : ""}> Mostrar ${plural(semDados, "sem peças", "sem peças")} hoje</label>` : ""}
       <button class="btn" data-acao="exportar-tecnicos">${icone("baixar")}Exportar</button>
     </div>
     ${lista.length ? `<div class="tabela-rolagem"><table class="tabela">
@@ -53,7 +55,7 @@ function renderTecnicos() {
         <td class="num">${t.meta || "Sem limite"}</td>
         <td><button class="botao-prazos" data-acao="editar-prazos" data-tid="${esc(t.tid)}" aria-label="Personalizar prazos de ${esc(t.nome)}"><span>Usadas <strong>${t.prazo} dias</strong>${prazoValido(t.cad.prazoUsadas) !== null ? '<small>próprio</small>' : ''}</span><span>Novas <strong>${t.prazoNovas} dias</strong>${prazoValido(t.cad.prazoNovas) !== null ? '<small>próprio</small>' : ''}</span></button></td>
         <td class="num">${t.mediaDiasDev != null ? `${fmtNum1(t.mediaDiasDev)} d` : "—"}</td>
-        <td><button class="btn-icone" data-acao="editar-tecnico" data-tid="${esc(t.tid)}" aria-label="Editar ${esc(t.nome)}" title="Editar cadastro">${icone("lapis")}</button></td>
+        <td><div class="linha-botoes"><button class="btn-icone" data-acao="editar-tecnico" data-tid="${esc(t.tid)}" aria-label="Editar ${esc(t.nome)}" title="Editar cadastro">${icone("lapis")}</button>${podeAdministrar()?`<button class="btn pequeno ${t.cad.excluido?'':'perigo fantasma'}" data-acao="${t.cad.excluido?'reativar-tecnico':'excluir-tecnico'}" data-tid="${esc(t.tid)}">${icone(t.cad.excluido?'desfazer':'fechar')}${t.cad.excluido?'Reativar':'Excluir da relação'}</button>`:''}</div></td>
       </tr>`).join("")}</tbody></table></div>` : vazio("pessoas", "Ninguém nesta lista", "Mude os filtros acima.")}`;
 }
 
@@ -107,6 +109,7 @@ function renderFicha(tid) {
         ${t.obs ? `<p class="ficha-obs"></p>` : ""}
       </div>
       <div class="ficha-acoes"><button class="btn" data-acao="inventario-tecnico" data-tid="${esc(t.tid)}">${icone("caixa")}Histórico de peças</button><button class="btn" data-acao="historico-agenda" data-tid="${esc(t.tid)}">${icone("calendario")}Histórico de agendamentos</button>
+        ${podeAdministrar()?`<button class="btn ${t.cad.excluido?'':'perigo fantasma'}" data-acao="${t.cad.excluido?'reativar-tecnico':'excluir-tecnico'}" data-tid="${esc(t.tid)}">${t.cad.excluido?'Reativar técnico':'Excluir da relação'}</button>`:''}
         ${t.novasLinhas.length ? `<button class="btn" data-acao="cobrar" data-aba="novas" data-tid="${esc(t.tid)}">${icone("mensagem")}Cobrar novas</button>` : ""}
         ${t.rmdf.length ? `<button class="btn" data-acao="cobrar" data-aba="rmdf" data-tid="${esc(t.tid)}">${icone("mensagem")}Cobrar RMDF</button>` : ""}
         ${t.retornos.length ? `<button class="btn prim" data-acao="cobrar" data-tid="${esc(t.tid)}" data-aba="${t.itensCobrar.length ? "cobrar" : "todos"}">${icone("mensagem")}Cobrar</button>` : ""}
@@ -161,6 +164,6 @@ async function exportarTecnicos() {
       { titulo: "WhatsApp", largura: 16 }, { titulo: "E-mail", largura: 26 }, { titulo: "Usadas pendentes", largura: 10, tipo: "numero" },
       { titulo: "Peças RMDF", largura: 12, tipo: "numero" }, { titulo: "Atrasadas", largura: 10, tipo: "numero" }, { titulo: "Dias da mais antiga", largura: 10, tipo: "numero" }, { titulo: "Peças novas", largura: 10, tipo: "numero" },
       { titulo: "Limite máximo", largura: 16, tipo: "numero" }, { titulo: "Situação do estoque", largura: 16 }, { titulo: "Devolução média (dias)", largura: 10, tipo: "numero" }, { titulo: "Observação", largura: 30 }, { titulo: "Prazo usadas (dias)", largura: 18, tipo: "numero" }, { titulo: "Regra usadas", largura: 16 }, { titulo: "Prazo novas (dias)", largura: 18, tipo: "numero" }, { titulo: "Regra novas", largura: 16 }, { titulo: "Capital / interior", largura: 18 }],
-    linhas: D.tecnicos.filter((t) => t.temDados || t.estoqueConhecido).map((t) => [t.nome, t.nomeOriginal, t.regiao, fmtTelefone(t.telefone), t.email, t.nUsadas, t.nRmdf, t.nAtrasadas, t.maxDias, t.estoqueConhecido ? t.novasQtd : "", t.meta ? t.meta : "", STATUS_NOVAS[t.statusNovas].rotulo, t.mediaDiasDev != null ? Math.round(t.mediaDiasDev * 10) / 10 : "", t.obs, t.prazo, prazoValido(t.cad.prazoUsadas) !== null ? "Personalizado" : "Geral", t.prazoNovas, prazoValido(t.cad.prazoNovas) !== null ? "Personalizado" : "Geral", LOCALIDADES[t.localidade] || LOCALIDADES[""]]),
+    linhas: D.tecnicos.filter(t=>(!!t.cad.excluido)===(UI.tc.situacao==='excluidos')&&(t.temDados||t.estoqueConhecido||t.cad.excluido)).map((t) => [t.nome, t.nomeOriginal, t.regiao, fmtTelefone(t.telefone), t.email, t.nUsadas, t.nRmdf, t.nAtrasadas, t.maxDias, t.estoqueConhecido ? t.novasQtd : "", t.meta ? t.meta : "", STATUS_NOVAS[t.statusNovas].rotulo, t.mediaDiasDev != null ? Math.round(t.mediaDiasDev * 10) / 10 : "", t.obs, t.prazo, prazoValido(t.cad.prazoUsadas) !== null ? "Personalizado" : "Geral", t.prazoNovas, prazoValido(t.cad.prazoNovas) !== null ? "Personalizado" : "Geral", LOCALIDADES[t.localidade] || LOCALIDADES[""]]),
   }]);
 }

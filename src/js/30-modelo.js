@@ -406,7 +406,7 @@ function derivar() {
 
   // ---- totais
   const tecnicos = lista;
-  const estoqueTec = tecnicos.filter((t) => t.estoqueConhecido);
+  const estoqueTec = tecnicos.filter((t) => t.estoqueConhecido&&(!t.cad.excluido||t.temDados));
   const cobrarTec = lista.filter((t) => t.nCobrar > 0)
     .sort((a, b) => (b.nPrevVencida > 0) - (a.nPrevVencida > 0) || b.maxDias - a.maxDias || b.nCobrar - a.nCobrar);
   const corte7 = somaDias(hoje, -6);
